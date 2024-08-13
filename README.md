@@ -1,2 +1,2 @@
-# Calculators
-Fastest solver for FEM beam calculations, written in Rust
+# FERs
+Blazingly fast Finite Element beam calculator written in Rust
