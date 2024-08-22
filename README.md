@@ -15,4 +15,4 @@
 You can install `FERS_core` via pip:
 
 ```bash
-pip install fers_core
+pip install FERS

@@ -5,8 +5,8 @@ with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setup(
-    name="fers",
-    version="0.1.0",
+    name="FERS",
+    version="0.1.1",
     author="Jeroen Hermsen",
     author_email="j.hermsen@serrac.com",
     description="Finite Element Method library written in Rust with Python interface",
