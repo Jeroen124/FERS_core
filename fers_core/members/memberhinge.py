@@ -3,7 +3,7 @@ class MemberHinge:
 
     def __init__(
         self,
-        pk: int = None,
+        id: int = None,
         type: str = "",
         translational_release_vx: float = None,
         translational_release_vy: float = None,
@@ -39,11 +39,11 @@ class MemberHinge:
         """
 
         # Handle hinge numbering with an optional type
-        if pk is None:
-            self.pk = MemberHinge._hinge_counter
+        if id is None:
+            self.id = MemberHinge._hinge_counter
             MemberHinge._hinge_counter += 1
         else:
-            self.pk = pk
+            self.id = id
 
         self.type = type
         self.translational_release_vx = translational_release_vx

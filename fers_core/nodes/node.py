@@ -3,11 +3,19 @@ from fers_core.supports.nodalsupport import NodalSupport
 
 
 class Node:
-    _node_counter = 1  
+    _node_counter = 1
 
-    def __init__(self, pk: Optional[int] = None, classification: str = "", X: float = 0.0, Y: float = 0.0, Z: float = 0.0, nodal_support: Optional[NodalSupport] = None):
-        self.pk = pk or Node._node_counter
-        if pk is None:
+    def __init__(
+        self,
+        node_id : Optional[int] = None,
+        classification: str = "",
+        X: float = 0.0,
+        Y: float = 0.0,
+        Z: float = 0.0,
+        nodal_support: Optional[NodalSupport] = None,
+    ):
+        self.id = id or Node._node_counter
+        if node_id  is None:
             Node._node_counter += 1
         self.classification = classification
         self.X = X
@@ -20,7 +28,9 @@ class Node:
         cls._node_counter = 1
 
     @staticmethod
-    def find_at_location(nodes: List['Node'], X: float, Y: float, Z: float, tolerance: float = 1e-3) -> List['Node']:
+    def find_at_location(
+        nodes: List["Node"], X: float, Y: float, Z: float, tolerance: float = 1e-3
+    ) -> List["Node"]:
         """
         Find all nodes at a specific location within a given tolerance.
 
@@ -33,15 +43,29 @@ class Node:
         """
         if not all(isinstance(node, cls) for node in nodes):
             raise TypeError("All elements in 'nodes' must be instances of Node.")
-        
-        return [node for node in nodes if abs(node.X - X) <= tolerance and abs(node.Y - Y) <= tolerance and abs(node.Z - Z) <= tolerance]
+
+        return [
+            node
+            for node in nodes
+            if abs(node.X - X) <= tolerance
+            and abs(node.Y - Y) <= tolerance
+            and abs(node.Z - Z) <= tolerance
+        ]
 
     @staticmethod
-    def distance(node1: 'Node', node2: 'Node') -> float:
-        return ((node1.X - node2.X) ** 2 + (node1.Y - node2.Y) ** 2 + (node1.Z - node2.Z) ** 2) ** 0.5
+    def distance(node1: "Node", node2: "Node") -> float:
+        return (
+            (node1.X - node2.X) ** 2
+            + (node1.Y - node2.Y) ** 2
+            + (node1.Z - node2.Z) ** 2
+        ) ** 0.5
 
     @staticmethod
-    def find_closest(nodes: List['Node'], X: float, Y: float, Z: float) -> 'Node':
+    def find_closest(nodes: List["Node"], X: float, Y: float, Z: float) -> "Node":
         if not all(isinstance(node, Node) for node in nodes):
             raise TypeError("All elements in 'nodes' must be instances of Node.")
-        return min(nodes, key=lambda node: ((node.X - X) ** 2 + (node.Y - Y) ** 2 + (node.Z - Z) ** 2) ** 0.5)
+        return min(
+            nodes,
+            key=lambda node: ((node.X - X) ** 2 + (node.Y - Y) ** 2 + (node.Z - Z) ** 2)
+            ** 0.5,
+        )
