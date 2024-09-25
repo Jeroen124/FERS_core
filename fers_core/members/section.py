@@ -1,5 +1,17 @@
 class Section:
-    def __init__(self, id: int, name: str, material: str, h: float, b: float, I_y: float, I_z: float, area: float, t_w: float = None, t_f: float = None):
+    def __init__(
+        self,
+        id: int,
+        name: str,
+        material: str,
+        h: float,
+        b: float,
+        I_y: float,
+        I_z: float,
+        area: float,
+        t_w: float = None,
+        t_f: float = None,
+    ):
         """
         Initializes a Section object.
 
