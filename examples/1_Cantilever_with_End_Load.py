@@ -1,5 +1,4 @@
-from fers_core import Node, Member, FERS, Material, Section, MemberSet
-
+from fers_core import Node, Member, FERS, Material, Section, MemberSet, NodalSupport
 
 # Create nodes
 node1 = Node(0, 0, 0)  # Fixed end
@@ -14,19 +13,25 @@ section = Section(name="Beam Section", material=Steel_S235, I_y=1.0e-6, I_z=1.0e
 # Create member
 beam = Member(start_node=node1, end_node=node2, section=section)
 
+
+# Creating a boundary conditions (by default all 6 d.o.f. are constraint)
+wall_support = NodalSupport()
+
+# Assigning the nodal_support to the correct node.
+node1.nodal_support = wall_support
+
+# =============================================================================
+# Now that the geometrical part is created. Lets create the model and the loadcases
+# =============================================================================
 # Create a memberset holding the beam
 membergroup1 = MemberSet(members=[beam])
 
 # Create analysis object
 analysis_1 = FERS()
 
-# Add nodes and member to the analysis
-analysis_1.add(MemberSet=membergroup1)
-analysis_1.add_node(node2)
-analysis_1.add_member(beam)
+# Adding the memberset to the model
+analysis_1.add_member_set(membergroup1)
 
-# Apply boundary conditions (fixed at node1)
-analysis_1.add_support(node1, dx=0, dy=0, dz=0, rx=0, ry=0, rz=0)
 
 # Apply end load at node2 (100 kN downward force)
 analysis_1.add_load(node2, fy=-100)
