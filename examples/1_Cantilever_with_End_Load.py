@@ -1,10 +1,14 @@
 from fers_core.nodes.node import Node
 from fers_core.members.member import Member
 from fers_core.fers.fers import FERS
+from fers_core.members.material import Material
 
 # Create nodes
 node1 = Node(0, 0, 0)  # Fixed end
 node2 = Node(5, 0, 0)  # Free end
+
+# Create material
+material = Material(name="Steel", E_mod=200e9, G_mod=0.3, density=7850, yield_stress=250e6)
 
 # Create member
 beam = Member(node1, node2)
