@@ -7,7 +7,7 @@ class Node:
 
     def __init__(
         self,
-        node_id : Optional[int] = None,
+        node_id: Optional[int] = None,
         classification: str = "",
         X: float = 0.0,
         Y: float = 0.0,
@@ -15,7 +15,7 @@ class Node:
         nodal_support: Optional[NodalSupport] = None,
     ):
         self.id = id or Node._node_counter
-        if node_id  is None:
+        if node_id is None:
             Node._node_counter += 1
         self.classification = classification
         self.X = X
@@ -41,7 +41,7 @@ class Node:
         :param tolerance: The tolerance within which coordinates are considered equal.
         :return: A list of Node instances at the given location.
         """
-        if not all(isinstance(node, cls) for node in nodes):
+        if not all(isinstance(node) for node in nodes):
             raise TypeError("All elements in 'nodes' must be instances of Node.")
 
         return [
@@ -55,9 +55,7 @@ class Node:
     @staticmethod
     def distance(node1: "Node", node2: "Node") -> float:
         return (
-            (node1.X - node2.X) ** 2
-            + (node1.Y - node2.Y) ** 2
-            + (node1.Z - node2.Z) ** 2
+            (node1.X - node2.X) ** 2 + (node1.Y - node2.Y) ** 2 + (node1.Z - node2.Z) ** 2
         ) ** 0.5
 
     @staticmethod
@@ -66,6 +64,5 @@ class Node:
             raise TypeError("All elements in 'nodes' must be instances of Node.")
         return min(
             nodes,
-            key=lambda node: ((node.X - X) ** 2 + (node.Y - Y) ** 2 + (node.Z - Z) ** 2)
-            ** 0.5,
+            key=lambda node: ((node.X - X) ** 2 + (node.Y - Y) ** 2 + (node.Z - Z) ** 2) ** 0.5,
         )
