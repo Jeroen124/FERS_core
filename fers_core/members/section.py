@@ -1,5 +1,6 @@
 from fers_core.members.material import Material
 
+
 class Section:
     def __init__(
         self,
@@ -19,7 +20,7 @@ class Section:
         Parameters:
         id (int): Unique identifier for the section.
         name (str): Descriptive name of the section.
-        material (Material): Material object representing the type of material used (e.g., steel, concrete).
+        material (Material): Material object representing the type of material used (e.g., steel).
         I_y (float): Moment of inertia about the y-axis, indicating resistance to bending.
         I_z (float): Moment of inertia about the z-axis, indicating resistance to torsion.
         area (float): Cross-sectional area of the section, relevant for load calculations.
