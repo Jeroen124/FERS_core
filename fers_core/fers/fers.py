@@ -1,4 +1,4 @@
-class SOLVINQ:
+class FERS:
     def __init__(self):
         self.member_sets = []
         self.load_cases = []

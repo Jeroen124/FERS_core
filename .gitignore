@@ -18,3 +18,15 @@ venv/
 /dist/
 /build/
 /*.egg-info/
+
+# Ignore all pycache folders
+__pycache__/
+
+# Ignore compiled .pyc files
+*.pyc
+
+# Allow certain files from pycache to be tracked (e.g., main.pyc)
+!__pycache__/main.pyc
+
+# Virtual environment
+venv/

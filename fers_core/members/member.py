@@ -18,7 +18,7 @@ class Member:
         section: Section,
         start_hinge: MemberHinge = None,
         end_hinge: MemberHinge = None,
-        member_id : Optional[int] = None,
+        member_id: Optional[int] = None,
         classification: str = "",
         rotation_angle: float = 0.0,
         weight: float = None,

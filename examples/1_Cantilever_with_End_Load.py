@@ -1,3 +1,6 @@
+import os
+os.chdir('..')  
+
 from fers_core.nodes.node import Node
 from fers_core.members.member import Member
 from fers_core.fers.fers import FERS
