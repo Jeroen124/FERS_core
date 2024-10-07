@@ -76,15 +76,15 @@ class Member:
 
     def EA(self):
         E = self.section.material.E_mod
-        A = self.section.A
+        A = self.section.area
         return E * A
 
-    def EI(self):
+    def EI_y(self):
         E = self.section.material.E_mod
         I = self.section.I_y  # noqa: E741
         return E * I
 
-    def EI_weak_axis(self):
+    def EI_z(self):
         E = self.section.material.E_mod
         I = self.section.I_z  # noqa: E741
         return E * I
@@ -101,7 +101,7 @@ class Member:
 
     def weight(self):
         length = self.length()
-        return self.section.material.density * self.section.A * length
+        return self.section.material.density * self.section.area * length
 
     def weight_per_mm(self):
-        return self.section.material.density * self.section.A
+        return self.section.material.density * self.section.area

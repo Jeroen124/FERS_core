@@ -2,16 +2,21 @@ from fers_core.nodes.node import Node
 from fers_core.members.member import Member
 from fers_core.fers.fers import FERS
 from fers_core.members.material import Material
+from fers_core.members.section import Section
 
 # Create nodes
 node1 = Node(0, 0, 0)  # Fixed end
 node2 = Node(5, 0, 0)  # Free end
 
 # Create material
-material = Material(name="Steel", E_mod=200e9, G_mod=0.3, density=7850, yield_stress=250e6)
+Steel_S235 = Material(name="Steel", E_mod=200e9, G_mod=77e9, density=7850, yield_stress=235e6)
+
+# Create a section
+section = Section(name="Beam Section", material=Steel_S235, I_y=1.0e-6, I_z=1.0e-6, area=0.1)
 
 # Create member
-beam = Member(node1, node2)
+beam = Member(start_node=node1, end_node=node2, section=section)
+
 
 # Create analysis object
 analysis_1 = FERS()

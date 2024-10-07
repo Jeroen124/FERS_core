@@ -1,6 +1,4 @@
-repos:
-  - repo: https://github.com/charliermarsh/ruff-pre-commit
-    rev: v0.6.7  
-    hooks:
-      - id: ruff
-        args: [--fix] 
+numpy==2.1.2
+matplotlib==3.9.2
+pre_commit==4.0.0
+ruff==0.6.7
