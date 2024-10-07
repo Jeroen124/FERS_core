@@ -35,9 +35,9 @@ print(f"Fy = {node1.reaction_force[1]:.2f} kN")
 print(f"Mz = {node1.reaction_moment[2]:.2f} kN·m")
 
 # Calculate and print maximum bending stress
-I = beam.moment_of_inertia_z  # Assuming a default cross-section
+I_z = beam.moment_of_inertia_z
 y_max = beam.height / 2
 M_max = abs(node1.reaction_moment[2])
-sigma_max = M_max * y_max / I
+sigma_max = M_max * y_max / I_z
 
 print(f"\nMaximum bending stress: {sigma_max:.2f} MPa")
