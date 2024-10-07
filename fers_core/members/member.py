@@ -51,9 +51,7 @@ class Member:
     @staticmethod
     def find_members_with_node(node):
         return [
-            member
-            for member in Member._all_members
-            if member.start_node == node or member.end_node == node
+            member for member in Member._all_members if member.start_node == node or member.end_node == node
         ]
 
     @staticmethod

@@ -13,7 +13,8 @@ class NodalSupport:
         rotation_conditions: dict = None,
     ):
         """
-        Initialize a Nodal Support instance with optional stiffness specifications for displacement and rotation.
+        Initialize a Nodal Support instance with optional stiffness
+        specifications for displacement and rotation.
         Defaults to a fixed condition if no conditions are provided.
 
         :param pk: Primary key for the nodal support instance.
@@ -60,9 +61,12 @@ class NodalSupport:
     def _default_conditions(self) -> dict:
         """Return default fixed conditions for all directions."""
         return {
-            direction: SupportCondition(condition=SupportCondition.FIXED)
-            for direction in self.DIRECTIONS
+            direction: SupportCondition(condition=SupportCondition.FIXED) for direction in self.DIRECTIONS
         }
 
     def __repr__(self) -> str:
-        return f"NodalSupport(pk={self.pk}, type={self.type}, displacement_conditions={self.displacement_conditions}, rotation_conditions={self.rotation_conditions})"
+        return (
+            f"NodalSupport(pk={self.pk}, type={self.type}, "
+            f"displacement_conditions={self.displacement_conditions}, "
+            f"rotation_conditions={self.rotation_conditions})"
+        )
