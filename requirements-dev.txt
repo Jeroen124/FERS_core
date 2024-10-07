@@ -1,2 +1,6 @@
-ruff==0.6.7
-pre_commit==4.0.0
+repos:
+  - repo: https://github.com/charliermarsh/ruff-pre-commit
+    rev: v0.6.7  
+    hooks:
+      - id: ruff
+        args: [--fix] 
