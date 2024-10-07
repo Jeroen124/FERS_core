@@ -6,10 +6,10 @@ from fers_core.imperfections.imperfectioncase import ImperfectionCase
 from fers_core.loads.loadcase import LoadCase
 from fers_core.loads.loadcombination import LoadCombination
 from fers_core.members.member import Member
+from fers_core.members.section import Section
 from fers_core.members.memberhinge import MemberHinge
 from fers_core.members.memberset import MemberSet
 from fers_core.nodes.node import Node
-from fers_core.pydantic_models.pydantic_models import Section, NormUsed, CalculationSetting
 from fers_core.supports.nodalsupport import NodalSupport
 
 
@@ -51,12 +51,6 @@ class FERS:
 
     def add_imperfection_case(self, imperfection_case):
         self.imperfection_cases.append(imperfection_case)
-
-    def set_norm(self, norm: NormUsed):
-        self.norm = norm
-
-    def set_calculation_settings(self, calculation_settings: CalculationSetting):
-        self.calculation_settings = calculation_settings
 
     def number_of_elements(self):
         """Returns the total number of unique members in the model."""
@@ -314,7 +308,6 @@ class FERS:
         """Returns a list of all unique nodes in the model."""
         nodes = []
         node_ids = set()
-
         for member_set in self.member_sets:
             for member in member_set.members:
                 if member.start_node.pk not in node_ids:

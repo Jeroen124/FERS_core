@@ -18,18 +18,19 @@ class ImperfectionCase:
         Initialize a new ImperfectionCase instance.
 
         Args:
-            loadcombinations (list[LoadCombination]):   List of LoadCombination instances associated with this
-                                                        ImperfectionCase. Represents the combinations of loads
-                                                        that are considered in the analysis.
+            loadcombinations (list[LoadCombination]):   List of LoadCombination instances associated with
+                                                        this ImperfectionCase. Represents the combinations
+                                                        of loads that are considered in the analysis.
             imperfection_case_id (int, optional):       Unique identifier for the ImperfectionCase instance.
                                                         If not provided, an auto-incremented value based
                                                         on the class counter is used.
             rotation_imperfections (list[RotationImperfection], optional):  List of RotationImperfection
                                                                             instances associated with this
                                                                             ImperfectionCase.
-            translation_imperfections (list[TranslationImperfection], optional):    List of TranslationImper.
-                                                                                    instances associated with
-                                                                                    this ImperfectionCase.
+            translation_imperfections (list[TranslationImperfection], optional):
+                                                                            List of TranslationImper.
+                                                                            instances associated with
+                                                                            this ImperfectionCase.
         """
 
         self.imperfection_case_id = id or ImperfectionCase._imperfection_case_counter

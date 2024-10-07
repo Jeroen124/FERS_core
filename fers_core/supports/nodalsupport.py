@@ -1,4 +1,5 @@
 from .supportcondition import SupportCondition
+from typing import Optional
 
 
 class NodalSupport:
@@ -7,17 +8,17 @@ class NodalSupport:
 
     def __init__(
         self,
-        pk: int = None,
-        classification: str = None,
-        displacement_conditions: dict = None,
-        rotation_conditions: dict = None,
+        support_id: Optional[int] = None,
+        classification: Optional[str] = None,
+        displacement_conditions: Optional[dict] = None,
+        rotation_conditions: Optional[dict] = None,
     ):
         """
         Initialize a Nodal Support instance with optional stiffness
         specifications for displacement and rotation.
         Defaults to a fixed condition if no conditions are provided.
 
-        :param pk: Primary key for the nodal support instance.
+        :param support_id: Primary key for the nodal support instance.
         :param classification: Optional classification for the nodal support.
         :param displacement_conditions: Optional dictionary with conditions per direction.
         :param rotation_conditions: Optional dictionary with conditions per direction.
@@ -25,7 +26,7 @@ class NodalSupport:
         # Default condition for all directions
         default_condition = SupportCondition(condition=SupportCondition.FIXED)
 
-        self.pk = pk or self._get_next_pk()
+        self.support_id = support_id or self._get_next_support_id()
         self.classification = classification
 
         # Initialize conditions; default to fixed if none provided
@@ -52,11 +53,11 @@ class NodalSupport:
         """Reset the nodal support counter to 1."""
         cls._nodal_support_counter = 1
 
-    def _get_next_pk(self) -> int:
+    def _get_next_support_id(self) -> int:
         """Generate and return the next primary key."""
-        pk = NodalSupport._nodal_support_counter
+        support_id = NodalSupport._nodal_support_counter
         NodalSupport._nodal_support_counter += 1
-        return pk
+        return support_id
 
     def _default_conditions(self) -> dict:
         """Return default fixed conditions for all directions."""
@@ -66,7 +67,7 @@ class NodalSupport:
 
     def __repr__(self) -> str:
         return (
-            f"NodalSupport(pk={self.pk}, type={self.type}, "
+            f"NodalSupport(support_id={self.support_id}, type={self.type}, "
             f"displacement_conditions={self.displacement_conditions}, "
             f"rotation_conditions={self.rotation_conditions})"
         )
