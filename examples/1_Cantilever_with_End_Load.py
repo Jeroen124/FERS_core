@@ -1,8 +1,5 @@
-from fers_core.nodes.node import Node
-from fers_core.members.member import Member
-from fers_core.fers.fers import FERS
-from fers_core.members.material import Material
-from fers_core.members.section import Section
+from fers_core import Node, Member, FERS, Material, Section, MemberSet
+
 
 # Create nodes
 node1 = Node(0, 0, 0)  # Fixed end
@@ -17,12 +14,14 @@ section = Section(name="Beam Section", material=Steel_S235, I_y=1.0e-6, I_z=1.0e
 # Create member
 beam = Member(start_node=node1, end_node=node2, section=section)
 
+# Create a memberset holding the beam
+membergroup1 = MemberSet(members=[beam])
 
 # Create analysis object
 analysis_1 = FERS()
 
 # Add nodes and member to the analysis
-analysis_1.add_node(node1)
+analysis_1.add(MemberSet=membergroup1)
 analysis_1.add_node(node2)
 analysis_1.add_member(beam)
 

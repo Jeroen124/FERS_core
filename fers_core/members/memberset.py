@@ -20,7 +20,7 @@ class MemberSet:
         if member_set_id is None:
             MemberSet._member_set_counter += 1
 
-        self.members_id = [member.id for member in members] if members else []
+        self.members_id = [member.member_id for member in members] if members else []
         self.members = members if members is not None else []
         self.L_y = L_y
         self.L_z = L_z
@@ -46,7 +46,7 @@ class MemberSet:
     def add_member(self, member: Member):
         """Add a single member to the MemberSet."""
         self.members.append(member)
-        self.members_id.append(member.id)
+        self.members_id.append(member.member_id)
 
     def plot(self, plane="yz", fig=None, ax=None, set_aspect=True, show_title=True, show_legend=True):
         """
@@ -92,7 +92,7 @@ class MemberSet:
                 raise ValueError("Invalid plane specified. Use 'xy', 'xz' or 'yz'.")
 
             # Plot member line
-            ax.plot(primary_values, secondary_values, label=f"Member {member.id}")
+            ax.plot(primary_values, secondary_values, label=f"Member {member.member_id}")
             # Plot start and end nodes as dots
 
         # Customize plot settings
@@ -144,7 +144,7 @@ class MemberSet:
             ax.plot(
                 [start_coords[0], end_coords[0]],
                 [start_coords[1], end_coords[1]],
-                label=f"Member {member.id}",
+                label=f"Member {member.member_id}",
             )
 
             # Display node numbers as floating text near each node
@@ -359,7 +359,7 @@ class MemberSet:
         Finds and returns the node with the highest y-coordinate.
 
         Returns:
-            Node: The node with the highest y-coordinate. Returns None if no nodes are present.
+            Node: Returns node with the highest y-coordinate.
         """
         highest_node = None
 
