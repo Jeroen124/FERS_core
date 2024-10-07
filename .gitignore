@@ -21,6 +21,7 @@ venv/
 
 # Ignore all pycache folders
 __pycache__/
+__pycache__
 
 # Ignore compiled .pyc files
 *.pyc
@@ -30,3 +31,4 @@ __pycache__/
 
 # Virtual environment
 venv/
+
