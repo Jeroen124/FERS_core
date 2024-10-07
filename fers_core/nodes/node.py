@@ -47,16 +47,12 @@ class Node:
         return [
             node
             for node in nodes
-            if abs(node.X - X) <= tolerance
-            and abs(node.Y - Y) <= tolerance
-            and abs(node.Z - Z) <= tolerance
+            if abs(node.X - X) <= tolerance and abs(node.Y - Y) <= tolerance and abs(node.Z - Z) <= tolerance
         ]
 
     @staticmethod
     def distance(node1: "Node", node2: "Node") -> float:
-        return (
-            (node1.X - node2.X) ** 2 + (node1.Y - node2.Y) ** 2 + (node1.Z - node2.Z) ** 2
-        ) ** 0.5
+        return ((node1.X - node2.X) ** 2 + (node1.Y - node2.Y) ** 2 + (node1.Z - node2.Z) ** 2) ** 0.5
 
     @staticmethod
     def find_closest(nodes: List["Node"], X: float, Y: float, Z: float) -> "Node":

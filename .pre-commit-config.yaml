@@ -4,7 +4,6 @@ repos:
     hooks:
       # Run the linter.
       - id: ruff
-        pass_filenames: false
         args: [ --fix ]
       # Run the formatter.
       - id: ruff-format

@@ -12,10 +12,13 @@ class SupportConditionType(Enum):
 class SupportCondition:
     def __init__(self, condition=None, stiffness=None):
         """
-        Initializes the support condition. The condition can be fixed, free, or defined by a specific stiffness.
+        Initializes a support condition that defines how a structure can move or deform at a support point.
+        The condition can be fixed, free, or specified by a stiffness value.
 
-        :param condition: An instance of SupportConditionType or None if a stiffness is provided.
-        :param stiffness: A float representing the stiffness in the specified direction. None if condition is fixed or free.
+        :param condition: An instance of SupportConditionType indicating the type of support condition,
+                          or None if a stiffness value is provided.
+        :param stiffness: A float representing the stiffness in the specified direction. This should be None
+                          if the condition is fixed or free.
         """
         if condition is not None and not isinstance(condition, SupportConditionType):
             raise ValueError("Invalid condition type")
