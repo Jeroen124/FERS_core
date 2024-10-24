@@ -1,5 +1,5 @@
 from typing import Optional
-from fers_core.members.material import Material
+from FERS_core.members.material import Material
 
 
 class Section:

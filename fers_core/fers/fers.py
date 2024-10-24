@@ -2,15 +2,15 @@ import re
 
 import matplotlib.pyplot as plt
 
-from fers_core.imperfections.imperfectioncase import ImperfectionCase
-from fers_core.loads.loadcase import LoadCase
-from fers_core.loads.loadcombination import LoadCombination
-from fers_core.members.member import Member
-from fers_core.members.section import Section
-from fers_core.members.memberhinge import MemberHinge
-from fers_core.members.memberset import MemberSet
-from fers_core.nodes.node import Node
-from fers_core.supports.nodalsupport import NodalSupport
+from FERS_core.imperfections.imperfectioncase import ImperfectionCase
+from FERS_core.loads.loadcase import LoadCase
+from FERS_core.loads.loadcombination import LoadCombination
+from FERS_core.members.member import Member
+from FERS_core.members.section import Section
+from FERS_core.members.memberhinge import MemberHinge
+from FERS_core.members.memberset import MemberSet
+from FERS_core.nodes.node import Node
+from FERS_core.supports.nodalsupport import NodalSupport
 
 
 class FERS:
