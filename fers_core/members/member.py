@@ -1,10 +1,10 @@
-from fers_core.nodes.node import Node
+from FERS_core.nodes.node import Node
 
 from typing import Optional
 
-from fers_core.members.memberhinge import MemberHinge
-from fers_core.members.enums import MemberType
-from fers_core.members.section import Section
+from FERS_core.members.memberhinge import MemberHinge
+from FERS_core.members.enums import MemberType
+from FERS_core.members.section import Section
 
 
 class Member:

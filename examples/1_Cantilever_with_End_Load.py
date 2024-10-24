@@ -1,4 +1,4 @@
-from fers_core import Node, Member, FERS, Material, Section, MemberSet, NodalSupport
+from FERS_core import Node, Member, FERS, Material, Section, MemberSet, NodalSupport
 
 # Create nodes
 node1 = Node(0, 0, 0)  # Fixed end

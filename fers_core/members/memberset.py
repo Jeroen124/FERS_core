@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from fers_core.members.member import Member
+from FERS_core.members.member import Member
 from typing import Optional
 
 
