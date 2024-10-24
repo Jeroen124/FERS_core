@@ -10,15 +10,24 @@ class SupportConditionType(Enum):
 
 
 class SupportCondition:
+    FIXED = SupportConditionType.FIXED
+    FREE = SupportConditionType.FREE
+    SPRING = SupportConditionType.SPRING
+    POSITIVE_ONLY = SupportConditionType.POSITIVE_ONLY
+    NEGATIVE_ONLY = SupportConditionType.NEGATIVE_ONLY
+
     def __init__(self, condition=None, stiffness=None):
         """
         Initializes a support condition that defines how a structure can move or deform at a support point.
-        The condition can be fixed, free, or specified by a stiffness value.
+        The condition can be fixed, free, spring, positive-only, or negative-only.
 
-        :param condition: An instance of SupportConditionType indicating the type of support condition,
-                          or None if a stiffness value is provided.
-        :param stiffness: A float representing the stiffness in the specified direction. This should be None
-                          if the condition is fixed or free.
+        :param condition: An instance of SupportConditionType indicating the type of support condition.
+                          This should be provided for fixed, free, positive-only, or negative-only conditions.
+        :param stiffness: A float representing the stiffness in the specified direction. This should only be
+                          provided when the condition is SPRING, and must be a positive value.
+
+        Raises:
+            ValueError: If an invalid combination of condition and stiffness is provided.
         """
         if condition is not None and not isinstance(condition, SupportConditionType):
             raise ValueError("Invalid condition type")
@@ -28,13 +37,9 @@ class SupportCondition:
         self.condition = condition
         self.stiffness = stiffness if condition is None else None
 
-    def __repr__(self):
-        if self.condition:
-            return self.condition.value
-        else:
-            return f"Stiffness: {self.stiffness}"
-
     def __eq__(self, other):
-        if isinstance(other, SupportConditionType):
+        if isinstance(other, SupportCondition):
+            return self.condition == other.condition and self.stiffness == other.stiffness
+        elif isinstance(other, SupportConditionType):
             return self.condition == other
         return NotImplemented

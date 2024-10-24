@@ -7,7 +7,7 @@ class NodalLoad:
             node (Node): The node the load is applied to.
             load_case (LoadCase): The load case this load belongs to.
             magnitude (float): The magnitude of the load.
-            direction (tuple): The direction of the load as a tuple (dx, dy, dz).
+            direction (tuple): The direction of the load in global reference frame as a tuple (X, Y, Z).
             load_type (str, optional): The type of the load ('force' or 'moment'). Defaults to 'force'.
         """
         self.node = node
