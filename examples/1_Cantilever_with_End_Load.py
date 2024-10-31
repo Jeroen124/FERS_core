@@ -30,13 +30,13 @@ node1.nodal_support = wall_support
 membergroup1 = MemberSet(members=[beam])
 
 # Create analysis object
-analysis_1 = FERS()
+calculation_1 = FERS()
 
 # Adding the memberset to the model
-analysis_1.add_member_set(membergroup1)
+calculation_1.add_member_set(membergroup1)
 
 # Create a loadcase for the end load
-end_load_case = analysis_1.create_load_case(name="End Load")
+end_load_case = calculation_1.create_load_case(name="End Load")
 
 # Apply end load at node2 1 kN downward force (global y-axis) to the loadcase
 end_load_case.add_nodal_load(
@@ -44,20 +44,20 @@ end_load_case.add_nodal_load(
 )
 
 # Run analysis
-analysis_1.analyze()
+# result = FERS_calculation(calculation_1)
 
-# Print results
-print("Displacement at free end (node2):")
-print(f"dy = {node2.displacement[1]:.6f} m")
+# # Print results
+# print("Displacement at free end (node2):")
+# print(f"dy = {node2.displacement[1]:.6f} m")
 
-print("\nReaction forces at fixed end (node1):")
-print(f"Fy = {node1.reaction_force[1]:.2f} kN")
-print(f"Mz = {node1.reaction_moment[2]:.2f} kN·m")
+# print("\nReaction forces at fixed end (node1):")
+# print(f"Fy = {node1.reaction_force[1]:.2f} kN")
+# print(f"Mz = {node1.reaction_moment[2]:.2f} kN·m")
 
-# Calculate and print maximum bending stress
-I_z = beam.moment_of_inertia_z
-y_max = beam.height / 2
-M_max = abs(node1.reaction_moment[2])
-sigma_max = M_max * y_max / I_z
+# # Calculate and print maximum bending stress
+# I_z = beam.moment_of_inertia_z
+# y_max = beam.height / 2
+# M_max = abs(node1.reaction_moment[2])
+# sigma_max = M_max * y_max / I_z
 
-print(f"\nMaximum bending stress: {sigma_max:.2f} MPa")
+# print(f"\nMaximum bending stress: {sigma_max:.2f} MPa")

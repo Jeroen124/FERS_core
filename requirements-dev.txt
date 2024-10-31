@@ -4,3 +4,4 @@ matplotlib==3.9.2
 pre_commit==4.0.0
 ruff==0.6.7
 twine==5.1.1
+maturin==1.7.4
