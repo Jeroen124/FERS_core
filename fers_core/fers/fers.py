@@ -41,10 +41,10 @@ class FERS:
             "sections": [section.to_dict() for section in self.get_unique_sections_from_all_member_sets()],
         }
 
-    def save_to_json(self, file_path):
+    def save_to_json(self, file_path, indent=None):
         """Save the FERS model to a JSON file using ujson."""
         with open(file_path, "w") as json_file:
-            ujson.dump(self.to_dict(), json_file)
+            ujson.dump(self.to_dict(), json_file, indent=indent)
 
     def create_load_case(self, name):
         load_case = LoadCase(name=name)

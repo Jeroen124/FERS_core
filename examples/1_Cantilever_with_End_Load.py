@@ -46,7 +46,7 @@ end_load_case.add_nodal_load(
 )
 
 file_path = os.path.join("examples", "json_input_solver", "1_cantilever_with_end_load.json")
-calculation_1.save_to_json(file_path)
+calculation_1.save_to_json(file_path, indent=4)
 
 
 # Run analysis
