@@ -120,7 +120,7 @@ class Member:
             "chi": self.chi,
             "reference_member": self.reference_member.id if self.reference_member else None,
             "reference_node": self.reference_node.id if self.reference_node else None,
-            "member_type": str(self.member_type)
+            "member_type": str(self.member_type.value)
             if isinstance(self.member_type, MemberType)
             else self.member_type,
         }

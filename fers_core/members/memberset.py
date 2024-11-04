@@ -12,8 +12,8 @@ class MemberSet:
         self,
         members: Optional[list[Member]] = None,
         classification: Optional[str] = None,
-        L_y: Optional[float] = None,
-        L_z: Optional[float] = None,
+        l_y: Optional[float] = None,
+        l_z: Optional[float] = None,
         id: Optional[int] = None,
     ):
         self.memberset_id = id or MemberSet._member_set_counter
@@ -22,8 +22,8 @@ class MemberSet:
 
         self.members_id = [member.id for member in members] if members else []
         self.members = members if members is not None else []
-        self.L_y = L_y
-        self.L_z = L_z
+        self.l_y = l_y
+        self.l_z = l_z
         self.classification = classification
 
     @classmethod
@@ -32,18 +32,12 @@ class MemberSet:
 
     def to_dict(self):
         # Get unique materials and sections using get_unique methods
-        unique_materials = self.get_unique_materials()
-        unique_sections = self.get_unique_sections()
-
         return {
             "id": self.memberset_id,
-            "L_y": self.L_y,
-            "L_z": self.L_z,
+            "l_y": self.l_y,
+            "l_z": self.l_z,
             "classification": self.classification,
             "members": [member.to_dict() for member in self.members],
-            "memberhinges": [memberhinge.to_dict() for memberhinge in self.get_unique_memberhinges()],
-            "materials": [material.to_dict() for material in unique_materials],
-            "sections": [section.to_dict() for section in unique_sections],
         }
 
     @staticmethod
