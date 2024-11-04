@@ -30,7 +30,7 @@ class Node:
             "X": self.X,
             "Y": self.Y,
             "Z": self.Z,
-            "nodal_support": str(self.nodal_support) if self.nodal_support else None,
+            "nodal_support": self.nodal_support.id if self.nodal_support else None,
         }
 
     @classmethod

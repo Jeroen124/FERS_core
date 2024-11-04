@@ -109,8 +109,8 @@ class Member:
     def to_dict(self):
         return {
             "id": self.id,
-            "start_node": self.start_node.id,
-            "end_node": self.end_node.id,
+            "start_node": self.start_node.to_dict(),
+            "end_node": self.end_node.to_dict(),
             "section": self.section.id,
             "rotation_angle": self.rotation_angle,
             "start_hinge": self.start_hinge.id if self.start_hinge else None,
