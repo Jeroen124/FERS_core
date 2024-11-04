@@ -32,6 +32,13 @@ class FERS:
             "imperfection_cases": [imp_case.to_dict() for imp_case in self.imperfection_cases],
             "analysis_options": self.analysis_options.to_dict() if self.analysis_options else None,
             "results": self.results.to_dict() if self.results else None,
+            "memberhinges": [
+                memberhinge.to_dict() for memberhinge in self.get_unique_member_hinges_from_all_member_sets()
+            ],
+            "materials": [
+                material.to_dict() for material in self.get_unique_materials_from_all_member_sets()
+            ],
+            "sections": [section.to_dict() for section in self.get_unique_sections_from_all_member_sets()],
         }
 
     def save_to_json(self, file_path):
@@ -196,8 +203,8 @@ class FERS:
                 translated_member_set = MemberSet(
                     members=new_members,
                     classification=original_member_set.classification,
-                    L_y=original_member_set.L_y,
-                    L_z=original_member_set.L_z,
+                    l_y=original_member_set.l_y,
+                    l_z=original_member_set.l_z,
                 )
                 combined_model.add_member_set(translated_member_set)
 
@@ -344,24 +351,53 @@ class FERS:
                 return node
         return None
 
-    def get_unique_materials(self):
+    def get_unique_materials_from_all_member_sets(self, ids_only=False):
         """
-        Retrieves all unique materials used across all member sets and members.
+        Collects and returns unique materials used across all member sets in the model.
+
+        Args:
+            ids_only (bool): If True, return only the unique material IDs. Otherwise, return material objects.
 
         Returns:
-            List[Material]: A list of unique Material objects used in the model.
+            list: List of unique materials or material IDs used across all member sets.
         """
-        unique_materials = {}  # Use a dictionary to avoid duplicates based on material name
-
+        unique_materials = set()
         for member_set in self.member_sets:
-            for member in member_set.members:
-                # Check if we've already added this material by name
-                if member.section.material.name not in unique_materials:
-                    # Add the material to the dictionary
-                    unique_materials[member.section.material.name] = member.section.material
+            materials = member_set.get_unique_materials(ids_only=ids_only)
+            unique_materials.update(materials)
+        return list(unique_materials)
 
-        # Return the materials as a list
-        return list(unique_materials.values())
+    def get_unique_sections_from_all_member_sets(self, ids_only=False):
+        """
+        Collects and returns unique sections used across all member sets in the model.
+
+        Args:
+            ids_only (bool): If True, return only the unique section IDs. Otherwise, return section objects.
+
+        Returns:
+            list: List of unique sections or section IDs used across all member sets.
+        """
+        unique_sections = set()
+        for member_set in self.member_sets:
+            sections = member_set.get_unique_sections(ids_only=ids_only)
+            unique_sections.update(sections)
+        return list(unique_sections)
+
+    def get_unique_member_hinges_from_all_member_sets(self, ids_only=False):
+        """
+        Collects and returns unique member hinges used across all member sets in the model.
+
+        Args:
+            ids_only (bool): If True, return only the unique hinge IDs. Otherwise, return hinge objects.
+
+        Returns:
+            list: List of unique hinges or hinge IDs used across all member sets.
+        """
+        unique_hinges = set()
+        for member_set in self.member_sets:
+            hinges = member_set.get_unique_memberhinges(ids_only=ids_only)
+            unique_hinges.update(hinges)
+        return list(unique_hinges)
 
     def get_unique_situations(self):
         """
@@ -372,22 +408,6 @@ class FERS:
             if load_combination.situation:
                 unique_situations.add(load_combination.situation)
         return unique_situations
-
-    def get_unique_sections(self):
-        """
-        Returns a set of unique sections used in the model, identified by their names.
-        """
-        unique_sections = {}  # Use a dictionary to avoid duplicates based on section name
-
-        for member_set in self.member_sets:
-            for member in member_set.members:
-                # Check if we've already added this section by name
-                if member.section.name not in unique_sections:
-                    # Add the section to the dictionary
-                    unique_sections[member.section.name] = member.section
-
-        # Return the materials as a list
-        return list(unique_sections.values())
 
     def get_unique_material_names(self):
         """Returns a set of unique material names used in the model."""
@@ -404,28 +424,6 @@ class FERS:
             for member in member_set.members:
                 unique_sections.add(member.section.name)
         return unique_sections
-
-    def get_unique_section_material_combinations(self, rstab_materials):
-        """
-        Returns a list of unique (section name, material name, material index) tuples used in the model.
-        """
-        unique_combinations = set()
-        material_name_to_index = {material["Name"]: material["index"] for material in rstab_materials}
-
-        for member_set in self.member_sets:
-            for member in member_set.members:
-                material_name = member.section.material.name
-                section_name = member.section.name
-                material_index = material_name_to_index.get(material_name, None)
-
-                if material_index is not None:
-                    combination = (section_name, material_name, material_index)
-                    unique_combinations.add(combination)
-                else:
-                    # Handle the case where the material name doesn't have a corresponding index
-                    print(f"Warning: No RSTAB material index found for material name '{material_name}'.")
-
-        return unique_combinations
 
     def get_all_unique_member_hinges(self):
         """Return all unique member hinge instances in the model."""
@@ -569,8 +567,8 @@ class FERS:
         rotation_angle=None,
         chi=None,
         reference_member=None,
-        L_y=None,
-        L_z=None,
+        l_y=None,
+        l_z=None,
     ):
         members = []
         node_list = [start_point] + (intermediate_points or []) + [end_point]
@@ -589,7 +587,7 @@ class FERS:
             )
             members.append(member)
 
-        member_set = MemberSet(members=members, classification=classification, L_y=L_y, L_z=L_z)
+        member_set = MemberSet(members=members, classification=classification, l_y=l_y, l_z=l_z)
         return member_set
 
     @staticmethod
