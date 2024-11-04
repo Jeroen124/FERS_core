@@ -16,9 +16,9 @@ class Member:
         start_node: Node,
         end_node: Node,
         section: Section,
+        id: Optional[int] = None,
         start_hinge: MemberHinge = None,
         end_hinge: MemberHinge = None,
-        member_id: Optional[int] = None,
         classification: str = "",
         rotation_angle: float = 0.0,
         weight: float = None,
@@ -27,8 +27,8 @@ class Member:
         reference_node: Optional["Node"] = None,
         member_type: str = MemberType.NORMAL,
     ):
-        self.member_id = member_id or Member._member_counter
-        if member_id is None:
+        self.id = id or Member._member_counter
+        if id is None:
             Member._member_counter += 1
         self.rotation_angle = rotation_angle
         self.start_node = start_node
@@ -59,34 +59,34 @@ class Member:
         # Static method to retrieve all Member objects
         return Member._all_members
 
-    def get_member_by_id(cls, member_id: int):
+    def get_member_by_id(cls, id: int):
         """
         Class method to find a member by its ID.
 
         Args:
-            member_id (str): The ID of the member to find.
+            id (str): The ID of the member to find.
 
         Returns:
             Member: The found member object or None if not found.
         """
         for member in cls._all_members:
-            if member.id == member_id:
+            if member.id == id:
                 return member
         return None
 
     def EA(self):
-        E = self.section.material.E_mod
+        E = self.section.material.e_mod
         A = self.section.area
         return E * A
 
-    def EI_y(self):
-        E = self.section.material.E_mod
-        I = self.section.I_y  # noqa: E741
+    def Ei_y(self):
+        E = self.section.material.e_mod
+        I = self.section.i_y  # noqa: E741
         return E * I
 
-    def EI_z(self):
-        E = self.section.material.E_mod
-        I = self.section.I_z  # noqa: E741
+    def Ei_z(self):
+        E = self.section.material.e_mod
+        I = self.section.i_z  # noqa: E741
         return E * I
 
     def length(self):
@@ -105,3 +105,22 @@ class Member:
 
     def weight_per_mm(self):
         return self.section.material.density * self.section.area
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "start_node": self.start_node.id,
+            "end_node": self.end_node.id,
+            "section": self.section.id,
+            "rotation_angle": self.rotation_angle,
+            "start_hinge": self.start_hinge.id if self.start_hinge else None,
+            "end_hinge": self.end_hinge.id if self.end_hinge else None,
+            "classification": self.classification,
+            "weight": self.weight,
+            "chi": self.chi,
+            "reference_member": self.reference_member.id if self.reference_member else None,
+            "reference_node": self.reference_node.id if self.reference_node else None,
+            "member_type": str(self.member_type)
+            if isinstance(self.member_type, MemberType)
+            else self.member_type,
+        }

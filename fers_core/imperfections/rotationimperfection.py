@@ -2,6 +2,8 @@ from FERS_core.members.memberset import MemberSet
 
 
 class RotationImperfection:
+    _rotation_imperfection_counter = 1
+
     def __init__(
         self,
         memberset: list[MemberSet],
@@ -20,8 +22,20 @@ class RotationImperfection:
             axis (tuple): The axis of rotation (e.g., (0, 0, 1) for Z-axis).
             point (tuple): The point around which the rotation occurs.
         """
+        self.id = RotationImperfection._rotation_imperfection_counter
+        RotationImperfection._rotation_imperfection_counter += 1
         self.memberset = memberset
         self.magnitude = magnitude
         self.axis = axis
         self.axis_only = axis_only
         self.point = point
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "memberset": [ms.id for ms in self.memberset],
+            "magnitude": self.magnitude,
+            "axis": self.axis,
+            "axis_only": self.axis_only,
+            "point": self.point,
+        }

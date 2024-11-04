@@ -14,13 +14,13 @@ class MemberSet:
         classification: Optional[str] = None,
         L_y: Optional[float] = None,
         L_z: Optional[float] = None,
-        member_set_id: Optional[int] = None,
+        id: Optional[int] = None,
     ):
         self.memberset_id = id or MemberSet._member_set_counter
-        if member_set_id is None:
+        if id is None:
             MemberSet._member_set_counter += 1
 
-        self.members_id = [member.member_id for member in members] if members else []
+        self.members_id = [member.id for member in members] if members else []
         self.members = members if members is not None else []
         self.L_y = L_y
         self.L_z = L_z
@@ -30,23 +30,39 @@ class MemberSet:
     def reset_counter(cls):
         cls._member_set_counter = 1
 
+    def to_dict(self):
+        # Get unique materials and sections using get_unique methods
+        unique_materials = self.get_unique_materials()
+        unique_sections = self.get_unique_sections()
+
+        return {
+            "id": self.memberset_id,
+            "L_y": self.L_y,
+            "L_z": self.L_z,
+            "classification": self.classification,
+            "members": [member.to_dict() for member in self.members],
+            "memberhinges": [memberhinge.to_dict() for memberhinge in self.get_unique_memberhinges()],
+            "materials": [material.to_dict() for material in unique_materials],
+            "sections": [section.to_dict() for section in unique_sections],
+        }
+
     @staticmethod
-    def find_member_sets_containing_member(member_id, all_member_sets):
-        return [member_set for member_set in all_member_sets if member_id in member_set.members_id]
+    def find_member_sets_containing_member(id, all_member_sets):
+        return [member_set for member_set in all_member_sets if id in member_set.members_id]
 
     @staticmethod
     def aggregate_properties(member_set, all_members):
         # Assuming all_members is a dictionary with member numbers as keys
         total_length = 0
-        for member_id in member_set.members_id:
-            member = all_members[member_id]
+        for id in member_set.members_id:
+            member = all_members[id]
             total_length += Member.calculate_length(member)
         return {"total_length": total_length}
 
     def add_member(self, member: Member):
         """Add a single member to the MemberSet."""
         self.members.append(member)
-        self.members_id.append(member.member_id)
+        self.members_id.append(member.id)
 
     def plot(self, plane="yz", fig=None, ax=None, set_aspect=True, show_title=True, show_legend=True):
         """
@@ -92,7 +108,7 @@ class MemberSet:
                 raise ValueError("Invalid plane specified. Use 'xy', 'xz' or 'yz'.")
 
             # Plot member line
-            ax.plot(primary_values, secondary_values, label=f"Member {member.member_id}")
+            ax.plot(primary_values, secondary_values, label=f"Member {member.id}")
             # Plot start and end nodes as dots
 
         # Customize plot settings
@@ -144,7 +160,7 @@ class MemberSet:
             ax.plot(
                 [start_coords[0], end_coords[0]],
                 [start_coords[1], end_coords[1]],
-                label=f"Member {member.member_id}",
+                label=f"Member {member.id}",
             )
 
             # Display node numbers as floating text near each node
@@ -164,25 +180,67 @@ class MemberSet:
         # Show the plot
         plt.show()
 
-    def get_unique_sections(self):
+    def get_unique_sections(self, ids_only=False):
         """
-        Returns a set of unique sections used in the MemberSet.
+        Returns a list of unique sections used in the MemberSet, based on section id.
+
+        Parameters:
+            ids_only (bool): If True, returns only the unique section IDs. If False, returns section objects.
+                           Defaults to False.
+
+        Returns:
+            list: List of unique section objects or section IDs.
         """
         unique_sections = {}
         for member in self.members:
             section = member.section
             unique_sections[section.id] = section
+
+        if ids_only:
+            return list(unique_sections.keys())
         return list(unique_sections.values())
 
-    def get_unique_materials(self):
+    def get_unique_materials(self, ids_only=False):
         """
         Returns a list of unique materials used in the MemberSet, based on material id.
+
+        Parameters:
+            ids_only (bool): If True, returns only the unique material IDs. If False, returns material objects
+                           Defaults to False.
+
+        Returns:
+            list: List of unique material objects or material IDs.
         """
         unique_materials = {}
         for member in self.members:
             material = member.section.material
             unique_materials[material.id] = material
+
+        if ids_only:
+            return list(unique_materials.keys())
         return list(unique_materials.values())
+
+    def get_unique_memberhinges(self, ids_only=False):
+        """
+        Returns a list of unique hinges used in the MemberSet, based on hinge id.
+
+        Parameters:
+            ids_only (bool): If True, returns only the unique hinge IDs. If False, returns the hinge objects.
+                           Defaults to False.
+
+        Returns:
+            list: List of unique hinge objects or hinge IDs.
+        """
+        unique_hinges = {}
+        for member in self.members:
+            if member.start_hinge:
+                unique_hinges[member.start_hinge.id] = member.start_hinge
+            if member.end_hinge:
+                unique_hinges[member.end_hinge.id] = member.end_hinge
+
+        if ids_only:
+            return list(unique_hinges.keys())
+        return list(unique_hinges.values())
 
     def get_longest_member(self):
         """
@@ -221,25 +279,25 @@ class MemberSet:
 
     def get_minimal_Iy(self):
         """
-        Returns the member with the smallest moment of inertia about the local y-axis (I_y).
+        Returns the member with the smallest moment of inertia about the local y-axis (i_y).
         """
         if not self.members:
             return None
         unique_sections = self.get_unique_sections()
 
-        smallest_Iy_section = min(unique_sections, key=lambda section: section.I_y)
-        return smallest_Iy_section.I_y
+        smallest_Iy_section = min(unique_sections, key=lambda section: section.i_y)
+        return smallest_Iy_section.i_y
 
     def get_minimal_Iz(self):
         """
-        Returns the member with the smallest moment of inertia about the local z-axis (I_z).
+        Returns the member with the smallest moment of inertia about the local z-axis (i_z).
         """
         if not self.members:
             return None
         unique_sections = self.get_unique_sections()
 
-        smallest_Iz_section = min(unique_sections, key=lambda section: section.I_z)
-        return smallest_Iz_section.I_z
+        smallest_Iz_section = min(unique_sections, key=lambda section: section.i_z)
+        return smallest_Iz_section.i_z
 
     def get_minimal_yield_stress(self):
         """

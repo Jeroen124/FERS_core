@@ -62,3 +62,21 @@ class MemberHinge:
     @classmethod
     def reset_counter(cls):
         cls._hinge_counter = 1
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "type": self.type,
+            "translational_release_vx": self.translational_release_vx,
+            "translational_release_vy": self.translational_release_vy,
+            "translational_release_vz": self.translational_release_vz,
+            "rotational_release_mx": self.rotational_release_mx,
+            "rotational_release_my": self.rotational_release_my,
+            "rotational_release_mz": self.rotational_release_mz,
+            "max_tension_vx": self.max_tension_vx,
+            "max_tension_vy": self.max_tension_vy,
+            "max_tension_vz": self.max_tension_vz,
+            "max_moment_mx": self.max_moment_mx,
+            "max_moment_my": self.max_moment_my,
+            "max_moment_mz": self.max_moment_mz,
+        }

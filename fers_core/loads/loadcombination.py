@@ -21,7 +21,7 @@ class LoadCombination:
             situation (str, optional): A description of the situation for this load combination.
             check (str, optional): A parameter to determine the type of checks to perform, defaulting to 'ALL'.
         """  # noqa: E501
-        self.load_combination_id = LoadCombination._load_combination_counter
+        self.id = LoadCombination._load_combination_counter
         LoadCombination._load_combination_counter += 1
         self.name = name
         self.load_cases_factors = load_cases_factors or {}
@@ -52,3 +52,12 @@ class LoadCombination:
             combination_items.append([factor, rstab_load_case_number, 0, False])
 
         return combination_items
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "load_cases_factors": {lc.id: factor for lc, factor in self.load_cases_factors.items()},
+            "situation": self.situation,
+            "check": self.check,
+        }
