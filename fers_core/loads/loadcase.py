@@ -9,20 +9,17 @@ class LoadCase:
     def __init__(
         self,
         name: Optional[str] = None,
-        load_case_id: Optional[int] = None,
+        id: Optional[int] = None,
         nodal_loads: Optional[list] = None,
         line_loads: Optional[list] = None,
         rotation_imperfections: Optional[list] = None,
         translation_imperfections: Optional[list] = None,
     ):
-        if load_case_id is None:
-            self.load_case_id = LoadCase._load_case_counter
+        self.id = id or LoadCase._load_case_counter
+        if id is None:
             LoadCase._load_case_counter += 1
-        else:
-            self.load_case_id = load_case_id
-
         if name is None:
-            self.name = f"Loadcase {self.load_case_id}"
+            self.name = f"Loadcase {self.id}"
         else:
             self.name = name
 
@@ -65,6 +62,16 @@ class LoadCase:
             if load_case.name == name:
                 return load_case
         return None
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "nodal_loads": [nl.id for nl in self.nodal_loads],
+            "line_loads": [ll.id for ll in self.line_loads],
+            "rotation_imperfections": [ri.id for ri in self.rotation_imperfections],
+            "translation_imperfections": [ti.id for ti in self.translation_imperfections],
+        }
 
     @staticmethod
     def apply_deadload_to_members(members, load_case, direction):

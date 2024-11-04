@@ -32,3 +32,4 @@ __pycache__
 # Virtual environment
 venv/
 .env
+json_input_solver/

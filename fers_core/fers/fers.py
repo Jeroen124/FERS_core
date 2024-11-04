@@ -1,4 +1,5 @@
 import re
+import ujson
 
 import matplotlib.pyplot as plt
 
@@ -21,6 +22,22 @@ class FERS:
         self.imperfection_cases = []
         self.analysis_options = None
         self.results = None
+
+    def to_dict(self):
+        """Convert the FERS model to a dictionary representation."""
+        return {
+            "member_sets": [member_set.to_dict() for member_set in self.member_sets],
+            "load_cases": [load_case.to_dict() for load_case in self.load_cases],
+            "load_combinations": [load_comb.to_dict() for load_comb in self.load_combinations],
+            "imperfection_cases": [imp_case.to_dict() for imp_case in self.imperfection_cases],
+            "analysis_options": self.analysis_options.to_dict() if self.analysis_options else None,
+            "results": self.results.to_dict() if self.results else None,
+        }
+
+    def save_to_json(self, file_path):
+        """Save the FERS model to a JSON file using ujson."""
+        with open(file_path, "w") as json_file:
+            ujson.dump(self.to_dict(), json_file)
 
     def create_load_case(self, name):
         load_case = LoadCase(name=name)
@@ -146,16 +163,16 @@ class FERS:
                         nodal_support=original_node.nodal_support,
                         classification=original_node.classification,
                     )
-                    node_mapping[(original_node.pk, i)] = new_node
+                    node_mapping[(original_node.id, i)] = new_node
 
         for i in range(1, count):
             for original_member_set in original_model.get_all_member_sets():
                 new_members = []
                 for member in original_member_set.members:
-                    new_start_node = node_mapping[(member.start_node.pk, i)]
-                    new_end_node = node_mapping[(member.end_node.pk, i)]
+                    new_start_node = node_mapping[(member.start_node.id, i)]
+                    new_end_node = node_mapping[(member.end_node.id, i)]
                     if member.reference_node is not None:
-                        new_reference_node = node_mapping[(member.reference_node.pk, i)]
+                        new_reference_node = node_mapping[(member.reference_node.id, i)]
                     else:
                         new_reference_node = None
 
@@ -216,14 +233,14 @@ class FERS:
                 Y=original_node.Y + translation_vector[1],
                 Z=original_node.Z + translation_vector[2],
             )
-            node_translation_map[original_node.pk] = translated_node
+            node_translation_map[original_node.id] = translated_node
 
         # Reconstruct member sets with translated nodes
         for original_member_set in model.get_all_member_sets():
             new_members = []
             for member in original_member_set.members:
-                new_start_node = node_translation_map[member.start_node.pk]
-                new_end_node = node_translation_map[member.end_node.pk]
+                new_start_node = node_translation_map[member.start_node.id]
+                new_end_node = node_translation_map[member.end_node.id]
                 new_member = Member(
                     start_node=new_start_node,
                     end_node=new_end_node,
@@ -282,9 +299,9 @@ class FERS:
 
         for member_set in self.member_sets:
             for member in member_set.members:
-                if member.pk not in member_ids:
+                if member.id not in member_ids:
                     members.append(member)
-                    member_ids.add(member.pk)
+                    member_ids.add(member.id)
 
         return members
 
@@ -310,20 +327,20 @@ class FERS:
         node_ids = set()
         for member_set in self.member_sets:
             for member in member_set.members:
-                if member.start_node.pk not in node_ids:
+                if member.start_node.id not in node_ids:
                     nodes.append(member.start_node)
-                    node_ids.add(member.start_node.pk)
+                    node_ids.add(member.start_node.id)
 
-                if member.end_node.pk not in node_ids:
+                if member.end_node.id not in node_ids:
                     nodes.append(member.end_node)
-                    node_ids.add(member.end_node.pk)
+                    node_ids.add(member.end_node.id)
 
         return nodes
 
     def get_node_by_pk(self, pk):
         """Returns a node by its PK."""
         for node in self.get_all_nodes():
-            if node.pk == pk:
+            if node.id == pk:
                 return node
         return None
 
@@ -436,8 +453,8 @@ class FERS:
             for member in member_set.members:
                 for node in [member.start_node, member.end_node]:
                     if node.nodal_support:
-                        if node.nodal_support.pk not in unique_nodal_supports:
-                            unique_nodal_supports[node.pk] = node.nodal_support
+                        if node.nodal_support.id not in unique_nodal_supports:
+                            unique_nodal_supports[node.id] = node.nodal_support
 
         # Return the materials as a list
         return unique_nodal_supports
@@ -459,7 +476,7 @@ class FERS:
             for member in member_set.members:
                 for node in [member.start_node, member.end_node]:
                     if node.nodal_support:
-                        support_no = node.nodal_support.pk
+                        support_no = node.nodal_support.id
                         if support_no not in support_details:
                             support_details[support_no] = {
                                 "support_no": support_no,
@@ -468,7 +485,7 @@ class FERS:
                                 "rotation_conditions": node.nodal_support.rotation_conditions,
                             }
                         # Add the node's number to the list of nodes for this NodalSupport
-                        support_details[support_no]["node_nos"].add(node.pk)
+                        support_details[support_no]["node_nos"].add(node.id)
 
         # Convert the details to a list of dictionaries for easier consumption
         detailed_support_list = list(support_details.values())
@@ -508,7 +525,7 @@ class FERS:
     def get_load_combination_by_pk(self, pk):
         """Retrieve a load case by its pk."""
         for load_combination in self.load_combinations:
-            if load_combination.pk == pk:
+            if load_combination.id == pk:
                 return load_combination
         return None
 
@@ -536,7 +553,7 @@ class FERS:
     def get_model_summary(self):
         """Returns a summary of the model's components: MemberSets, LoadCases, and LoadCombinations."""
         summary = {
-            "MemberSets": [member_set.pk for member_set in self.member_sets],
+            "MemberSets": [member_set.id for member_set in self.member_sets],
             "LoadCases": [load_case.name for load_case in self.load_cases],
             "LoadCombinations": [load_combination.name for load_combination in self.load_combinations],
         }

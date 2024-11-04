@@ -51,3 +51,11 @@ class ImperfectionCase:
 
     def add_translation_imperfection(self, imperfection):
         self.translation_imperfections.append(imperfection)
+
+    def to_dict(self):
+        return {
+            "imperfection_case_id": self.imperfection_case_id,
+            "loadcombinations": [lc.id for lc in self.loadcombinations],
+            "rotation_imperfections": [ri.id for ri in self.rotation_imperfections],
+            "translation_imperfections": [ti.id for ti in self.translation_imperfections],
+        }

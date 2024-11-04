@@ -7,20 +7,30 @@ class Material:
     def __init__(
         self,
         name: str,
-        E_mod: float,
-        G_mod: float,
+        e_mod: float,
+        g_mod: float,
         density: float,
         yield_stress: float,
-        material_id: Optional[int] = None,
+        id: Optional[int] = None,
     ):
-        self.id = material_id or Material._material_counter
-        if material_id is None:
+        self.id = id or Material._material_counter
+        if id is None:
             Material._material_counter += 1
         self.name = name
-        self.E_mod = E_mod
-        self.G_mod = G_mod
+        self.e_mod = e_mod
+        self.g_mod = g_mod
         self.density = density
         self.yield_stress = yield_stress
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "e_mod": self.e_mod,
+            "g_mod": self.g_mod,
+            "density": self.density,
+            "yield_stress": self.yield_stress,
+        }
 
     @classmethod
     def reset_counter(cls):

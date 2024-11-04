@@ -4,11 +4,11 @@ from typing import Optional
 
 class NodalSupport:
     DIRECTIONS = ["X", "Y", "Z"]
-    _nodal_support_counter = 1
+    id = 1
 
     def __init__(
         self,
-        support_id: Optional[int] = None,
+        id: Optional[int] = None,
         classification: Optional[str] = None,
         displacement_conditions: Optional[dict] = None,
         rotation_conditions: Optional[dict] = None,
@@ -18,7 +18,7 @@ class NodalSupport:
         specifications for displacement and rotation.
         Defaults to a fixed condition if no conditions are provided.
 
-        :param support_id: Primary key for the nodal support instance.
+        :param id: Primary key for the nodal support instance.
         :param classification: Optional classification for the nodal support.
         :param displacement_conditions: Optional dictionary with conditions per direction.
         :param rotation_conditions: Optional dictionary with conditions per direction.
@@ -26,7 +26,9 @@ class NodalSupport:
         # Default condition for all directions
         default_condition = SupportCondition(condition=SupportCondition.FIXED)
 
-        self.support_id = support_id or self._get_next_support_id()
+        self.id = id or NodalSupport.id
+        if id is None:
+            NodalSupport.id += 1
         self.classification = classification
 
         # Initialize conditions; default to fixed if none provided
@@ -51,13 +53,7 @@ class NodalSupport:
     @classmethod
     def reset_counter(cls):
         """Reset the nodal support counter to 1."""
-        cls._nodal_support_counter = 1
-
-    def _get_next_support_id(self) -> int:
-        """Generate and return the next primary key."""
-        support_id = NodalSupport._nodal_support_counter
-        NodalSupport._nodal_support_counter += 1
-        return support_id
+        cls.id = 1
 
     def _default_conditions(self) -> dict:
         """Return default fixed conditions for all directions."""
@@ -67,7 +63,16 @@ class NodalSupport:
 
     def __repr__(self) -> str:
         return (
-            f"NodalSupport(support_id={self.support_id}, type={self.type}, "
+            f"NodalSupport(id={self.id}, type={self.type}, "
             f"displacement_conditions={self.displacement_conditions}, "
             f"rotation_conditions={self.rotation_conditions})"
         )
+
+    def to_dict(self) -> dict:
+        """Convert the nodal support instance to a dictionary."""
+        return {
+            "id": self.id,
+            "classification": self.classification,
+            "displacement_conditions": self.displacement_conditions,
+            "rotation_conditions": self.rotation_conditions,
+        }

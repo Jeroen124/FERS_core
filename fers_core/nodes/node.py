@@ -7,7 +7,7 @@ class Node:
 
     def __init__(
         self,
-        node_id: Optional[int] = None,
+        id: Optional[int] = None,
         classification: str = "",
         X: float = 0.0,
         Y: float = 0.0,
@@ -15,13 +15,23 @@ class Node:
         nodal_support: Optional[NodalSupport] = None,
     ):
         self.id = id or Node._node_counter
-        if node_id is None:
+        if id is None:
             Node._node_counter += 1
         self.classification = classification
         self.X = X
         self.Y = Y
         self.Z = Z
         self.nodal_support = nodal_support
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "classification": self.classification,
+            "X": self.X,
+            "Y": self.Y,
+            "Z": self.Z,
+            "nodal_support": str(self.nodal_support) if self.nodal_support else None,
+        }
 
     @classmethod
     def reset_counter(cls) -> None:
