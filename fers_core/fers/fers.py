@@ -12,15 +12,18 @@ from FERS_core.members.memberhinge import MemberHinge
 from FERS_core.members.memberset import MemberSet
 from FERS_core.nodes.node import Node
 from FERS_core.supports.nodalsupport import NodalSupport
+from FERS_core.settings.settings import Settings
 
 
 class FERS:
-    def __init__(self):
+    def __init__(self, settings=None):
         self.member_sets = []
         self.load_cases = []
         self.load_combinations = []
         self.imperfection_cases = []
-        self.analysis_options = None
+        self.settings = (
+            settings if settings is not None else Settings()
+        )  # Use provided settings or create default
         self.results = None
 
     def to_dict(self):
@@ -30,7 +33,7 @@ class FERS:
             "load_cases": [load_case.to_dict() for load_case in self.load_cases],
             "load_combinations": [load_comb.to_dict() for load_comb in self.load_combinations],
             "imperfection_cases": [imp_case.to_dict() for imp_case in self.imperfection_cases],
-            "analysis_options": self.analysis_options.to_dict() if self.analysis_options else None,
+            "settings": self.settings.to_dict(),
             "results": self.results.to_dict() if self.results else None,
             "memberhinges": [
                 memberhinge.to_dict() for memberhinge in self.get_unique_member_hinges_from_all_member_sets()
@@ -39,6 +42,14 @@ class FERS:
                 material.to_dict() for material in self.get_unique_materials_from_all_member_sets()
             ],
             "sections": [section.to_dict() for section in self.get_unique_sections_from_all_member_sets()],
+        }
+
+    def settings_to_dict(self):
+        """Convert settings to a dictionary representation with additional information."""
+        return {
+            **self.settings.to_dict(),
+            "total_elements": self.number_of_elements(),
+            "total_nodes": self.number_of_nodes(),
         }
 
     def save_to_json(self, file_path, indent=None):
