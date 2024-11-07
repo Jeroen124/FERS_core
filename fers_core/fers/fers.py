@@ -6,6 +6,8 @@ import matplotlib.pyplot as plt
 from FERS_core.imperfections.imperfectioncase import ImperfectionCase
 from FERS_core.loads.loadcase import LoadCase
 from FERS_core.loads.loadcombination import LoadCombination
+from FERS_core.loads.nodalload import NodalLoad
+from FERS_core.members.material import Material
 from FERS_core.members.member import Member
 from FERS_core.members.section import Section
 from FERS_core.members.memberhinge import MemberHinge
@@ -110,6 +112,9 @@ class FERS:
         MemberSet.reset_counter()
         Node.reset_counter()
         NodalSupport.reset_counter()
+        NodalLoad.reset_counter()
+        Section.reset_counter()
+        Material.reset_counter()
 
     @staticmethod
     def translate_member_set(member_set, translation_vector):

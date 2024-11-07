@@ -67,8 +67,8 @@ class LoadCase:
         return {
             "id": self.id,
             "name": self.name,
-            "nodal_loads": [nl.id for nl in self.nodal_loads],
-            "line_loads": [ll.id for ll in self.line_loads],
+            "nodal_loads": [nl.to_dict() for nl in self.nodal_loads],
+            "line_loads": [ll.to_dict() for ll in self.line_loads],
             "rotation_imperfections": [ri.id for ri in self.rotation_imperfections],
             "translation_imperfections": [ti.id for ti in self.translation_imperfections],
         }

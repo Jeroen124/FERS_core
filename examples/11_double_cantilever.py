@@ -18,7 +18,10 @@ node3 = Node(5, 5, 0)  # Free end
 Steel_S235 = Material(name="Steel", e_mod=200e9, g_mod=77e9, density=7850, yield_stress=235e6)
 
 # Create a section
-section = Section(name="Beam Section", material=Steel_S235, i_y=1.0e-6, i_z=1.0e-6, j=1.0e-6, area=0.1)
+# For example IPE 180: https://eurocodeapplied.com/design/en1993/ipe-hea-heb-hem-design-properties
+section = Section(
+    name="IPE 180 Beam Section", material=Steel_S235, i_y=13.17e-6, i_z=1.0e-6, j=47.23e-9, area=2395e-6
+)
 
 # Create member
 beam1 = Member(start_node=node1, end_node=node2, section=section)

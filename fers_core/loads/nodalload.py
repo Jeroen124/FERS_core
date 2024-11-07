@@ -23,6 +23,10 @@ class NodalLoad:
         # Automatically add this nodal load to the load case upon creation
         self.load_case.add_nodal_load(self)
 
+    @classmethod
+    def reset_counter(cls):
+        cls._nodal_load_counter = 1
+
     def to_dict(self):
         return {
             "id": self.id,
