@@ -11,6 +11,7 @@ class Section:
         material: Material,
         i_y: float,
         i_z: float,
+        j: float,
         area: float,
         h: float = None,
         b: float = None,
@@ -26,6 +27,7 @@ class Section:
         material (Material): Material object representing the type of material used (e.g., steel).
         i_y (float): Moment of inertia about the y-axis, indicating resistance to bending.
         i_z (float): Moment of inertia about the z-axis, indicating resistance to torsion.
+        j (float): Torsional constant, indicating resistance to torsion.
         area (float): Cross-sectional area of the section, relevant for load calculations.
         h (float, optional): Height of the section, if applicable.
         b (float, optional): Width of the section, if applicable.
@@ -41,6 +43,7 @@ class Section:
         self.b = b
         self.i_y = i_y
         self.i_z = i_z
+        self.j = j
         self.area = area
         self.t_w = t_w
         self.t_f = t_f
@@ -58,6 +61,7 @@ class Section:
             "b": self.b,
             "i_y": self.i_y,
             "i_z": self.i_z,
+            "j": self.j,
             "area": self.area,
             "t_w": self.t_w,
             "t_f": self.t_f,
