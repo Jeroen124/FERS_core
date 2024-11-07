@@ -63,16 +63,30 @@ class NodalSupport:
 
     def __repr__(self) -> str:
         return (
-            f"NodalSupport(id={self.id}, type={self.type}, "
+            f"NodalSupport(id={self.id}, type={self.classification}, "
             f"displacement_conditions={self.displacement_conditions}, "
             f"rotation_conditions={self.rotation_conditions})"
         )
 
     def to_dict(self) -> dict:
-        """Convert the nodal support instance to a dictionary."""
+        """Convert the nodal support instance to a dictionary with readable conditions."""
+
+        def condition_to_string(condition):
+            """Helper to convert a SupportCondition to a readable string."""
+            if condition.condition:
+                return condition.condition.value  # This gets the readable form, like "Fixed"
+            elif condition.stiffness is not None:
+                return f"Spring (stiffness={condition.stiffness})"
+            return "Custom"
+
         return {
             "id": self.id,
             "classification": self.classification,
-            "displacement_conditions": self.displacement_conditions,
-            "rotation_conditions": self.rotation_conditions,
+            "displacement_conditions": {
+                direction: condition_to_string(cond)
+                for direction, cond in self.displacement_conditions.items()
+            },
+            "rotation_conditions": {
+                direction: condition_to_string(cond) for direction, cond in self.rotation_conditions.items()
+            },
         }
