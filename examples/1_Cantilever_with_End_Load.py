@@ -14,7 +14,7 @@ node2 = Node(5, 0, 0)  # Free end
 Steel_S235 = Material(name="Steel", e_mod=200e9, g_mod=77e9, density=7850, yield_stress=235e6)
 
 # Create a section
-section = Section(name="Beam Section", material=Steel_S235, i_y=1.0e-6, i_z=1.0e-6, area=0.1)
+section = Section(name="Beam Section", material=Steel_S235, i_y=1.0e-6, i_z=1.0e-6, j=1.0e-6, area=0.1)
 
 # Create member
 beam = Member(start_node=node1, end_node=node2, section=section)

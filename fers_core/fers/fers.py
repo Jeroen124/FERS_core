@@ -16,7 +16,9 @@ from FERS_core.settings.settings import Settings
 
 
 class FERS:
-    def __init__(self, settings=None):
+    def __init__(self, settings=None, reset_counters=True):
+        if reset_counters:
+            self.reset_counters()
         self.member_sets = []
         self.load_cases = []
         self.load_combinations = []
@@ -42,6 +44,10 @@ class FERS:
                 material.to_dict() for material in self.get_unique_materials_from_all_member_sets()
             ],
             "sections": [section.to_dict() for section in self.get_unique_sections_from_all_member_sets()],
+            "nodal_supports": [
+                nodal_support.to_dict()
+                for nodal_support in self.get_unique_nodal_support_from_all_member_sets()
+            ],
         }
 
     def settings_to_dict(self):
@@ -377,6 +383,30 @@ class FERS:
             materials = member_set.get_unique_materials(ids_only=ids_only)
             unique_materials.update(materials)
         return list(unique_materials)
+
+    def get_unique_nodal_support_from_all_member_sets(self, ids_only=False):
+        """
+        Collects and returns unique NodalSupport instances used across all member sets in the model.
+
+        Args:
+            ids_only (bool): If True, return only the unique NodalSupport IDs.
+                            Otherwise, return NodalSupport objects.
+
+        Returns:
+            list: List of unique NodalSupport instances or their IDs.
+        """
+        unique_nodal_supports = {}
+
+        for member_set in self.member_sets:
+            for member in member_set.members:
+                # Check nodal supports for start and end nodes
+                for node in [member.start_node, member.end_node]:
+                    if node.nodal_support and node.nodal_support.id not in unique_nodal_supports:
+                        # Store unique nodal supports by ID
+                        unique_nodal_supports[node.nodal_support.id] = node.nodal_support
+
+        # Return only the IDs if ids_only is True
+        return list(unique_nodal_supports.keys()) if ids_only else list(unique_nodal_supports.values())
 
     def get_unique_sections_from_all_member_sets(self, ids_only=False):
         """

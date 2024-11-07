@@ -7,20 +7,20 @@ class Node:
 
     def __init__(
         self,
-        id: Optional[int] = None,
-        classification: str = "",
         X: float = 0.0,
         Y: float = 0.0,
         Z: float = 0.0,
+        id: Optional[int] = None,
+        classification: str = "",
         nodal_support: Optional[NodalSupport] = None,
     ):
+        self.X = X
+        self.Y = Y
+        self.Z = Z
         self.id = id or Node._node_counter
         if id is None:
             Node._node_counter += 1
         self.classification = classification
-        self.X = X
-        self.Y = Y
-        self.Z = Z
         self.nodal_support = nodal_support
 
     def to_dict(self):

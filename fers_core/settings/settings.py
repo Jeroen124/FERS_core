@@ -16,9 +16,7 @@ class Settings:
         if id is None:
             Settings._settings_counter += 1
         self.analysis_option = analysis_option if analysis_option else AnalysisOptions()
-        self.general_info = (
-            general_info if general_info else GeneralInfo()
-        )  # Updated to use provided general_info
+        self.general_info = general_info if general_info else GeneralInfo()
 
     @classmethod
     def reset_counter(cls):
