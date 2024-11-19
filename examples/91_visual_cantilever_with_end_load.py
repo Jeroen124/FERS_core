@@ -1,5 +1,5 @@
 import os
-from FERS_core import Node, Member, FERS, Material, Section, MemberSet, NodalSupport, NodalLoad
+from FERS_core import Node, Member, FERS, Material, Section, MemberSet, NodalSupport, NodalLoad, ShapePath
 
 
 # =============================================================================
@@ -19,9 +19,19 @@ Steel_S235 = Material(name="Steel", e_mod=200e9, g_mod=77e9, density=7850, yield
 
 # Create a section
 # For example IPE 180 - A:
+shape_path_ipe_180 = ShapePath(
+    name="IPE180",
+    shape_commands=ShapePath.create_ipe_profile(h=0.177, b=0.091, t_f=0.0065, t_w=0.0043, r=0.009),
+)
 
 section = Section(
-    name="IPE 180 Beam Section", material=Steel_S235, i_y=10.63e-6, i_z=0.819e-6, j=47.23e-9, area=2395e-6
+    name="IPE 180 Beam Section",
+    material=Steel_S235,
+    i_y=10.63e-6,
+    i_z=0.819e-6,
+    j=47.23e-9,
+    area=2395e-6,
+    shape_path=shape_path_ipe_180,
 )
 
 
@@ -51,7 +61,7 @@ end_load_case = calculation_1.create_load_case(name="End Load")
 nodal_load = NodalLoad(node=node2, load_case=end_load_case, magnitude=-1000, direction=(0, -1, 0))
 
 
-file_path = os.path.join("examples", "json_input_solver", "1_cantilever_with_end_load.json")
+file_path = os.path.join("examples", "json_input_solver", "91_visual_cantilever_with_end_load.json")
 calculation_1.save_to_json(file_path, indent=4)
 
 

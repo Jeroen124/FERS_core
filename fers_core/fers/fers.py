@@ -50,6 +50,9 @@ class FERS:
                 nodal_support.to_dict()
                 for nodal_support in self.get_unique_nodal_support_from_all_member_sets()
             ],
+            "shape_paths": [
+                shape_path.to_dict() for shape_path in self.get_unique_shape_paths_from_all_member_sets()
+            ],
         }
 
     def settings_to_dict(self):
@@ -388,6 +391,29 @@ class FERS:
             materials = member_set.get_unique_materials(ids_only=ids_only)
             unique_materials.update(materials)
         return list(unique_materials)
+
+    def get_unique_shape_paths_from_all_member_sets(self, ids_only=False):
+        """
+        Collects and returns unique ShapePath instances used across all member sets in the model.
+
+        Args:
+            ids_only (bool): If True, return only the unique ShapePath IDs.
+                            Otherwise, return ShapePath objects.
+
+        Returns:
+            list: List of unique ShapePath instances or their IDs used across all member sets.
+        """
+        unique_shape_paths = {}
+
+        for member_set in self.member_sets:
+            for member in member_set.members:
+                section = member.section
+                if section.shape_path:
+                    shape_path_id = section.shape_path.id
+                    if shape_path_id not in unique_shape_paths:
+                        unique_shape_paths[shape_path_id] = section.shape_path
+
+        return list(unique_shape_paths.keys()) if ids_only else list(unique_shape_paths.values())
 
     def get_unique_nodal_support_from_all_member_sets(self, ids_only=False):
         """

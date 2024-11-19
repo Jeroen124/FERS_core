@@ -3,6 +3,7 @@ from .members.member import Member
 from .fers.fers import FERS
 from .members.material import Material
 from .members.section import Section
+from .members.shapepath import ShapePath
 from .members.memberset import MemberSet
 from .supports.nodalsupport import NodalSupport
 from .loads.loadcase import LoadCase
@@ -19,6 +20,7 @@ __all__ = [
     "Material",
     "NodalSupport",
     "Section",
+    "ShapePath",
     "MemberSet",
     "LoadCase",
     "NodalLoad",
