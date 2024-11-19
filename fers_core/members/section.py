@@ -1,5 +1,6 @@
 from typing import Optional
 from FERS_core.members.material import Material
+from FERS_core.members.shapepath import ShapePath
 
 
 class Section:
@@ -13,11 +14,10 @@ class Section:
         i_z: float,
         j: float,
         area: float,
-        h: float = None,
-        b: float = None,
-        t_w: float = None,
-        t_f: float = None,
+        h: Optional[float] = None,
+        b: Optional[float] = None,
         id: Optional[int] = None,
+        shape_path: Optional[ShapePath] = None,
     ):
         """
         Initializes a Section object representing a structural element.
@@ -45,8 +45,7 @@ class Section:
         self.i_z = i_z
         self.j = j
         self.area = area
-        self.t_w = t_w
-        self.t_f = t_f
+        self.shape_path = shape_path
 
     @classmethod
     def reset_counter(cls):
@@ -63,6 +62,5 @@ class Section:
             "i_z": self.i_z,
             "j": self.j,
             "area": self.area,
-            "t_w": self.t_w,
-            "t_f": self.t_f,
+            "shape_path": self.shape_path.id if self.shape_path else None,
         }

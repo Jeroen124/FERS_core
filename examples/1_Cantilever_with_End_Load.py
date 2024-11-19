@@ -18,10 +18,12 @@ node2 = Node(5, 0, 0)  # Free end
 Steel_S235 = Material(name="Steel", e_mod=200e9, g_mod=77e9, density=7850, yield_stress=235e6)
 
 # Create a section
-# For example IPE 180: https://eurocodeapplied.com/design/en1993/ipe-hea-heb-hem-design-properties
+# For example IPE 180 - A:
+
 section = Section(
-    name="IPE 180 Beam Section", material=Steel_S235, i_y=13.17e-6, i_z=1.0e-6, j=47.23e-9, area=2395e-6
+    name="IPE 180 Beam Section", material=Steel_S235, i_y=10.63e-6, i_z=0.819e-6, j=47.23e-9, area=2395e-6
 )
+
 
 # Create member
 beam = Member(start_node=node1, end_node=node2, section=section)
@@ -64,10 +66,13 @@ calculation_1.save_to_json(file_path, indent=4)
 # print(f"Fy = {node1.reaction_force[1]:.2f} kN")
 # print(f"Mz = {node1.reaction_moment[2]:.2f} kN·m")
 
+# # With the use of beam equations https://mechanicalc.com/reference/beam-analysis
+
+
 # # Calculate and print maximum bending stress
 # i_z = beam.moment_of_inertia_z
 # y_max = beam.height / 2
 # M_max = abs(node1.reaction_moment[2])
 # sigma_max = M_max * y_max / i_z
 
-# print(f"\nMaximum bending stress: {sigma_max:.2f} MPa")
+# print(f"\nMaximum bending stre
