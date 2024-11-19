@@ -12,6 +12,7 @@ from FERS_core.members.member import Member
 from FERS_core.members.section import Section
 from FERS_core.members.memberhinge import MemberHinge
 from FERS_core.members.memberset import MemberSet
+from FERS_core.members.shapepath import ShapePath
 from FERS_core.nodes.node import Node
 from FERS_core.supports.nodalsupport import NodalSupport
 from FERS_core.settings.settings import Settings
@@ -118,6 +119,7 @@ class FERS:
         NodalLoad.reset_counter()
         Section.reset_counter()
         Material.reset_counter()
+        ShapePath.reset_counter()
 
     @staticmethod
     def translate_member_set(member_set, translation_vector):
