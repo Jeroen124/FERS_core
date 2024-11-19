@@ -46,27 +46,32 @@ class ShapePath:
         List[ShapeCommand]: List of shape commands defining the IPE geometry.
         """
         commands = [
-            ShapeCommand("moveTo", y=-b / 2, z=h / 2),
-            ShapeCommand("lineTo", y=b / 2, z=h / 2),
-            ShapeCommand("lineTo", y=b / 2, z=h / 2 - t_f),
-            ShapeCommand("lineTo", y=t_w / 2, z=h / 2 - t_f),
-            ShapeCommand("lineTo", y=t_w / 2, z=-h / 2 + t_f),
-            ShapeCommand("lineTo", y=-t_w / 2, z=-h / 2 + t_f),
-            ShapeCommand("lineTo", y=-t_w / 2, z=-h / 2 + t_f),
-            ShapeCommand("lineTo", y=-b / 2, z=-h / 2),
-            ShapeCommand("lineTo", y=b / 2, z=-h / 2),
-            ShapeCommand("lineTo", y=b / 2, z=-h / 2 + t_f),
-            ShapeCommand("lineTo", y=-b / 2, z=-h / 2 + t_f),
+            ShapeCommand("moveTo", y=-b / 2, z=h / 2),  # 0
+            ShapeCommand("lineTo", y=b / 2, z=h / 2),  # 1
+            ShapeCommand("lineTo", y=b / 2, z=h / 2 - t_f),  # 2
+            ShapeCommand("lineTo", y=t_w / 2, z=h / 2 - t_f),  # 3
+            ShapeCommand("lineTo", y=t_w / 2, z=-h / 2 + t_f),  # 4
+            ShapeCommand("lineTo", y=b / 2, z=-h / 2 + t_f),  # 5
+            ShapeCommand("lineTo", y=b / 2, z=-h / 2),  # 6
+            ShapeCommand("lineTo", y=-b / 2, z=-h / 2),  # 7
+            ShapeCommand("lineTo", y=-b / 2, z=-h / 2 + t_f),  # 8
+            ShapeCommand("lineTo", y=-t_w / 2, z=-h / 2 + t_f),  # 9
+            ShapeCommand("lineTo", y=-t_w / 2, z=h / 2 - t_f),  # 10
+            ShapeCommand("lineTo", y=-b / 2, z=h / 2 - t_f),  # 11
             ShapeCommand("closePath"),
         ]
         return commands
 
-    def plot(self):
+    def plot(self, show_nodes: bool = True):
         """
         Plots the shape on the yz plane, with y as the horizontal axis and z as the vertical axis.
+        Parameters:
+        show_nodes (bool): Whether to display node numbers and positions. Default is True.
         """
         y, z = [], []
+        node_coords = []  # To store node coordinates for plotting
         start_y, start_z = None, None  # To track the starting point for closePath
+        node_count = 0
 
         for command in self.shape_commands:
             if command.command == "moveTo":
@@ -75,16 +80,26 @@ class ShapePath:
                     y, z = [], []
                 y.append(command.y)
                 z.append(command.z)
+                node_coords.append((command.y, command.z, node_count))
                 start_y, start_z = command.y, command.z
+                node_count += 1
             elif command.command == "lineTo":
                 y.append(command.y)
                 z.append(command.z)
+                node_coords.append((command.y, command.z, node_count))
+                node_count += 1
             elif command.command == "closePath":
                 if start_y is not None and start_z is not None:
                     y.append(start_y)
                     z.append(start_z)
                 plt.plot(y, z, "b-")
                 y, z = [], []
+
+        # Plot node numbers if enabled
+        if show_nodes:
+            for ny, nz, nnum in node_coords:
+                plt.scatter(ny, nz, color="red")  # Plot the node as a red point
+                plt.text(ny, nz, str(nnum), color="red", fontsize=10, ha="right")
 
         plt.axis("equal")
         plt.title(self.name)
