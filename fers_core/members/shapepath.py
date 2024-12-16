@@ -101,9 +101,45 @@ class ShapePath:
                 plt.scatter(ny, nz, color="red")  # Plot the node as a red point
                 plt.text(ny, nz, str(nnum), color="red", fontsize=10, ha="right")
 
+        plt.axvline(0, color="black", linestyle="--")  # y-axis (x=0)
+        plt.axhline(0, color="black", linestyle="--")  # z-axis (y=0)
+
         plt.axis("equal")
         plt.title(self.name)
         plt.xlabel("Y (Horizontal)")
         plt.ylabel("Z (Vertical)")
         plt.grid(True)
         plt.show()
+
+    def get_shape_geometry(self):
+        """
+        Converts the shape commands into nodes and edges for plotting or extrusion.
+
+        Returns:
+        - coords (list of tuple): A list of (y, z) coordinates defining the vertices of the shape.
+        - edges (list of tuple): A list of (start_index, end_index) representing connections between nodes.
+        """
+        coords = []  # To store all the (y, z) coordinates
+        edges = []  # To store edges as (start_index, end_index)
+        start_index = None  # To track the starting index for 'closePath'
+        node_index = 0  # Index counter for vertices
+
+        for command in self.shape_commands:
+            if command.command == "moveTo":
+                # Record the starting point for closePath
+                start_index = node_index
+                coords.append((command.y, command.z))
+                node_index += 1
+
+            elif command.command == "lineTo":
+                # Add a vertex and connect it to the previous node
+                coords.append((command.y, command.z))
+                edges.append((node_index - 1, node_index))
+                node_index += 1
+
+            elif command.command == "closePath":
+                if start_index is not None:
+                    # Close the loop by connecting the last node to the start node
+                    edges.append((node_index - 1, start_index))
+
+        return coords, edges

@@ -11,13 +11,15 @@ calculation_1 = FERS()
 
 
 # Create nodes
-node1 = Node(0, 0, 0)  # Fixed end
-node2 = Node(5, 0, 0)  # Free end
+node1 = Node(0, 0, 0)  # Connected to wall
+node2 = Node(0, 4, 0)  # Hinged connection
+node3 = Node(3, 0, 0)  # Connected to wall
 
 # Create material
-Steel_S235 = Material(name="Steel", e_mod=200e9, g_mod=77e9, density=7850, yield_stress=235e6)
+Steel_S235 = Material(name="Steel", e_mod=210e9, g_mod=80.769e9, density=7850, yield_stress=235e6)
 
-# Create an IPE section
+# Create a section
+# For example IPE 180 - A:
 
 ipe_section = Section.create_ipe_section(
     name="IPE 180 Beam Section",
@@ -29,34 +31,35 @@ ipe_section = Section.create_ipe_section(
     r=0.009,
 )
 
-
 # Create member
-beam = Member(start_node=node1, end_node=node2, section=ipe_section)
+beam_A = Member(start_node=node1, end_node=node3, section=ipe_section)
+beam_B = Member(start_node=node2, end_node=node3, section=ipe_section)
 
 # Creating a boundary conditions (by default all 6 d.o.f. are constraint)
 wall_support = NodalSupport()
 
 # Assigning the nodal_support to the correct node.
 node1.nodal_support = wall_support
+node3.nodal_support = wall_support
 
 # =============================================================================
 # Now that the geometrical part is created. Lets create the model and the loadcases
 # =============================================================================
 # Create a memberset holding the beam
-membergroup1 = MemberSet(members=[beam])
-
+membergroup1 = MemberSet(members=[beam_A])
+membergroup2 = MemberSet(members=[beam_B])
 
 # Adding the memberset to the model
 calculation_1.add_member_set(membergroup1)
+calculation_1.add_member_set(membergroup2)
 
 # Create a loadcase for the end load
 end_load_case = calculation_1.create_load_case(name="End Load")
 
 # Apply end load at node2 1 kN downward force (global y-axis) to the loadcase
-nodal_load = NodalLoad(node=node2, load_case=end_load_case, magnitude=-1000, direction=(0, -1, 0))
+nodal_load = NodalLoad(node=node2, load_case=end_load_case, magnitude=150000, direction=(0, -1, 0))
 
-
-file_path = os.path.join("examples", "json_input_solver", "91_visual_cantilever_with_end_load.json")
+file_path = os.path.join("examples", "json_input_solver", "21_two_bar_truss.json")
 calculation_1.save_to_json(file_path, indent=4)
 
 
