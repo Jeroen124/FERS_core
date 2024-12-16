@@ -1,7 +1,9 @@
 import re
 import ujson
 
+import numpy as np
 import matplotlib.pyplot as plt
+import pyvista as pv
 
 from FERS_core.imperfections.imperfectioncase import ImperfectionCase
 from FERS_core.loads.loadcase import LoadCase
@@ -600,6 +602,127 @@ class FERS:
             if load_combination.id == pk:
                 return load_combination
         return None
+
+    def plot_model_3d(self, show_nodes=True, show_sections=True, show_local_axes=True):
+        """
+        Creates an interactive 3D PyVista plot of the entire model, aligning sections to the member's axis.
+        Parameters:
+        - show_nodes (bool): Whether to show node spheres in the plot.
+        - show_sections (bool): Whether to extrude sections along members' axes.
+        - show_local_axes (bool): Whether to plot the local coordinate system at each member's start node.
+        """
+
+        # Create a PyVista plotter
+        plotter = pv.Plotter()
+
+        # Store all members and lines
+        all_points = []
+        all_lines = []
+        point_offset = 0
+
+        # Retrieve all members
+        members = self.get_all_members()
+
+        # Process all members to create 3D edges
+        for member in members:
+            start_node = member.start_node
+            end_node = member.end_node
+
+            # Collect start and end coordinates
+            start_xyz = (start_node.X, start_node.Y, start_node.Z)
+            end_xyz = (end_node.X, end_node.Y, end_node.Z)
+
+            # Add points to the points list
+            all_points.append(start_xyz)
+            all_points.append(end_xyz)
+
+            # Define a line connecting these two points
+            all_lines.append(2)
+            all_lines.append(point_offset)
+            all_lines.append(point_offset + 1)
+
+            point_offset += 2
+
+        # Convert points and lines to PyVista PolyData
+        all_points = np.array(all_points, dtype=np.float32)
+        poly_data = pv.PolyData(all_points)
+        poly_data.lines = np.array(all_lines, dtype=np.int32)
+
+        # Add lines to the plot
+        plotter.add_mesh(poly_data, color="blue", line_width=2, label="Members")
+
+        if show_sections:
+            for member in members:
+                start_node = member.start_node
+                end_node = member.end_node
+                section = member.section
+
+                if section.shape_path is not None:
+                    # Get nodes and edges of the section in the local y-z plane
+                    coords_2d, edges = section.shape_path.get_shape_geometry()
+
+                    # Convert to a 3D format, keeping points in the local y-z plane
+                    coords_local = np.array([[0.0, y, z] for y, z in coords_2d], dtype=np.float32)
+
+                    # Get the local coordinate system
+                    local_x, local_y, local_z = member.local_coordinate_system()
+
+                    # Build the transformation matrix
+                    transform_matrix = np.column_stack((local_x, local_y, local_z))
+
+                    # Transform the local y-z points into the global coordinate system
+                    transformed_coords = coords_local @ transform_matrix.T
+
+                    # Translate the transformed coordinates to the start node position
+                    transformed_coords += np.array([start_node.X, start_node.Y, start_node.Z])
+
+                    # Create a PyVista PolyData for the section
+                    section_polydata = pv.PolyData(transformed_coords)
+                    lines = []
+                    for edge in edges:
+                        lines.append(2)
+                        lines.extend(edge)
+                    section_polydata.lines = np.array(lines, dtype=np.int32)
+
+                    # Extrude the section along the member's local x-axis
+                    dx = end_node.X - start_node.X
+                    dy = end_node.Y - start_node.Y
+                    dz = end_node.Z - start_node.Z
+                    extruded_section = section_polydata.extrude([dx, dy, dz])
+
+                    # Add extruded section to the plot
+                    plotter.add_mesh(extruded_section, color="steelblue", label=f"Section {section.name}")
+
+        if show_local_axes:
+            for index, member in enumerate(members):
+                start_node = member.start_node
+                local_x, local_y, local_z = member.local_coordinate_system()
+
+                # Define vectors for the local axes
+                origin = np.array([start_node.X, start_node.Y, start_node.Z])
+                scale = 0.2 * member.length()  # Scale local axes vectors relative to member length
+
+                if index == 0:
+                    plotter.add_arrows(origin, local_x * scale, color="red", label="Local X")
+                    plotter.add_arrows(origin, local_y * scale, color="green", label="Local Y")
+                    plotter.add_arrows(origin, local_z * scale, color="blue", label="Local Z")
+                else:
+                    plotter.add_arrows(origin, local_x * scale, color="red")
+                    plotter.add_arrows(origin, local_y * scale, color="green")
+                    plotter.add_arrows(origin, local_z * scale, color="blue")
+
+        if show_nodes:
+            # Plot spheres at each unique node location
+            unique_nodes = self.get_all_nodes()
+            node_points = [(node.X, node.Y, node.Z) for node in unique_nodes]
+            point_cloud = pv.PolyData(node_points)
+            glyph = point_cloud.glyph(geom=pv.Sphere(radius=0.1), scale=False, orient=False)
+            plotter.add_mesh(glyph, color="red", label="Nodes")
+
+        # Add a legend and grid
+        plotter.add_legend()
+        plotter.show_grid(color="gray")
+        plotter.show(title="FERS 3D Model")
 
     def plot_model(self, plane="yz"):
         """

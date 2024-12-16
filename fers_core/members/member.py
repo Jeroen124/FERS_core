@@ -124,3 +124,35 @@ class Member:
             if isinstance(self.member_type, MemberType)
             else self.member_type,
         }
+
+    def local_coordinate_system(self):
+        """
+        Calculates the local coordinate system (x, y, z) for the member.
+
+        Returns:
+        - local_x (numpy array): The local x-axis (unit vector along the member's axis).
+        - local_y (numpy array): The local y-axis (unit vector perpendicular to x and
+          lying in the global xz-plane if possible).
+        - local_z (numpy array): The local z-axis (unit vector orthogonal to x and y).
+        """
+        import numpy as np
+
+        # Compute the local x-axis (direction vector from start_node to end_node)
+        dx = self.end_node.X - self.start_node.X
+        dy = self.end_node.Y - self.start_node.Y
+        dz = self.end_node.Z - self.start_node.Z
+        length = (dx**2 + dy**2 + dz**2) ** 0.5
+        local_x = np.array([dx / length, dy / length, dz / length])
+
+        # Compute the local y-axis
+        if np.allclose(local_x, [0, 1, 0]):  # Local x aligns with global y
+            local_y = np.array([1, 0, 0])  # Align local y with global x
+        else:
+            # Project onto the global xz-plane and normalize
+            local_y = np.array([local_x[2], 0, -local_x[0]])
+            local_y /= np.linalg.norm(local_y)
+
+        # Compute the local z-axis (orthogonal to x and y)
+        local_z = np.cross(local_x, local_y)
+
+        return local_x, local_y, local_z

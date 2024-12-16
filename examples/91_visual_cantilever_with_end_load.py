@@ -1,5 +1,5 @@
 import os
-from FERS_core import Node, Member, FERS, Material, Section, MemberSet, NodalSupport, NodalLoad, ShapePath
+from FERS_core import Node, Member, FERS, Material, Section, MemberSet, NodalSupport, NodalLoad
 
 
 # =============================================================================
@@ -17,26 +17,21 @@ node2 = Node(5, 0, 0)  # Free end
 # Create material
 Steel_S235 = Material(name="Steel", e_mod=200e9, g_mod=77e9, density=7850, yield_stress=235e6)
 
-# Create a section
-# For example IPE 180 - A:
-shape_path_ipe_180 = ShapePath(
-    name="IPE180",
-    shape_commands=ShapePath.create_ipe_profile(h=0.177, b=0.091, t_f=0.0065, t_w=0.0043, r=0.009),
-)
+# Create an IPE section
 
-section = Section(
+ipe_section = Section.create_ipe_section(
     name="IPE 180 Beam Section",
     material=Steel_S235,
-    i_y=10.63e-6,
-    i_z=0.819e-6,
-    j=47.23e-9,
-    area=2395e-6,
-    shape_path=shape_path_ipe_180,
+    h=0.177,
+    b=0.091,
+    t_f=0.0065,
+    t_w=0.0043,
+    r=0.009,
 )
 
 
 # Create member
-beam = Member(start_node=node1, end_node=node2, section=section)
+beam = Member(start_node=node1, end_node=node2, section=ipe_section)
 
 # Creating a boundary conditions (by default all 6 d.o.f. are constraint)
 wall_support = NodalSupport()

@@ -15,13 +15,13 @@ node1 = Node(0, 0, 0)  # Fixed end
 node2 = Node(5, 0, 0)  # Free end
 
 # Create material
-Steel_S235 = Material(name="Steel", e_mod=200e9, g_mod=77e9, density=7850, yield_stress=235e6)
+Steel_S235 = Material(name="Steel", e_mod=210e9, g_mod=80.769e9, density=7850, yield_stress=235e6)
 
 # Create a section
 # For example IPE 180 - A:
 
 section = Section(
-    name="IPE 180 Beam Section", material=Steel_S235, i_y=10.63e-6, i_z=0.819e-6, j=47.23e-9, area=2395e-6
+    name="IPE 180 Beam Section", material=Steel_S235, i_y=10.63e-6, i_z=0.819e-6, j=0.027e-6, area=0.00196
 )
 
 
