@@ -1,6 +1,7 @@
 from FERS_core.nodes.node import Node
 
 from typing import Optional
+import numpy as np
 
 from FERS_core.members.memberhinge import MemberHinge
 from FERS_core.members.enums import MemberType
@@ -131,28 +132,54 @@ class Member:
 
         Returns:
         - local_x (numpy array): The local x-axis (unit vector along the member's axis).
-        - local_y (numpy array): The local y-axis (unit vector perpendicular to x and
-          lying in the global xz-plane if possible).
+        - local_y (numpy array): The local y-axis (unit vector perpendicular to x and z).
         - local_z (numpy array): The local z-axis (unit vector orthogonal to x and y).
         """
-        import numpy as np
-
         # Compute the local x-axis (direction vector from start_node to end_node)
         dx = self.end_node.X - self.start_node.X
         dy = self.end_node.Y - self.start_node.Y
         dz = self.end_node.Z - self.start_node.Z
-        length = (dx**2 + dy**2 + dz**2) ** 0.5
+        length = np.sqrt(dx**2 + dy**2 + dz**2)
+        start_node_array = np.array([self.start_node.X, self.start_node.Y, self.start_node.Z])
+        if length < 1e-12:
+            raise ValueError("Start and end nodes are the same or too close to define a direction.")
+
         local_x = np.array([dx / length, dy / length, dz / length])
 
-        # Compute the local y-axis
-        if np.allclose(local_x, [0, 1, 0]):  # Local x aligns with global y
-            local_z = np.array([1, 0, 0])  # Align local z with global x
-        else:
-            # Project onto the global xz-plane and normalize
-            local_z = np.array([local_x[2], 0, local_x[0]])
-            local_z /= np.linalg.norm(local_z)
+        # Define the primary reference vector (global Y-axis)
+        primary_ref = np.array([0, 1, 0]) + start_node_array
 
-        # Compute the local y-axis (orthogonal to x and y)
+        # Check if local_x is parallel or nearly parallel to the primary reference vector
+        dot_product = np.dot(local_x, primary_ref)
+        if np.abs(dot_product) > 1.0 - 1e-6:
+            # If parallel, choose an alternative reference vector (global Z-axis)
+            reference_vector = np.array([0, 0, 1]) + start_node_array
+        else:
+            # Otherwise, use the primary reference vector
+            reference_vector = primary_ref
+
+        # Compute the local z-axis as the cross product of local_x and reference_vector
+        local_z = np.cross(local_x, reference_vector)
+        norm_z = np.linalg.norm(local_z)
+        if norm_z < 1e-12:
+            # If the cross product is near zero, choose a different reference vector
+            # Here, we can choose the global X-axis or another non-parallel vector
+            reference_vector = np.array([1, 0, 0]) + start_node_array
+            local_z = np.cross(local_x, reference_vector)
+            norm_z = np.linalg.norm(local_z)
+            if norm_z < 1e-12:
+                raise ValueError(
+                    "Cannot define a valid local_z axis; local_x is collinear with all reference vectors."
+                )
+
+        local_z /= norm_z
+
+        # Compute the local y-axis as the cross product of local_z and local_x
         local_y = np.cross(local_z, local_x)
+        norm_y = np.linalg.norm(local_y)
+        if norm_y < 1e-12:
+            raise ValueError("Cannot define local_y axis; local_z and local_x are collinear.")
+
+        local_y /= norm_y
 
         return local_x, local_y, local_z
