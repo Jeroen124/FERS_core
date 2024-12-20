@@ -46,18 +46,18 @@ class ShapePath:
         List[ShapeCommand]: List of shape commands defining the IPE geometry.
         """
         commands = [
-            ShapeCommand("moveTo", y=-b / 2, z=h / 2),  # 0
-            ShapeCommand("lineTo", y=b / 2, z=h / 2),  # 1
-            ShapeCommand("lineTo", y=b / 2, z=h / 2 - t_f),  # 2
-            ShapeCommand("lineTo", y=t_w / 2, z=h / 2 - t_f),  # 3
-            ShapeCommand("lineTo", y=t_w / 2, z=-h / 2 + t_f),  # 4
-            ShapeCommand("lineTo", y=b / 2, z=-h / 2 + t_f),  # 5
-            ShapeCommand("lineTo", y=b / 2, z=-h / 2),  # 6
-            ShapeCommand("lineTo", y=-b / 2, z=-h / 2),  # 7
-            ShapeCommand("lineTo", y=-b / 2, z=-h / 2 + t_f),  # 8
-            ShapeCommand("lineTo", y=-t_w / 2, z=-h / 2 + t_f),  # 9
-            ShapeCommand("lineTo", y=-t_w / 2, z=h / 2 - t_f),  # 10
-            ShapeCommand("lineTo", y=-b / 2, z=h / 2 - t_f),  # 11
+            ShapeCommand("moveTo", z=-b / 2, y=h / 2),  # 0
+            ShapeCommand("lineTo", z=b / 2, y=h / 2),  # 1
+            ShapeCommand("lineTo", z=b / 2, y=h / 2 - t_f),  # 2
+            ShapeCommand("lineTo", z=t_w / 2, y=h / 2 - t_f),  # 3
+            ShapeCommand("lineTo", z=t_w / 2, y=-h / 2 + t_f),  # 4
+            ShapeCommand("lineTo", z=b / 2, y=-h / 2 + t_f),  # 5
+            ShapeCommand("lineTo", z=b / 2, y=-h / 2),  # 6
+            ShapeCommand("lineTo", z=-b / 2, y=-h / 2),  # 7
+            ShapeCommand("lineTo", z=-b / 2, y=-h / 2 + t_f),  # 8
+            ShapeCommand("lineTo", z=-t_w / 2, y=-h / 2 + t_f),  # 9
+            ShapeCommand("lineTo", z=-t_w / 2, y=h / 2 - t_f),  # 10
+            ShapeCommand("lineTo", z=-b / 2, y=h / 2 - t_f),  # 11
             ShapeCommand("closePath"),
         ]
         return commands
@@ -75,25 +75,25 @@ class ShapePath:
 
         for command in self.shape_commands:
             if command.command == "moveTo":
-                if y and z:  # If not empty, draw the previous path
-                    plt.plot(y, z, "b-")
-                    y, z = [], []
-                y.append(command.y)
+                if z and y:  # If not empty, draw the previous path
+                    plt.plot(z, y, "b-")
+                    z, y = [], []
                 z.append(command.z)
-                node_coords.append((command.y, command.z, node_count))
-                start_y, start_z = command.y, command.z
+                y.append(command.y)
+                node_coords.append((command.z, command.y, node_count))
+                start_z, start_y = command.z, command.y
                 node_count += 1
             elif command.command == "lineTo":
-                y.append(command.y)
                 z.append(command.z)
-                node_coords.append((command.y, command.z, node_count))
+                y.append(command.y)
+                node_coords.append((command.z, command.y, node_count))
                 node_count += 1
             elif command.command == "closePath":
-                if start_y is not None and start_z is not None:
-                    y.append(start_y)
+                if start_z is not None and start_y is not None:
                     z.append(start_z)
-                plt.plot(y, z, "b-")
-                y, z = [], []
+                    y.append(start_y)
+                plt.plot(z, y, "b-")
+                z, y = [], []
 
         # Plot node numbers if enabled
         if show_nodes:
@@ -101,13 +101,13 @@ class ShapePath:
                 plt.scatter(ny, nz, color="red")  # Plot the node as a red point
                 plt.text(ny, nz, str(nnum), color="red", fontsize=10, ha="right")
 
-        plt.axvline(0, color="black", linestyle="--")  # y-axis (x=0)
+        plt.axvline(0, color="black", linestyle="--")  # y-axis (z=0)
         plt.axhline(0, color="black", linestyle="--")  # z-axis (y=0)
 
         plt.axis("equal")
         plt.title(self.name)
-        plt.xlabel("Y (Horizontal)")
-        plt.ylabel("Z (Vertical)")
+        plt.xlabel("Z (Vertical)")
+        plt.ylabel("Y (Horizontal)")
         plt.grid(True)
         plt.show()
 

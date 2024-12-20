@@ -146,13 +146,13 @@ class Member:
 
         # Compute the local y-axis
         if np.allclose(local_x, [0, 1, 0]):  # Local x aligns with global y
-            local_y = np.array([1, 0, 0])  # Align local y with global x
+            local_z = np.array([1, 0, 0])  # Align local z with global x
         else:
             # Project onto the global xz-plane and normalize
-            local_y = np.array([local_x[2], 0, -local_x[0]])
-            local_y /= np.linalg.norm(local_y)
+            local_z = np.array([local_x[2], 0, local_x[0]])
+            local_z /= np.linalg.norm(local_z)
 
-        # Compute the local z-axis (orthogonal to x and y)
-        local_z = np.cross(local_x, local_y)
+        # Compute the local y-axis (orthogonal to x and y)
+        local_y = np.cross(local_z, local_x)
 
         return local_x, local_y, local_z

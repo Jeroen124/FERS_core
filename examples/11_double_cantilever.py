@@ -15,12 +15,12 @@ node2 = Node(5, 0, 0)  # Free end
 node3 = Node(5, 5, 0)  # Free end
 
 # Create material
-Steel_S235 = Material(name="Steel", e_mod=200e9, g_mod=77e9, density=7850, yield_stress=235e6)
+Steel_S235 = Material(name="Steel", e_mod=210e9, g_mod=80.769e9, density=7850, yield_stress=235e6)
 
 # Create a section
 # For example IPE 180: https://eurocodeapplied.com/design/en1993/ipe-hea-heb-hem-design-properties
 section = Section(
-    name="IPE 180 Beam Section", material=Steel_S235, i_y=13.17e-6, i_z=1.0e-6, j=47.23e-9, area=2395e-6
+    name="IPE 180 Beam Section", material=Steel_S235, i_y=10.63e-6, i_z=0.819e-6, j=0.027e-6, area=0.00196
 )
 
 # Create member
@@ -47,9 +47,8 @@ calculation_1.add_member_set(*[membergroup1, membergroup2])
 end_load_case = calculation_1.create_load_case(name="End Load")
 
 # Apply end load at node2 1 kN downward force (global y-axis) to the loadcase
-end_load_case.add_nodal_load(
-    nodal_load=NodalLoad(node=node3, load_case=end_load_case, magnitude=-1000, direction=(-1, 0, 0))
-)
+nodal_load = NodalLoad(node=node3, load_case=end_load_case, magnitude=-1000, direction=(1, 0, 0))
+
 
 file_path = os.path.join("examples", "json_input_solver", "11_double_cantilever.json")
 calculation_1.save_to_json(file_path, indent=4)
