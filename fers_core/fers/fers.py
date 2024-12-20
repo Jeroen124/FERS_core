@@ -295,6 +295,27 @@ class FERS:
 
         return new_model
 
+    def get_structure_bounds(self):
+        """
+        Calculate the minimum and maximum coordinates of all nodes in the structure.
+
+        Returns:
+            tuple: A tuple ((min_x, min_y, min_z), (max_x, max_y, max_z)) representing
+                the minimum and maximum coordinates of all nodes.
+        """
+        all_nodes = self.get_all_nodes()
+        if not all_nodes:
+            return None, None
+
+        x_coords = [node.X for node in all_nodes]
+        y_coords = [node.Y for node in all_nodes]
+        z_coords = [node.Z for node in all_nodes]
+
+        min_coords = (min(x_coords), min(y_coords), min(z_coords))
+        max_coords = (max(x_coords), max(y_coords), max(z_coords))
+
+        return min_coords, max_coords
+
     def get_all_load_cases(self):
         """Return all load cases in the model."""
         return self.load_cases
@@ -603,13 +624,20 @@ class FERS:
                 return load_combination
         return None
 
-    def plot_model_3d(self, show_nodes=True, show_sections=True, show_local_axes=True):
+    def plot_model_3d(
+        self,
+        show_nodes=True,
+        show_sections=True,
+        show_local_axes=True,
+        load_case=None,
+    ):
         """
         Creates an interactive 3D PyVista plot of the entire model, aligning sections to the member's axis.
         Parameters:
         - show_nodes (bool): Whether to show node spheres in the plot.
         - show_sections (bool): Whether to extrude sections along members' axes.
         - show_local_axes (bool): Whether to plot the local coordinate system at each member's start node.
+        - load_case_name (str): Name of the load case to display loads for. If None, no point loads are shown.
         """
 
         # Create a PyVista plotter
@@ -622,6 +650,14 @@ class FERS:
 
         # Retrieve all members
         members = self.get_all_members()
+
+        min_coords, max_coords = self.get_structure_bounds()
+        if min_coords and max_coords:
+            structure_size = np.linalg.norm(np.array(max_coords) - np.array(min_coords))
+        else:
+            structure_size = 1.0
+
+        arrow_scale_factor = structure_size * 0.5
 
         # Process all members to create 3D edges
         for member in members:
@@ -710,6 +746,23 @@ class FERS:
                     plotter.add_arrows(origin, local_x * scale, color="red")
                     plotter.add_arrows(origin, local_y * scale, color="green")
                     plotter.add_arrows(origin, local_z * scale, color="blue")
+
+        if load_case:
+            load_case = self.get_load_case_by_name(load_case)
+            if load_case:
+                for nodal_load in load_case.nodal_loads:
+                    node = nodal_load.node
+                    # Compute the force vector components
+                    load_vector = np.array(nodal_load.direction) * nodal_load.magnitude
+                    magnitude = np.linalg.norm(load_vector)
+                    if magnitude > 0:
+                        direction = load_vector / magnitude
+                        plotter.add_arrows(
+                            np.array([node.X, node.Y, node.Z]),
+                            direction * arrow_scale_factor,  # Scale arrows
+                            color="orange",
+                            label="Point Load",
+                        )
 
         if show_nodes:
             # Plot spheres at each unique node location

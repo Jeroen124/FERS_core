@@ -40,7 +40,7 @@ wall_support = NodalSupport()
 
 # Assigning the nodal_support to the correct node.
 node1.nodal_support = wall_support
-node3.nodal_support = wall_support
+node2.nodal_support = wall_support
 
 # =============================================================================
 # Now that the geometrical part is created. Lets create the model and the loadcases
@@ -57,9 +57,9 @@ calculation_1.add_member_set(membergroup2)
 end_load_case = calculation_1.create_load_case(name="End Load")
 
 # Apply end load at node2 1 kN downward force (global y-axis) to the loadcase
-nodal_load = NodalLoad(node=node2, load_case=end_load_case, magnitude=150000, direction=(0, -1, 0))
+nodal_load = NodalLoad(node=node3, load_case=end_load_case, magnitude=150000, direction=(0, -1, 0))
 
-file_path = os.path.join("examples", "json_input_solver", "21_two_bar_truss.json")
+file_path = os.path.join("examples", "json_input_solver", "22_two_bar_truss_with_visualization.json")
 calculation_1.save_to_json(file_path, indent=4)
 
 
