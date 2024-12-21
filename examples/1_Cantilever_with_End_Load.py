@@ -1,6 +1,7 @@
 import os
 from FERS_core import Node, Member, FERS, Material, Section, MemberSet, NodalSupport, NodalLoad
-
+import fers_calculations
+import time
 
 # =============================================================================
 # Creating a cantilever with an end_load
@@ -53,8 +54,16 @@ nodal_load = NodalLoad(node=node2, load_case=end_load_case, magnitude=-1000, dir
 
 file_path = os.path.join("examples", "json_input_solver", "1_cantilever_with_end_load.json")
 calculation_1.save_to_json(file_path, indent=4)
+start_time = time.time()  # record the starting time
 
+for i in range(1000):
+    jer = fers_calculations.calculate_from_file(file_path)
 
+end_time = time.time()  # record the ending time
+
+elapsed_time = end_time - start_time
+print(f"Total time for 1000 calculations: {elapsed_time:.2f} seconds")
+print(f"Average time per calculation: {elapsed_time / 1000:.4f} seconds")
 # Run analysis
 # result = FERS_calculation(calculation_1)
 
