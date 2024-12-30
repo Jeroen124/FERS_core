@@ -3,21 +3,23 @@ import platform
 import subprocess
 import os
 
+script_dir = os.path.dirname(os.path.abspath(__file__))
+
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 with open("requirements.txt", "r") as req_file:
     requirements = [r.strip() for r in req_file if r.strip()]
 
-platform_system = platform.system().lower()  # 'windows', 'linux', 'darwin'
-platform_machine = platform.machine().lower()  # 'x86_64', 'amd64', 'aarch64', etc.
+platform_system = platform.system().lower()
+platform_machine = platform.machine().lower()
 
-# Normalize 'arm64' to 'aarch64' for compatibility
+# Normalize 'arm64' to 'aarch64'
 if platform_machine == "arm64":
     platform_machine = "aarch64"
 
-# Map platforms to prebuilt wheels
-wheel_dir = os.path.join(os.path.dirname(__file__), "wheels")
+# Define wheels based on platform
+wheel_dir = "wheels"
 wheels = {
     ("windows", "amd64"): "fers_calculations-0.1.0-cp312-cp312-win_amd64.whl",
     ("linux", "x86_64"): "fers_calculations-0.1.0-cp312-cp312-manylinux_2_34_x86_64.whl",
@@ -26,20 +28,30 @@ wheels = {
 
 wheel_file = wheels.get((platform_system, platform_machine), "")
 
+data_files = []
+if wheel_file:
+    # Build an absolute path to the wheel file relative to setup.py
+    wheel_path_abs = os.path.join(script_dir, wheel_dir, wheel_file)
+    if os.path.exists(wheel_path_abs):
+        # Force it to become a relative path
+        wheel_path_rel = os.path.relpath(wheel_path_abs, start=script_dir).replace("\\", "/")
+        data_files.append((wheel_dir, [wheel_path_rel]))
+
 
 # Post-install script to install the correct wheel
 def install_wheel():
-    if wheel_file and os.path.exists(os.path.join(wheel_dir, wheel_file)):
-        print(f"Installing prebuilt wheel: {wheel_file}")
-        subprocess.run(["pip", "install", os.path.join(wheel_dir, wheel_file)], check=True)
-    else:
-        raise RuntimeError(
-            f"No compatible wheel found for platform {platform_system} on {platform_machine}. "
-            "Ensure the correct wheel is included in the package."
-        )
+    if wheel_file:
+        wheel_path_abs = os.path.join(script_dir, wheel_dir, wheel_file)
+        if os.path.exists(wheel_path_abs):
+            print(f"Installing prebuilt wheel: {wheel_file}")
+            subprocess.run(["pip", "install", wheel_path_abs], check=True)
+        else:
+            raise RuntimeError(
+                f"No compatible wheel found for platform {platform_system} on {platform_machine}. "
+                "Ensure the correct wheel is included in the package."
+            )
 
 
-# Custom install command
 class CustomInstallCommand(Command):
     description = "Custom install command to handle prebuilt wheel installation"
     user_options = []
@@ -74,7 +86,7 @@ setup(
     ],
     python_requires=">=3.8",
     install_requires=requirements,
-    data_files=[("wheels", [os.path.join(wheel_dir, f) for f in os.listdir(wheel_dir)])],
+    data_files=data_files,
     cmdclass={
         "install": CustomInstallCommand,
     },
