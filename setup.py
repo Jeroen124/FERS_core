@@ -1,4 +1,5 @@
-from setuptools import setup, find_packages, Command
+from setuptools import setup, find_packages
+from setuptools.command.install import install
 import platform
 import subprocess
 import os
@@ -18,7 +19,6 @@ platform_machine = platform.machine().lower()
 if platform_machine == "arm64":
     platform_machine = "aarch64"
 
-# Define wheels based on platform
 wheel_dir = "wheels"
 wheels = {
     ("windows", "amd64"): "fers_calculations-0.1.0-cp312-cp312-win_amd64.whl",
@@ -30,16 +30,18 @@ wheel_file = wheels.get((platform_system, platform_machine), "")
 
 data_files = []
 if wheel_file:
-    # Build an absolute path to the wheel file relative to setup.py
+    # Build absolute path to the wheel, then convert to relative for data_files
     wheel_path_abs = os.path.join(script_dir, wheel_dir, wheel_file)
     if os.path.exists(wheel_path_abs):
-        # Force it to become a relative path
         wheel_path_rel = os.path.relpath(wheel_path_abs, start=script_dir).replace("\\", "/")
         data_files.append((wheel_dir, [wheel_path_rel]))
 
 
-# Post-install script to install the correct wheel
 def install_wheel():
+    """
+    Called after normal install flow completes.
+    Installs the prebuilt .whl for the detected platform.
+    """
     if wheel_file:
         wheel_path_abs = os.path.join(script_dir, wheel_dir, wheel_file)
         if os.path.exists(wheel_path_abs):
@@ -52,30 +54,29 @@ def install_wheel():
             )
 
 
-class CustomInstallCommand(Command):
-    description = "Custom install command to handle prebuilt wheel installation"
-    user_options = []
-
-    def initialize_options(self):
-        pass
-
-    def finalize_options(self):
-        pass
+class CustomInstallCommand(install):
+    """
+    A subclass of setuptools 'install' that calls our install_wheel()
+    after the normal install steps are done.
+    """
 
     def run(self):
+        # This calls the standard install flow (build_lib is available, etc.)
+        super().run()
+        # Now do our wheel install
         install_wheel()
 
 
 setup(
     name="FERS",
-    version="0.1.2",
+    version="0.1.31",
     author="Jeroen Hermsen",
     author_email="j.hermsen@serrac.com",
     description="Finite Element Method library written in Rust with Python interface",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/jeroen124/FERS_core",
-    packages=find_packages(),
+    packages=find_packages(include=["FERS_core", "FERS_core.*"]),
     include_package_data=True,
     zip_safe=False,
     classifiers=[
