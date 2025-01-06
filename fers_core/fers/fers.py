@@ -1,4 +1,5 @@
 import re
+import fers_calculations
 import ujson
 
 import numpy as np
@@ -19,6 +20,8 @@ from FERS_core.nodes.node import Node
 from FERS_core.supports.nodalsupport import NodalSupport
 from FERS_core.settings.settings import Settings
 
+from FERS_core.types.pydantic_models import Results
+
 
 class FERS:
     def __init__(self, settings=None, reset_counters=True):
@@ -32,6 +35,63 @@ class FERS:
             settings if settings is not None else Settings()
         )  # Use provided settings or create default
         self.results = None
+
+    def run_analysis_from_file(self, file_path: str):
+        """
+        Run the Rust-based FERS calculation from a file, validate the results using Pydantic,
+        and update the FERS instance's results.
+
+        Args:
+            file_path (str): Path to the JSON input file.
+
+        Raises:
+            ValueError: If the validation of the results fails.
+        """
+        # Run the calculation
+        try:
+            print(f"Running analysis using {file_path}...")
+            result_string = fers_calculations.calculate_from_file(file_path)
+        except Exception as e:
+            raise RuntimeError(f"Failed to run calculation: {e}")
+
+        # Parse and validate the results
+        try:
+            results_dict = ujson.loads(result_string)
+            validated_results = Results(**results_dict)
+            self.results = validated_results
+        except Exception as e:
+            raise ValueError(f"Failed to parse or validate results: {e}")
+
+    def run_analysis(self, calculation_module=fers_calculations):
+        """
+        Run the Rust-based FERS calculation without saving the input to a file.
+        The input JSON is generated directly from the current FERS instance.
+
+        Args:
+            calculation_module: Module to perform calculations (default is fers_calculations).
+
+        Raises:
+            ValueError: If the validation of the results fails.
+        """
+
+        # Generate the input JSON
+        input_dict = self.to_dict()
+        input_json = ujson.dumps(input_dict)
+
+        # Run the calculation
+        try:
+            print("Running analysis with generated input JSON...")
+            result_string = fers_calculations.calculate_from_string(input_json)  # Use the appropriate method
+        except Exception as e:
+            raise RuntimeError(f"Failed to run calculation: {e}")
+
+        # Parse and validate the results
+        try:
+            results_dict = ujson.loads(result_string)  # Use ujson for performance
+            validated_results = Results(**results_dict)  # Validate with Pydantic
+            self.results = validated_results  # Update instance's results
+        except Exception as e:
+            raise ValueError(f"Failed to parse or validate results: {e}")
 
     def to_dict(self):
         """Convert the FERS model to a dictionary representation."""
