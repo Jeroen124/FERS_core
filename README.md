@@ -1,6 +1,6 @@
 # FERS_core
 
-**FERS_core** is an open-source Finite Element Method (FEM) library written in Rust with a Python interface. It provides the foundational tools and components necessary for performing FEM analysis. This core package is designed for users who need a reliable and efficient FEM solver, while advanced features and optimizations are available in the [FERS_pro](#fers_pro) package.
+**FERS_core** is an open-source Finite Element Method (FEM) library written in Rust with a Python interface. It provides the foundational tools and components necessary for performing FEM analysis. This core package is designed for users who need a reliable and efficient FEM solver.
 
 ## Features
 

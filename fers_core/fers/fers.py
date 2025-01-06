@@ -19,7 +19,6 @@ from FERS_core.members.shapepath import ShapePath
 from FERS_core.nodes.node import Node
 from FERS_core.supports.nodalsupport import NodalSupport
 from FERS_core.settings.settings import Settings
-
 from FERS_core.types.pydantic_models import Results
 
 

@@ -12,7 +12,7 @@ with open("requirements.txt", "r") as req_file:
 
 setup(
     name="FERS",
-    version="0.1.35",
+    version="0.1.36",
     author="Jeroen Hermsen",
     author_email="info@serrac.com",
     description="Finite Element Method library written in Rust with Python interface",
