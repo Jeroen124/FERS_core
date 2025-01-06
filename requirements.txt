@@ -1,0 +1,7 @@
+numpy==2.1.2
+matplotlib==3.9.2
+ujson==5.10.0
+sectionproperties==3.7.0
+pyvista==0.44.2
+fers_calculations==0.1.13
+pydantic==2.10.4

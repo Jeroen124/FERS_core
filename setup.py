@@ -1,20 +1,25 @@
 from setuptools import setup, find_packages
-# from setuptools_rust import RustExtension
+import os
+
+script_dir = os.path.dirname(os.path.abspath(__file__))
 
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
+with open("requirements.txt", "r") as req_file:
+    requirements = [r.strip() for r in req_file if r.strip()]
+
+
 setup(
     name="FERS",
-    version="0.1.1",
+    version="0.1.33",
     author="Jeroen Hermsen",
-    author_email="j.hermsen@serrac.com",
+    author_email="info@serrac.com",
     description="Finite Element Method library written in Rust with Python interface",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/jeroen124/fers_core",
-    packages=find_packages(where="fers_core"),
-    # rust_extensions=[RustExtension("fers_core.fers_core", binding="pyo3")],
+    url="https://github.com/jeroen124/FERS_core",
+    packages=find_packages(include=["FERS_core", "FERS_core.*"]),
     include_package_data=True,
     zip_safe=False,
     classifiers=[
@@ -23,8 +28,6 @@ setup(
         "License :: OSI Approved :: BSD License",
         "Operating System :: OS Independent",
     ],
-    python_requires=">=3.8",
-    install_requires=[
-        # List any Python dependencies your package has
-    ],
+    python_requires=">=3.12",
+    install_requires=requirements,
 )
