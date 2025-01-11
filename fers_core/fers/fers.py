@@ -849,6 +849,80 @@ class FERS:
         plotter.show_grid(color="gray")
         plotter.show(title="FERS 3D Model")
 
+    def show_results_3d(self, displacement=True, displacement_scale=100.0):
+        """
+        Visualizes the results of the analysis in 3D using PyVista, including displacements if enabled.
+
+        Args:
+            displacement (bool): Whether to show the displacement results.
+            displacement_scale (float): Scale factor for visualizing displacements.
+        """
+        if self.results is None:
+            print("No results to display. Please run an analysis first.")
+            return
+
+        # Extract nodes and their displacements
+        displacement_nodes = self.results.displacement_nodes
+        node_positions = []
+        displaced_positions = []
+        node_map = {}
+
+        # Extract original and displaced positions
+        for node_id, disp in displacement_nodes.items():
+            # Original node position
+            node = self.get_node_by_pk(int(node_id))  # Assuming nodes are accessible by ID
+            if node:
+                original_position = np.array([node.X, node.Y, node.Z])
+                node_positions.append(original_position)
+                node_map[int(node_id)] = len(node_positions) - 1
+
+                # Apply displacement and scaling
+                if displacement:
+                    displaced_position = (
+                        original_position + np.array([disp.dx, disp.dy, disp.dz]) * displacement_scale
+                    )
+                else:
+                    displaced_position = original_position
+
+                displaced_positions.append(displaced_position)
+
+        # Convert to NumPy arrays for PyVista compatibility
+        node_positions = np.array(node_positions)
+        displaced_positions = np.array(displaced_positions)
+
+        # Create a PyVista plotter
+        plotter = pv.Plotter()
+        plotter.add_axes()  # Add 3D axes for reference
+
+        # Plot the original structure
+        original_poly_data = pv.PolyData(node_positions)
+        original_poly_data["Original"] = np.arange(len(node_positions))
+        plotter.add_points(original_poly_data, color="blue", point_size=10, label="Original Shape")
+
+        # Plot the deformed structure
+        displaced_poly_data = pv.PolyData(displaced_positions)
+        displaced_poly_data["Displaced"] = np.arange(len(displaced_positions))
+        plotter.add_points(displaced_poly_data, color="red", point_size=10, label="Deformed Shape")
+
+        # Draw lines between nodes to represent members
+        for member in self.get_all_members():
+            start_idx = node_map.get(member.start_node.id)
+            end_idx = node_map.get(member.end_node.id)
+
+            if start_idx is not None and end_idx is not None:
+                # Lines for original structure
+                line = pv.Line(node_positions[start_idx], node_positions[end_idx])
+                plotter.add_mesh(line, color="blue", line_width=2)
+
+                # Lines for deformed structure
+                line_deformed = pv.Line(displaced_positions[start_idx], displaced_positions[end_idx])
+                plotter.add_mesh(line_deformed, color="red", line_width=2)
+
+        # Set up the visualization
+        plotter.add_legend()
+        plotter.show_grid(color="gray")
+        plotter.show(title="3D Beam Displacement Visualization")
+
     def plot_model(self, plane="yz"):
         """
         Plot all member sets in the model on the specified plane.
