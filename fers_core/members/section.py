@@ -107,8 +107,8 @@ class Section:
         return Section(
             name=name,
             material=material,
-            i_y=float(analysis_section.section_props.ixx_c),
-            i_z=float(analysis_section.section_props.iyy_c),
+            i_y=float(analysis_section.section_props.iyy_c),
+            i_z=float(analysis_section.section_props.ixx_c),
             j=float(analysis_section.get_j()),
             area=float(analysis_section.section_props.area),
             h=h,

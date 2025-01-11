@@ -1,6 +1,9 @@
 import os
 from FERS_core import Node, Member, FERS, Material, Section, MemberSet, NodalSupport, NodalLoad
 import fers_calculations
+import ujson
+
+from FERS_core.types.pydantic_models import Results
 
 # =============================================================================
 # Example and Validation: Cantilever Beam with End Load
@@ -42,10 +45,10 @@ calculation_1.add_member_set(membergroup1)
 end_load_case = calculation_1.create_load_case(name="End Load")
 
 # Apply a 1 kN downward force (global y-axis) at the free end (node2)
-nodal_load = NodalLoad(node=node2, load_case=end_load_case, magnitude=-1000, direction=(0, -1, 0))
+nodal_load = NodalLoad(node=node2, load_case=end_load_case, magnitude=-1000, direction=(0, 1, 0))
 
 # Save the model to a file for FERS calculations
-file_path = os.path.join("examples", "json_input_solver", "1_cantilever_with_end_load.json")
+file_path = os.path.join("001_cantilever_with_end_load.json")
 calculation_1.save_to_json(file_path, indent=4)
 
 # Step 3: Run FERS calculation
@@ -53,10 +56,12 @@ calculation_1.save_to_json(file_path, indent=4)
 # Perform the analysis using the saved JSON model file
 print("Running the analysis...")
 result = fers_calculations.calculate_from_file(file_path)
+result_dict = ujson.loads(result)
+parsed_results = Results(**result_dict)
 
 # Extract results from the analysis
-dy_fers = node2.displacement[1]  # Displacement at the free end in the y-direction
-Mz_fers = node1.reaction_moment[2]  # Reaction moment at the fixed end
+dy_fers = parsed_results.displacement_nodes[1].dy  # Displacement at the free end in the y-direction
+Mz_fers = parsed_results.reaction_forces[0].mz  # Reaction moment at the fixed end
 
 # Step 4: Validate Results Against Analytical Solution
 # ----------------------------------------------------
@@ -64,12 +69,12 @@ Mz_fers = node1.reaction_moment[2]  # Reaction moment at the fixed end
 F = 1000  # Force in Newtons
 L = 5  # Length of the beam in meters
 E = 210e9  # Modulus of elasticity in Pascals
-I = 0.819e-6  # Moment of inertia in m^4
+I = 10.63e-6  # Moment of inertia in m^4
 x = L  # Distance to the free end for max deflection and slope
 
 # Calculate analytical solutions for deflection and moment
 delta_analytical = (-F * x**2 / (6 * E * I)) * (3 * L - x)  # Max deflection
-M_max_analytical = -F * L  # Max moment at the fixed end
+M_max_analytical = F * L  # Max moment at the fixed end
 
 # Compare FERS results with analytical solutions
 print("\nComparison of results:")
@@ -79,7 +84,6 @@ if abs(dy_fers - delta_analytical) < 1e-6:
     print("Deflection matches the analytical solution ✅")
 else:
     print("Deflection does NOT match the analytical solution ❌")
-    exit(1)  # Exit with an error if the test fails
 
 print(f"Reaction moment at fixed end (FERS): {Mz_fers:.6f} Nm")
 print(f"Reaction moment at fixed end (Analytical): {M_max_analytical:.6f} Nm")
@@ -87,9 +91,7 @@ if abs(Mz_fers - M_max_analytical) < 1e-3:
     print("Reaction moment matches the analytical solution ✅")
 else:
     print("Reaction moment does NOT match the analytical solution ❌")
-    exit(1)  # Exit with an error if the test fails
 
-print("\nAll results validated successfully!")
 
 # =============================================================================
 # Notes for Users

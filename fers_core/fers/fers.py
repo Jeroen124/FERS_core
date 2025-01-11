@@ -61,7 +61,7 @@ class FERS:
         except Exception as e:
             raise ValueError(f"Failed to parse or validate results: {e}")
 
-    def run_analysis(self, calculation_module=fers_calculations):
+    def run_analysis(self):
         """
         Run the Rust-based FERS calculation without saving the input to a file.
         The input JSON is generated directly from the current FERS instance.
@@ -80,7 +80,7 @@ class FERS:
         # Run the calculation
         try:
             print("Running analysis with generated input JSON...")
-            result_string = fers_calculations.calculate_from_string(input_json)  # Use the appropriate method
+            result_string = fers_calculations.calculate_from_json(input_json)
         except Exception as e:
             raise RuntimeError(f"Failed to run calculation: {e}")
 
@@ -688,7 +688,10 @@ class FERS:
         show_nodes=True,
         show_sections=True,
         show_local_axes=True,
+        display_Local_axes_scale=1,
         load_case=None,
+        display_load_scale=1,  # Added scale factor for point loads, default = 1
+        show_load_labels=True,
     ):
         """
         Creates an interactive 3D PyVista plot of the entire model, aligning sections to the member's axis.
@@ -697,6 +700,7 @@ class FERS:
         - show_sections (bool): Whether to extrude sections along members' axes.
         - show_local_axes (bool): Whether to plot the local coordinate system at each member's start node.
         - load_case_name (str): Name of the load case to display loads for. If None, no point loads are shown.
+        - point_load_scale (float): Scale factor for point loads, default is 1.
         """
 
         # Create a PyVista plotter
@@ -793,9 +797,8 @@ class FERS:
                 start_node = member.start_node
                 local_x, local_y, local_z = member.local_coordinate_system()
 
-                # Define vectors for the local axes
                 origin = np.array([start_node.X, start_node.Y, start_node.Z])
-                scale = 0.2 * member.length()  # Scale local axes vectors relative to member length
+                scale = display_Local_axes_scale
 
                 if index == 0:
                     plotter.add_arrows(origin, local_x * scale, color="red", label="Local X")
@@ -812,15 +815,25 @@ class FERS:
                 for nodal_load in load_case.nodal_loads:
                     node = nodal_load.node
                     # Compute the force vector components
-                    load_vector = np.array(nodal_load.direction) * nodal_load.magnitude
+                    load_vector = np.array(nodal_load.direction) * nodal_load.magnitude * display_load_scale
                     magnitude = np.linalg.norm(load_vector)
                     if magnitude > 0:
                         direction = load_vector / magnitude
                         plotter.add_arrows(
                             np.array([node.X, node.Y, node.Z]),
                             direction * arrow_scale_factor,  # Scale arrows
-                            color="orange",
+                            color="FFA500",  # Orange
                             label="Point Load",
+                        )
+                        # Calculate the midpoint for the label position
+                        midpoint = np.array([node.X, node.Y, node.Z]) + (direction * (arrow_scale_factor / 2))
+                        # Display the magnitude next to the midpoint of the arrow
+                        plotter.add_point_labels(
+                            midpoint,
+                            [f"{magnitude:.2f}"],  # Format magnitude to 2 decimal places
+                            font_size=20 * arrow_scale_factor,
+                            text_color="FFA500",
+                            always_visible=show_load_labels,
                         )
 
         if show_nodes:

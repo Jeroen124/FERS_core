@@ -5,7 +5,6 @@ import ujson
 
 from FERS_core.types.pydantic_models import Results
 
-
 # =============================================================================
 # Example and Validation: Cantilever Beam with End Load
 # =============================================================================
@@ -23,18 +22,12 @@ node2 = Node(5, 0, 0)  # Free end of the beam, 5 meters away
 Steel_S235 = Material(name="Steel", e_mod=210e9, g_mod=80.769e9, density=7850, yield_stress=235e6)
 
 # Define the beam cross-section (IPE 180)
-ipe_section = Section.create_ipe_section(
-    name="IPE 180 Beam Section",
-    material=Steel_S235,
-    h=0.177,
-    b=0.091,
-    t_f=0.0065,
-    t_w=0.0043,
-    r=0.009,
+section = Section(
+    name="IPE 180 Beam Section", material=Steel_S235, i_y=0.819e-6, i_z=10.63e-6, j=0.027e-6, area=0.00196
 )
 
 # Create the beam element
-beam = Member(start_node=node1, end_node=node2, section=ipe_section)
+beam = Member(start_node=node1, end_node=node2, section=section)
 
 # Apply a fixed support at the fixed end (node1)
 wall_support = NodalSupport()
@@ -107,4 +100,4 @@ print("\nAll results validated successfully!")
 # This script is both an example and a validation tool.
 # 1. It demonstrates how to set up and analyze a cantilever beam with an end load.
 # 2. It validates the FERS results against analytical solutions for deflection and moment.
-# 3. Run this script as-is to learn
+# 3. Run this script as-is to learn, or integrate it into your CI/CD pipeline for validation.
