@@ -64,9 +64,9 @@
     "load_combinations": [],
     "imperfection_cases": [],
     "settings": {
-        "id": 12,
+        "id": 14,
         "analysis_option": {
-            "id": 12,
+            "id": 14,
             "solve_loadcases": true,
             "solver": "newton_raphson",
             "tolerance": 0.01,
