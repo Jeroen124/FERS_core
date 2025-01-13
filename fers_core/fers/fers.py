@@ -850,7 +850,7 @@ class FERS:
         plotter.show(title="FERS 3D Model")
 
     def show_results_3d(
-        self, show_nodes=True, show_section=True, displacement=True, displacement_scale=100.0, num_points=20
+        self, show_nodes=True, show_sections=True, displacement=True, displacement_scale=100.0, num_points=20
     ):
         """
         Visualizes the results of the analysis in 3D using PyVista, including displacements if enabled.
@@ -896,6 +896,62 @@ class FERS:
         # Create a PyVista plotter
         plotter = pv.Plotter()
         plotter.add_axes()  # 3D axes
+
+        # Plot sections
+        if show_sections:
+            for member in self.get_all_members():
+                start_node = member.start_node
+                end_node = member.end_node
+                section = member.section
+
+                if section.shape_path is not None:
+                    # Original section coordinates in local space
+                    coords_2d, edges = section.shape_path.get_shape_geometry()
+                    coords_local = np.array([[0.0, y, z] for y, z in coords_2d], dtype=np.float32)
+
+                    # Get the local coordinate system
+                    local_x, local_y, local_z = member.local_coordinate_system()
+                    R = np.column_stack([local_x, local_y, local_z])  # Transformation matrix
+
+                    # Transform and extrude for original shape
+                    transformed_coords = coords_local @ R.T + np.array(
+                        [start_node.X, start_node.Y, start_node.Z]
+                    )
+                    section_polydata = pv.PolyData(transformed_coords)
+                    lines = []
+                    for edge in edges:
+                        lines.extend([2, edge[0], edge[1]])
+                    section_polydata.lines = np.array(lines, dtype=np.int32)
+
+                    dx, dy, dz = np.array([end_node.X, end_node.Y, end_node.Z]) - np.array(
+                        [start_node.X, start_node.Y, start_node.Z]
+                    )
+                    original_section = section_polydata.extrude([dx, dy, dz])
+                    plotter.add_mesh(original_section, color="steelblue", label=f"Section {section.name}")
+
+                    # Deformed shape
+                    if displacement:
+                        d_global_start, _ = node_displacements_global.get(start_node.id, (np.zeros(3), None))
+                        d_global_end, _ = node_displacements_global.get(end_node.id, (np.zeros(3), None))
+                        deformed_start = (
+                            np.array([start_node.X, start_node.Y, start_node.Z])
+                            + d_global_start * displacement_scale
+                        )
+                        deformed_end = (
+                            np.array([end_node.X, end_node.Y, end_node.Z]) + d_global_end * displacement_scale
+                        )
+
+                        transformed_coords = coords_local @ R.T + deformed_start
+                        section_polydata = pv.PolyData(transformed_coords)
+                        lines = []
+                        for edge in edges:
+                            lines.extend([2, edge[0], edge[1]])
+                        section_polydata.lines = np.array(lines, dtype=np.int32)
+                        dx, dy, dz = deformed_end - deformed_start
+                        deformed_section = section_polydata.extrude([dx, dy, dz])
+                        plotter.add_mesh(
+                            deformed_section, color="red", label=f"Deformed Section {section.name}"
+                        )
 
         # Plot nodes
         if show_nodes:
