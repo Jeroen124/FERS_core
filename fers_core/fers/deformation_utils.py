@@ -92,7 +92,7 @@ def interpolate_beam_local(
 
 def extrude_along_path(section, path_points, num_samples=100):
     """
-    Extrudes a custom section along a given path defined by points.
+    Extrudes a custom section along a given path without rotation.
 
     Args:
         section (ShapePath): The section geometry to be extruded.
@@ -118,39 +118,14 @@ def extrude_along_path(section, path_points, num_samples=100):
         lines.extend([2, edge[0], edge[1]])
     section_polydata.lines = np.array(lines, dtype=np.int32)
 
-    # Manual extrusion along the path
+    # Manual extrusion without rotation
     extruded_points = []
     extruded_faces = []
-    for i, t in enumerate(np.linspace(0, 1, num_samples - 1)):
-        start_point = spline.points[i]
-        end_point = spline.points[i + 1]
-
-        # Direction vector of the segment
-        direction = end_point - start_point
-        length = np.linalg.norm(direction)
-        if length == 0:
-            continue
-
-        direction /= length  # Normalize
-
-        # Rotation matrix to align section with the path segment
-        up_vector = np.array([0, 0, 1])  # Assuming z-axis alignment initially
-        rotation_matrix = np.eye(3)
-        if not np.allclose(direction, up_vector):
-            cross_product = np.cross(up_vector, direction)
-            dot_product = np.dot(up_vector, direction)
-            skew_symmetric = np.array(
-                [
-                    [0, -cross_product[2], cross_product[1]],
-                    [cross_product[2], 0, -cross_product[0]],
-                    [-cross_product[1], cross_product[0], 0],
-                ]
-            )
-            rotation_matrix += skew_symmetric + skew_symmetric @ skew_symmetric * (1 / (1 + dot_product))
-
-        # Transform the section
-        transformed_coords = coords_3d @ rotation_matrix.T + start_point
-        extruded_points.extend(transformed_coords)
+    for i in range(len(spline.points)):
+        # Translate section to the current point on the path
+        current_point = spline.points[i]
+        translated_coords = coords_3d + current_point
+        extruded_points.extend(translated_coords)
 
         if i > 0:
             # Connect the faces between current and previous segment
