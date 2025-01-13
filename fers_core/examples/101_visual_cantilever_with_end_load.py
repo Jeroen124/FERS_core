@@ -19,12 +19,18 @@ node2 = Node(5, 0, 0)  # Free end of the beam, 5 meters away
 Steel_S235 = Material(name="Steel", e_mod=210e9, g_mod=80.769e9, density=7850, yield_stress=235e6)
 
 # Define the beam cross-section (IPE 180)
-section = Section(
-    name="IPE 180 Beam Section", material=Steel_S235, i_y=0.819e-6, i_z=10.63e-6, j=0.027e-6, area=0.00196
+ipe_section = Section.create_ipe_section(
+    name="IPE 180 Beam Section",
+    material=Steel_S235,
+    h=0.177,
+    b=0.091,
+    t_f=0.0065,
+    t_w=0.0043,
+    r=0.009,
 )
 
 # Create the beam element
-beam = Member(start_node=node1, end_node=node2, section=section)
+beam = Member(start_node=node1, end_node=node2, section=ipe_section)
 
 # Apply a fixed support at the fixed end (node1)
 wall_support = NodalSupport()
@@ -45,7 +51,7 @@ end_load_case = calculation_1.create_load_case(name="End Load")
 nodal_load = NodalLoad(node=node2, load_case=end_load_case, magnitude=-1000, direction=(0, 1, 0))
 
 # Save the model to a file for FERS calculations
-file_path = os.path.join("001_cantilever_with_end_load.json")
+file_path = os.path.join("101_visual_cantilever_with_end_load.json")
 calculation_1.save_to_json(file_path, indent=4)
 
 # Step 3: Run FERS calculation
@@ -53,6 +59,7 @@ calculation_1.save_to_json(file_path, indent=4)
 # Perform the analysis using the saved JSON model file
 print("Running the analysis...")
 calculation_1.run_analysis()
+
 
 # Extract results from the analysis
 # Displacement at the free end in the y-direction
@@ -89,6 +96,7 @@ if abs(Mz_fers - M_max_analytical) < 1e-3:
 else:
     print("Reaction moment does NOT match the analytical solution ❌")
 
+print("\nAll results validated successfully!")
 
 # =============================================================================
 # Notes for Users

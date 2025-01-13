@@ -849,13 +849,17 @@ class FERS:
         plotter.show_grid(color="gray")
         plotter.show(title="FERS 3D Model")
 
-    def show_results_3d(self, displacement=True, displacement_scale=100.0, num_points=20):
+    def show_results_3d(
+        self, show_nodes=True, show_section=True, displacement=True, displacement_scale=100.0, num_points=20
+    ):
         """
         Visualizes the results of the analysis in 3D using PyVista, including displacements if enabled.
         Now updated to do local transformations for each member.
 
         Args:
             displacement (bool): Whether to show the displacement results.
+            show_sections (bool): Whether to extrude sections along members' axes.
+            show_nodes (bool): Whether to show node spheres in the plot.
             displacement_scale (float): Scale factor for visualizing displacements.
             num_points (int): Number of interpolation points along each member.
         """
@@ -892,6 +896,40 @@ class FERS:
         # Create a PyVista plotter
         plotter = pv.Plotter()
         plotter.add_axes()  # 3D axes
+
+        # Plot nodes
+        if show_nodes:
+            unique_nodes = self.get_all_nodes()
+            original_node_positions = []
+            deformed_node_positions = []
+
+            for node in unique_nodes:
+                node_id = node.id
+                original_position = np.array([node.X, node.Y, node.Z])
+                original_node_positions.append(original_position)
+
+                if node_id in node_displacements_global:
+                    d_global, _ = node_displacements_global[node_id]
+                    deformed_position = original_position + d_global * displacement_scale
+                    deformed_node_positions.append(deformed_position)
+
+            # Convert to numpy arrays
+            original_node_positions = np.array(original_node_positions)
+            deformed_node_positions = np.array(deformed_node_positions)
+
+            # Plot original nodes as blue spheres
+            plotter.add_mesh(
+                pv.PolyData(original_node_positions).glyph(scale=False, geom=pv.Sphere(radius=0.05)),
+                color="blue",
+                label="Original Nodes",
+            )
+
+            # Plot deformed nodes as red spheres
+            plotter.add_mesh(
+                pv.PolyData(deformed_node_positions).glyph(scale=False, geom=pv.Sphere(radius=0.05)),
+                color="red",
+                label="Deformed Nodes",
+            )
 
         # Helper: Build rotation matrix from local axes
         def get_rotation_matrix(local_x, local_y, local_z):

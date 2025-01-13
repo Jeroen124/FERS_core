@@ -112,4 +112,4 @@ else:
 # This script is both an example and a validation tool.
 # 1. It demonstrates how to set up and analyze a cantilever beam with an intermediate load.
 # 2. It validates the FERS results against analytical solutions for deflection and moment.
-# 3. Run this script as-is to learn, or integrate it into your CI/CD pipeline for validation.
+# 3. Run this script as-is to learn
