@@ -1,4 +1,5 @@
 import numpy as np
+import pyvista as pv
 
 
 # Helper: Build rotation matrix from local axes
@@ -87,3 +88,90 @@ def interpolate_beam_local(
     # Combine
     deflections_local = np.vstack([ux_vals, y_vals, z_vals]).T  # shape (n_points, 3)
     return deflections_local
+
+
+def extrude_along_path(section, path_points, num_samples=100):
+    """
+    Extrudes a custom section along a given path defined by points.
+
+    Args:
+        section (ShapePath): The section geometry to be extruded.
+        path_points (np.ndarray): Nx3 array of points defining the path.
+        num_samples (int): Number of samples for the path spline interpolation.
+
+    Returns:
+        pv.PolyData: Extruded geometry as a PyVista object.
+    """
+    if not isinstance(path_points, np.ndarray) or path_points.shape[1] != 3:
+        raise ValueError("path_points must be a Nx3 numpy array.")
+
+    # Interpolate the path to ensure smooth extrusion
+    spline = pv.Spline(path_points, num_samples)
+
+    # Convert section to PyVista PolyData
+    coords_2d, edges = section.get_shape_geometry()
+    coords_3d = np.array([[0.0, y, z] for y, z in coords_2d], dtype=np.float32)
+    section_polydata = pv.PolyData(coords_3d)
+
+    lines = []
+    for edge in edges:
+        lines.extend([2, edge[0], edge[1]])
+    section_polydata.lines = np.array(lines, dtype=np.int32)
+
+    # Manual extrusion along the path
+    extruded_points = []
+    extruded_faces = []
+    for i, t in enumerate(np.linspace(0, 1, num_samples - 1)):
+        start_point = spline.points[i]
+        end_point = spline.points[i + 1]
+
+        # Direction vector of the segment
+        direction = end_point - start_point
+        length = np.linalg.norm(direction)
+        if length == 0:
+            continue
+
+        direction /= length  # Normalize
+
+        # Rotation matrix to align section with the path segment
+        up_vector = np.array([0, 0, 1])  # Assuming z-axis alignment initially
+        rotation_matrix = np.eye(3)
+        if not np.allclose(direction, up_vector):
+            cross_product = np.cross(up_vector, direction)
+            dot_product = np.dot(up_vector, direction)
+            skew_symmetric = np.array(
+                [
+                    [0, -cross_product[2], cross_product[1]],
+                    [cross_product[2], 0, -cross_product[0]],
+                    [-cross_product[1], cross_product[0], 0],
+                ]
+            )
+            rotation_matrix += skew_symmetric + skew_symmetric @ skew_symmetric * (1 / (1 + dot_product))
+
+        # Transform the section
+        transformed_coords = coords_3d @ rotation_matrix.T + start_point
+        extruded_points.extend(transformed_coords)
+
+        if i > 0:
+            # Connect the faces between current and previous segment
+            offset = i * len(coords_3d)
+            for j in range(len(coords_3d)):
+                next_j = (j + 1) % len(coords_3d)
+                extruded_faces.append(
+                    [
+                        4,  # Quad
+                        offset + j - len(coords_3d),
+                        offset + next_j - len(coords_3d),
+                        offset + next_j,
+                        offset + j,
+                    ]
+                )
+
+    # Convert extruded points and faces to PyVista PolyData
+    extruded_points = np.array(extruded_points)
+    extruded_faces = np.hstack(extruded_faces)
+    extruded_geometry = pv.PolyData()
+    extruded_geometry.points = extruded_points
+    extruded_geometry.faces = extruded_faces
+
+    return extruded_geometry

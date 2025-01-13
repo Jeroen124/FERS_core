@@ -10,6 +10,7 @@ from FERS_core.fers.deformation_utils import (
     get_rotation_matrix,
     interpolate_beam_local,
     transform_dofs_global_to_local,
+    extrude_along_path,
 )
 from FERS_core.imperfections.imperfectioncase import ImperfectionCase
 from FERS_core.loads.loadcase import LoadCase
@@ -997,11 +998,13 @@ class FERS:
                         section_polydata.lines = np.array(lines, dtype=np.int32)
 
                         if path_polydata is not None and isinstance(path_polydata, pv.PolyData):
-                            deformed_section = section_polydata.extrude_along_path(path_polydata)
+                            path_points = path_polydata.points  # Extract Nx3 array of points
+                            deformed_section = extrude_along_path(member.section.shape_path, path_points)
                         else:
                             raise ValueError(
                                 "Invalid path for extrusion. Ensure path_polydata is a valid PolyData object."
                             )
+
                         print(path_polydata)
                         plotter.add_mesh(
                             deformed_section, color="red", label=f"Deformed Section {section.name}"
