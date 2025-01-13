@@ -1,5 +1,5 @@
 from FERS_core import Node, Member, FERS, Material, Section, MemberSet, NodalSupport, NodalLoad
-
+import os
 
 # =============================================================================
 # Example and Validation: Cantilever Beam with Intermediate Load
@@ -47,19 +47,22 @@ nodal_load = NodalLoad(
     node=intermediate_node, load_case=intermediate_load_case, magnitude=-1000, direction=(0, 1, 0)
 )
 
+# Save the model to a file for FERS calculations
+file_path = os.path.join("002_cantilever_with_intermediate_load.json")
+calculation_1.save_to_json(file_path, indent=4)
+
 # Step 3: Run FERS calculation
 # ----------------------------
 # Perform the analysis using the saved JSON model file
 print("Running the analysis...")
 calculation_1.run_analysis()
 # Extract results from the analysis
-dy_fers_intermediate = calculation_1.results.displacement_nodes[
-    "3"
-].dy  # Displacement at the intermediate point in the y-direction
-dy_fers_end = calculation_1.results.displacement_nodes[
-    "2"
-].dy  # Displacement at the free end in the y-direction
-Mz_fers = calculation_1.results.reaction_forces[0].mz  # Reaction moment at the fixed end
+# Displacement at the intermediate point in the y-direction
+dy_fers_intermediate = calculation_1.results.displacement_nodes["3"].dy
+# Displacement at the free end in the y-direction
+dy_fers_end = calculation_1.results.displacement_nodes["2"].dy
+# Reaction moment at the fixed end
+Mz_fers = calculation_1.results.reaction_forces[0].mz
 
 # Step 4: Validate Results Against Analytical Solution
 # ----------------------------------------------------
@@ -104,7 +107,7 @@ else:
     print("Reaction moment does NOT match the analytical solution ❌")
 
 # =============================================================================
-# Notes for Users
+# Notes for User
 # =============================================================================
 # This script is both an example and a validation tool.
 # 1. It demonstrates how to set up and analyze a cantilever beam with an intermediate load.

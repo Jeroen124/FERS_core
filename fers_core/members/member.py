@@ -150,8 +150,8 @@ class Member:
         primary_ref = np.array([0, 1, 0]) + start_node_array
 
         # Check if local_x is parallel or nearly parallel to the primary reference vector
-        dot_product = np.dot(local_x, primary_ref)
-        if np.abs(dot_product) > 1.0 - 1e-6:
+        cos_theta = np.dot(local_x, primary_ref) / (np.linalg.norm(local_x) * np.linalg.norm(primary_ref))
+        if np.abs(cos_theta) > 1.0 - 1e-6:
             # If parallel, choose an alternative reference vector (global Z-axis)
             reference_vector = np.array([0, 0, 1]) + start_node_array
         else:

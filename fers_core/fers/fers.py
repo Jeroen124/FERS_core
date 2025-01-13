@@ -849,79 +849,211 @@ class FERS:
         plotter.show_grid(color="gray")
         plotter.show(title="FERS 3D Model")
 
-    def show_results_3d(self, displacement=True, displacement_scale=100.0):
+    def show_results_3d(self, displacement=True, displacement_scale=100.0, num_points=20):
         """
         Visualizes the results of the analysis in 3D using PyVista, including displacements if enabled.
+        Now updated to do local transformations for each member.
 
         Args:
             displacement (bool): Whether to show the displacement results.
             displacement_scale (float): Scale factor for visualizing displacements.
+            num_points (int): Number of interpolation points along each member.
         """
+        import numpy as np
+        import pyvista as pv
+
         if self.results is None:
             print("No results to display. Please run an analysis first.")
             return
 
-        # Extract nodes and their displacements
+        # Extract nodes and their global displacements from the results
         displacement_nodes = self.results.displacement_nodes
-        node_positions = []
-        displaced_positions = []
-        node_map = {}
+        node_positions = {}
+        node_displacements_global = {}
 
-        # Extract original and displaced positions
-        for node_id, disp in displacement_nodes.items():
-            # Original node position
-            node = self.get_node_by_pk(int(node_id))  # Assuming nodes are accessible by ID
+        for node_id_str, disp in displacement_nodes.items():
+            node_id = int(node_id_str)
+            node = self.get_node_by_pk(node_id)
             if node:
                 original_position = np.array([node.X, node.Y, node.Z])
-                node_positions.append(original_position)
-                node_map[int(node_id)] = len(node_positions) - 1
+                node_positions[node_id] = original_position
 
-                # Apply displacement and scaling
-                if displacement:
-                    displaced_position = (
-                        original_position + np.array([disp.dx, disp.dy, disp.dz]) * displacement_scale
-                    )
+                if disp and displacement:
+                    # Global displacement vector
+                    d_global = np.array([disp.dx, disp.dy, disp.dz])  # Displacements in m
+                    r_global = np.array([disp.rx, disp.ry, disp.rz])  # rotations in rad
+
                 else:
-                    displaced_position = original_position
+                    d_global = np.array([0.0, 0.0, 0.0])
+                    r_global = np.array([0.0, 0.0, 0.0])
 
-                displaced_positions.append(displaced_position)
-
-        # Convert to NumPy arrays for PyVista compatibility
-        node_positions = np.array(node_positions)
-        displaced_positions = np.array(displaced_positions)
+                node_displacements_global[node_id] = (d_global, r_global)
 
         # Create a PyVista plotter
         plotter = pv.Plotter()
-        plotter.add_axes()  # Add 3D axes for reference
+        plotter.add_axes()  # 3D axes
 
-        # Plot the original structure
-        original_poly_data = pv.PolyData(node_positions)
-        original_poly_data["Original"] = np.arange(len(node_positions))
-        plotter.add_points(original_poly_data, color="blue", point_size=10, label="Original Shape")
+        # Helper: Build rotation matrix from local axes
+        def get_rotation_matrix(local_x, local_y, local_z):
+            # Each is shape (3,). We'll stack them as columns
+            R = np.column_stack([local_x, local_y, local_z])  # shape (3,3)
+            return R
 
-        # Plot the deformed structure
-        displaced_poly_data = pv.PolyData(displaced_positions)
-        displaced_poly_data["Displaced"] = np.arange(len(displaced_positions))
-        plotter.add_points(displaced_poly_data, color="red", point_size=10, label="Deformed Shape")
+        # Helper: Transform global DOFs to local
+        def transform_dofs_global_to_local(d_global, r_global, R):
+            # local_disp = R^T * global_disp
+            d_local = R.T @ d_global
+            r_local = R.T @ r_global
+            return d_local, r_local
 
-        # Draw lines between nodes to represent members
+        # Helper: Interpolate in local coords. You can do something more sophisticated
+        # with shape functions, but here's a simple approach to show the concept.
+        def interpolate_beam_local(
+            xstart, xend, local_disp_start, local_disp_end, local_rot_start, local_rot_end, n_points
+        ):
+            """
+            xstart, xend = scalar or local length in the local x-axis
+            local_disp_start, local_disp_end = (u_x, u_y, u_z) at ends
+            local_rot_start, local_rot_end   = (phi_x, phi_y, phi_z) at ends
+            n_points = how many interpolation points.
+
+            Returns: an array shape (n_points, 3) of deflections in local coordinates,
+                    for x from 0..(xend-xstart).
+            """
+            # For demonstration, let's do a simple "cubic" in local y and z for bending,
+            # plus linear in x and maybe a twist for phi_x. This is not a full 3D shape function,
+            # but gives an idea.
+
+            # We'll param = t in [0..1], length L = (xend - xstart)
+            # local_y(t) and local_z(t) as cubic polynomials matching end deflections and slopes
+            import numpy as np
+
+            L = xend - xstart
+            t = np.linspace(0, 1, n_points)
+
+            # local_disp_start = [uxs, uys, uzs]
+            # local_disp_end   = [uxe, uye, uze]
+            uxs, uys, uzs = local_disp_start
+            uxe, uye, uze = local_disp_end
+
+            # local_rot_start = [rxs, rys, rzs]  (these are small-angle rotations about local x,y,z)
+            # Typically, for Euler-Bernoulli beam bending about y or z, we'd use phi_z or phi_y as slope.
+            # We'll do something simple: the slope in yz-plane depends on phi_z or phi_y.
+
+            # For "bending in y", slope ~ phi_z (rotation about local z).
+            # For "bending in z", slope ~ -phi_y (rotation about local y).
+            # This is a big simplification!
+
+            rxs, rys, rzs = local_rot_start
+            rxe, rye, rze = local_rot_end
+
+            # 1) Interpolate in local x as linear
+            ux_vals = uxs + (uxe - uxs) * t
+
+            # 2) Interpolate local y with a "cubic Hermite" style
+            #    y(0)=uys, y(L)=uye, y'(0)=slope0, y'(L)=slope1
+            #    slope0 ~ L * ( rotation about z at start )
+            slope_y0 = L * rzs  # approximate slope from rotation about z
+            slope_y1 = L * rze  # at end
+
+            # Hermite basis for t in [0..1]
+            # h1 = 2t^3 - 3t^2 + 1
+            # h2 = -2t^3 + 3t^2
+            # h3 = t^3 - 2t^2 + t
+            # h4 = t^3 - t^2
+            # y(t) = uys*h1 + uye*h2 + slope_y0*h3 + slope_y1*h4
+            h1 = 2 * t**3 - 3 * t**2 + 1
+            h2 = -2 * t**3 + 3 * t**2
+            h3 = t**3 - 2 * t**2 + t
+            h4 = t**3 - t**2
+
+            y_vals = uys * h1 + uye * h2 + slope_y0 * h3 + slope_y1 * h4
+
+            # 3) Interpolate local z similarly, slope from rotation about y
+            slope_z0 = -L * rys
+            slope_z1 = -L * rye
+            z_vals = uzs * h1 + uze * h2 + slope_z0 * h3 + slope_z1 * h4
+
+            # Combine
+            deflections_local = np.vstack([ux_vals, y_vals, z_vals]).T  # shape (n_points, 3)
+            return deflections_local
+
+        # Now, loop over members and plot
         for member in self.get_all_members():
-            start_idx = node_map.get(member.start_node.id)
-            end_idx = node_map.get(member.end_node.id)
+            # Original line in global
+            start_id = member.start_node.id
+            end_id = member.end_node.id
 
-            if start_idx is not None and end_idx is not None:
-                # Lines for original structure
-                line = pv.Line(node_positions[start_idx], node_positions[end_idx])
-                plotter.add_mesh(line, color="blue", line_width=2)
+            start_pos_global = node_positions[start_id]
+            end_pos_global = node_positions[end_id]
 
-                # Lines for deformed structure
-                line_deformed = pv.Line(displaced_positions[start_idx], displaced_positions[end_idx])
-                plotter.add_mesh(line_deformed, color="red", line_width=2)
+            # Grab the global disp & rotations
+            d_global_start, r_global_start = node_displacements_global[start_id]
+            d_global_end, r_global_end = node_displacements_global[end_id]
 
-        # Set up the visualization
+            # local axes
+            local_x, local_y, local_z = member.local_coordinate_system()
+            R = get_rotation_matrix(local_x, local_y, local_z)
+
+            # 1) Transform the start/end DOFs to local
+            d_local_start, r_local_start = transform_dofs_global_to_local(d_global_start, r_global_start, R)
+            d_local_end, r_local_end = transform_dofs_global_to_local(d_global_end, r_global_end, R)
+
+            # 2) The local "x" coordinate for the start node is 0, for the end node is member.length()
+            #    We'll just say xstart=0, xend=L
+            L = member.length()
+
+            # 3) Interpolate the local deflection.
+            #    local_disp_start = (u_x, u_y, u_z) at the start
+            #    local_rot_start  = (phi_x, phi_y, phi_z) at the start, etc.
+            local_disp_start = d_local_start
+            local_disp_end = d_local_end
+            local_rot_start = r_local_start
+            local_rot_end = r_local_end
+
+            deflections_local = interpolate_beam_local(
+                0.0, L, local_disp_start, local_disp_end, local_rot_start, local_rot_end, num_points
+            )
+            deflections_local *= displacement_scale
+
+            # shape (n_points, 3) => each row is [ux, uy, uz] in local coords
+
+            # 4) Convert local deflections back to global
+            #    But we also need the local coordinate of each point along the beam's axis in global space.
+            #    A param s in [0..1],
+            #    the global position = start_pos_global + s*(end_pos_global - start_pos_global).
+            s_vals = np.linspace(0, 1, num_points)
+            original_curve_global = []
+            deformed_curve_global = []
+
+            for i, s in enumerate(s_vals):
+                # original global coordinate
+                orig_pt = start_pos_global + s * (end_pos_global - start_pos_global)
+                original_curve_global.append(orig_pt)
+
+                # local deflection at this point
+                defl_loc = deflections_local[i]
+
+                # transform local deflection to global
+                defl_g = R @ defl_loc
+
+                # add the node's base position in global + deflection + (optionally scale factor)
+                defl_pt_global = orig_pt + defl_g
+                deformed_curve_global.append(defl_pt_global)
+
+            original_curve_global = np.array(original_curve_global)
+            deformed_curve_global = np.array(deformed_curve_global)
+
+            # Plot original curve in BLUE
+            plotter.add_lines(original_curve_global, color="blue", width=2, label="Original Shape")
+
+            # Plot deformed curve in RED
+            plotter.add_lines(deformed_curve_global, color="red", width=2, label="Deformed Shape")
+
+        # Show
         plotter.add_legend()
         plotter.show_grid(color="gray")
-        plotter.show(title="3D Beam Displacement Visualization")
+        plotter.show(title="3D Beam Displacement Visualization (Local -> Global)")
 
     def plot_model(self, plane="yz"):
         """

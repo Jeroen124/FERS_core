@@ -1,9 +1,6 @@
 import os
 from FERS_core import Node, Member, FERS, Material, Section, MemberSet, NodalSupport, NodalLoad
-import fers_calculations
-import ujson
 
-from FERS_core.types.pydantic_models import Results
 
 # =============================================================================
 # Example and Validation: Cantilever Beam with End Load
@@ -55,13 +52,13 @@ calculation_1.save_to_json(file_path, indent=4)
 # ----------------------------
 # Perform the analysis using the saved JSON model file
 print("Running the analysis...")
-result = fers_calculations.calculate_from_file(file_path)
-result_dict = ujson.loads(result)
-parsed_results = Results(**result_dict)
+calculation_1.run_analysis()
 
 # Extract results from the analysis
-dy_fers = parsed_results.displacement_nodes[1].dy  # Displacement at the free end in the y-direction
-Mz_fers = parsed_results.reaction_forces[0].mz  # Reaction moment at the fixed end
+# Displacement at the free end in the y-direction
+dy_fers = calculation_1.results.displacement_nodes["2"].dy
+# Reaction moment at the fixed end
+Mz_fers = calculation_1.results.reaction_forces[0].mz
 
 # Step 4: Validate Results Against Analytical Solution
 # ----------------------------------------------------
