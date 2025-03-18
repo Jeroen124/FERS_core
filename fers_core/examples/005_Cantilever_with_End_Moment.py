@@ -1,8 +1,9 @@
 import os
-from FERS_core import Node, Member, FERS, Material, Section, MemberSet, NodalSupport, NodalLoad
+from FERS_core import Node, Member, FERS, Material, Section, MemberSet, NodalSupport
 import fers_calculations
 import ujson
 
+from FERS_core.loads.nodalmoment import NodalMoment
 from FERS_core.types.pydantic_models import Results
 
 # =============================================================================
@@ -45,10 +46,15 @@ calculation_1.add_member_set(membergroup1)
 end_load_case = calculation_1.create_load_case(name="End Load")
 
 # Apply a 1 kN downward force (global y-axis) at the free end (node2)
-nodal_load = NodalLoad(node=node2, load_case=end_load_case, magnitude=-1000, direction=(0, 1, 0))
+end_moment = NodalMoment(
+    node=node2,
+    load_case=end_load_case,
+    magnitude=500.0,
+    direction=(0, 0, 1),
+)
 
 # Save the model to a file for FERS calculations
-file_path = os.path.join("1_cantilever_with_end_load.json")
+file_path = os.path.join("json_input_solver", "005_cantilever_with_end_load.json")
 calculation_1.save_to_json(file_path, indent=4)
 
 # Step 3: Run FERS calculation

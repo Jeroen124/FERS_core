@@ -39,6 +39,8 @@ class FERS:
         self.settings = (
             settings if settings is not None else Settings()
         )  # Use provided settings or create default
+        self.validation_checks = []
+        self.report = None
         self.results = None
 
     def run_analysis_from_file(self, file_path: str):
@@ -392,12 +394,19 @@ class FERS:
             nodal_loads.extend(load_case.nodal_loads)
         return nodal_loads
 
-    def get_all_line_loads(self):
-        """Return all line loads in the model."""
-        line_loads = []
+    def get_all_nodal_moments(self):
+        """Return all nodal moments in the model."""
+        nodal_moments = []
         for load_case in self.get_all_load_cases():
-            line_loads.extend(load_case.line_loads)
-        return line_loads
+            nodal_moments.extend(load_case.nodal_moments)
+        return nodal_moments
+
+    def get_all_distributed_loads(self):
+        """Return all line loads in the model."""
+        distributed_loads = []
+        for load_case in self.get_all_load_cases():
+            distributed_loads.extend(load_case.distributed_loads)
+        return distributed_loads
 
     def get_all_imperfection_cases(self):
         """Return all imperfection cases in the model."""

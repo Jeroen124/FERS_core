@@ -1,5 +1,6 @@
-from .lineload import LineLoad
 from typing import Optional
+
+from FERS_core.loads.distributedload import DistributedLoad
 
 
 class LoadCase:
@@ -11,7 +12,8 @@ class LoadCase:
         name: Optional[str] = None,
         id: Optional[int] = None,
         nodal_loads: Optional[list] = None,
-        line_loads: Optional[list] = None,
+        nodal_moments: Optional[list] = None,
+        distributed_loads: Optional[list] = None,
         rotation_imperfections: Optional[list] = None,
         translation_imperfections: Optional[list] = None,
     ):
@@ -24,7 +26,8 @@ class LoadCase:
             self.name = name
 
         self.nodal_loads = nodal_loads if nodal_loads is not None else []
-        self.line_loads = line_loads if line_loads is not None else []
+        self.nodal_moments = nodal_moments if nodal_moments is not None else []
+        self.distributed_loads = distributed_loads if distributed_loads is not None else []
         self.rotation_imperfections = rotation_imperfections if rotation_imperfections is not None else []
         self.translation_imperfections = (
             translation_imperfections if translation_imperfections is not None else []
@@ -35,8 +38,11 @@ class LoadCase:
     def add_nodal_load(self, nodal_load):
         self.nodal_loads.append(nodal_load)
 
-    def add_line_load(self, line_load):
-        self.line_loads.append(line_load)
+    def add_nodal_moment(self, nodal_load):
+        self.nodal_moments.append(nodal_load)
+
+    def add_distributed_loads(self, distributed_loads):
+        self.distributed_loads.append(distributed_loads)
 
     def add_rotation_imperfection(self, rotation_imperfection):
         self.imperfection_loads.append(rotation_imperfection)
@@ -68,7 +74,8 @@ class LoadCase:
             "id": self.id,
             "name": self.name,
             "nodal_loads": [nl.to_dict() for nl in self.nodal_loads],
-            "line_loads": [ll.to_dict() for ll in self.line_loads],
+            "nodal_moments": [nm.to_dict() for nm in self.nodal_moments],
+            "distributed_loads": [ll.to_dict() for ll in self.distributed_loads],
             "rotation_imperfections": [ri.id for ri in self.rotation_imperfections],
             "translation_imperfections": [ti.id for ti in self.translation_imperfections],
         }
@@ -76,7 +83,7 @@ class LoadCase:
     @staticmethod
     def apply_deadload_to_members(members, load_case, direction):
         """
-        Apply a line load to all members
+        Apply a distributed load to all members
 
         Args:
             members (list): The list of members to search through.
@@ -87,9 +94,11 @@ class LoadCase:
             start_pos (float): The relative start position of the load along the member (0 = start, 1 = end).
             end_pos (float): The relative end position of the load along the member (0 = start, 1 = end).
         """
+        from FERS_core.loads.distributedload import DistributedLoad
+
         for member in members:
             magnitude = -9.81 * member.weight
-            LineLoad(
+            DistributedLoad(
                 member=member,
                 load_case=load_case,
                 magnitude=magnitude,
@@ -116,7 +125,7 @@ class LoadCase:
         """
         for member in members:
             if member.classification == classification:
-                LineLoad(
+                DistributedLoad(
                     member=member,
                     load_case=load_case,
                     magnitude=magnitude,

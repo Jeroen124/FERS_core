@@ -8,7 +8,8 @@ from .members.memberset import MemberSet
 from .supports.nodalsupport import NodalSupport
 from .loads.loadcase import LoadCase
 from .loads.nodalload import NodalLoad
-from .loads.lineload import LineLoad
+from .loads.distributedload import DistributedLoad
+from .loads.nodalmoment import NodalMoment
 from .imperfections.imperfectioncase import ImperfectionCase
 from .imperfections.rotationimperfection import RotationImperfection
 from .imperfections.translationimperfection import TranslationImperfection
@@ -24,7 +25,8 @@ __all__ = [
     "MemberSet",
     "LoadCase",
     "NodalLoad",
-    "LineLoad",
+    "DistributedLoad",
+    "NodalMoment",
     "ImperfectionCase",
     "RotationImperfection",
     "TranslationImperfection",

@@ -72,6 +72,15 @@ class MemberType(Enum):
     Rigid = "Rigid"
 
 
+class NodalMoment(BaseModel):
+    direction: List
+    id: conint(ge=0)
+    load_case: conint(ge=0)
+    load_type: str
+    magnitude: float
+    node: conint(ge=0)
+
+
 class NodalLoad(BaseModel):
     direction: List
     id: conint(ge=0)
@@ -228,7 +237,7 @@ class ImperfectionCase(BaseModel):
     translation_imperfections: List[TranslationImperfection]
 
 
-class LineLoad(BaseModel):
+class DistributedLoad(BaseModel):
     direction: List
     end_pos: float
     load_case: conint(ge=0)
@@ -239,9 +248,10 @@ class LineLoad(BaseModel):
 
 class LoadCase(BaseModel):
     id: conint(ge=0)
-    line_loads: List[LineLoad]
     name: str
     nodal_loads: List[NodalLoad]
+    nodal_moments: List[NodalMoment]
+    distributed_loads: List[DistributedLoad]
     rotation_imperfections: List[RotationImperfection]
     translation_imperfections: List[TranslationImperfection]
 

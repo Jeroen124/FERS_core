@@ -15,8 +15,9 @@ from FERS_core.types.pydantic_models import Results
 calculation_1 = FERS()
 
 # Define the geometry of the beam
-node1 = Node(0, 0, 0)  # Fixed end of the beam
-node2 = Node(5, 0, 0)  # Free end of the beam, 5 meters away
+node1 = Node(0, 0, 0)  # Simply supported side of the beam at x=0
+node2 = Node(3, 0, 0)  # Free end of the beam, 5 meters away
+node2 = Node(6, 0, 0)  # Simply supported side of the beam at x=6
 
 # Define the material properties (Steel S235)
 Steel_S235 = Material(name="Steel", e_mod=210e9, g_mod=80.769e9, density=7850, yield_stress=235e6)
