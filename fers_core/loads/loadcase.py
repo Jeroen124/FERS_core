@@ -1,7 +1,5 @@
 from typing import Optional
 
-from FERS_core.loads.distributedload import DistributedLoad
-
 
 class LoadCase:
     _load_case_counter = 1
@@ -41,7 +39,7 @@ class LoadCase:
     def add_nodal_moment(self, nodal_load):
         self.nodal_moments.append(nodal_load)
 
-    def add_distributed_loads(self, distributed_loads):
+    def add_distributed_load(self, distributed_loads):
         self.distributed_loads.append(distributed_loads)
 
     def add_rotation_imperfection(self, rotation_imperfection):
@@ -123,6 +121,8 @@ class LoadCase:
             start_pos (float): The relative start position of the load along the member (0 = start, 1 = end).
             end_pos (float): The relative end position of the load along the member (0 = start, 1 = end).
         """
+        from FERS_core.loads.distributedload import DistributedLoad
+
         for member in members:
             if member.classification == classification:
                 DistributedLoad(

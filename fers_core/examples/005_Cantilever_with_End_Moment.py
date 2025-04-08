@@ -54,7 +54,7 @@ end_moment = NodalMoment(
 )
 
 # Save the model to a file for FERS calculations
-file_path = os.path.join("json_input_solver", "005_cantilever_with_end_load.json")
+file_path = os.path.join("json_input_solver", "005_Cantilever_with_End_Moment.json")
 calculation_1.save_to_json(file_path, indent=4)
 
 # Step 3: Run FERS calculation

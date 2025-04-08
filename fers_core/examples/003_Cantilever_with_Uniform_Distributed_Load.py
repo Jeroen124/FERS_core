@@ -32,6 +32,7 @@ section = Section(
     name="IPE 180 Beam Section", material=Steel_S235, i_y=0.819e-6, i_z=10.63e-6, j=0.027e-6, area=0.00196
 )
 
+
 # Create the beam element
 beam = Member(start_node=node1, end_node=node2, section=section)
 
@@ -82,6 +83,11 @@ w = 1000.0  # N/m (same as above)
 L = 5  # Beam length in meters
 E = 210e9  # Elastic modulus (Pascals)
 I = 10.63e-6  # Moment of inertia (m^4)
+
+
+section = Section(
+    name="IPE 180 Beam Section", material=Steel_S235, i_y=1.019e-6, i_z=13.17e-6, j=0.027e-6, area=0.00196
+)
 
 # For a uniform load w on a cantilever, the maximum deflection at x=L is:
 #   δ_max = w * L^4 / (8 * E * I)

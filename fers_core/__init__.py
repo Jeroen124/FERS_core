@@ -13,6 +13,9 @@ from .loads.nodalmoment import NodalMoment
 from .imperfections.imperfectioncase import ImperfectionCase
 from .imperfections.rotationimperfection import RotationImperfection
 from .imperfections.translationimperfection import TranslationImperfection
+from .loads.distributionshape import DistributionShape
+from FERS_core.supports.supportcondition import SupportCondition
+from FERS_core.supports.supportcondition import SupportConditionType
 
 __all__ = [
     "Node",
@@ -30,4 +33,7 @@ __all__ = [
     "ImperfectionCase",
     "RotationImperfection",
     "TranslationImperfection",
+    "DistributionShape",
+    "SupportCondition",
+    "SupportConditionType",
 ]

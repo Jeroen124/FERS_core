@@ -1,12 +1,19 @@
 import os
-from FERS_core import Node, Member, FERS, Material, Section, MemberSet, NodalSupport, NodalLoad
-import fers_calculations
-import ujson
+from FERS_core import (
+    Node,
+    Member,
+    FERS,
+    Material,
+    Section,
+    MemberSet,
+    NodalSupport,
+    DistributedLoad,
+    DistributionShape,
+)
 
-from FERS_core.types.pydantic_models import Results
 
 # =============================================================================
-# Example and Validation: Cantilever Beam with End Load
+# Example and Validation: Cantilever Beam with Uniform Distributed Load
 # =============================================================================
 
 # Step 1: Set up the model
@@ -42,41 +49,50 @@ calculation_1.add_member_set(membergroup1)
 # Step 2: Apply the load
 # ----------------------
 # Create a load case for the analysis
-end_load_case = calculation_1.create_load_case(name="End Load")
+load_case = calculation_1.create_load_case(name="Uniform Load")
 
-# Apply a 1 kN downward force (global y-axis) at the free end (node2)
-nodal_load = NodalLoad(node=node2, load_case=end_load_case, magnitude=-1000, direction=(0, 1, 0))
+# Apply a uniform distributed load (e.g., w = 1000 N/m) downward along the entire beam
+distributed_load = DistributedLoad(
+    member=beam,
+    load_case=load_case,
+    distribution_shape=DistributionShape.UNIFORM,
+    magnitude=1000.0,  # 1000 N/m (example uniform load)
+    direction=(0, -1, 0),  # Downward in the global Y-axis
+    start_pos=0.0,
+    end_pos=beam.length(),
+)
 
 # Save the model to a file for FERS calculations
-file_path = os.path.join("1_cantilever_with_end_load.json")
+file_path = os.path.join("json_input_solver", "004_Cantilever_with_Triangular_Distributed_Load.json")
 calculation_1.save_to_json(file_path, indent=4)
 
 # Step 3: Run FERS calculation
 # ----------------------------
-# Perform the analysis using the saved JSON model file
 print("Running the analysis...")
-result = fers_calculations.calculate_from_file(file_path)
-result_dict = ujson.loads(result)
-parsed_results = Results(**result_dict)
+calculation_1.run_analysis()
 
 # Extract results from the analysis
-dy_fers = parsed_results.displacement_nodes[1].dy  # Displacement at the free end in the y-direction
-Mz_fers = parsed_results.reaction_forces[0].mz  # Reaction moment at the fixed end
+# Displacement at the free end in the y-direction
+dy_fers = calculation_1.results.displacement_nodes["2"].dy
+# Reaction moment at the fixed end
+Mz_fers = calculation_1.results.reaction_forces[0].mz
 
 # Step 4: Validate Results Against Analytical Solution
 # ----------------------------------------------------
-# Analytical solution parameters
-F = 1000  # Force in Newtons
-L = 5  # Length of the beam in meters
-E = 210e9  # Modulus of elasticity in Pascals
-I = 10.63e-6  # Moment of inertia in m^4
-x = L  # Distance to the free end for max deflection and slope
+# Analytical solution parameters for a cantilever with a uniform load 'w' over length L
+w = 1000.0  # N/m (same as above)
+L = 5  # Beam length in meters
+E = 210e9  # Elastic modulus (Pascals)
+I = 10.63e-6  # Moment of inertia (m^4)
 
-# Calculate analytical solutions for deflection and moment
-delta_analytical = (-F * x**2 / (6 * E * I)) * (3 * L - x)  # Max deflection
-M_max_analytical = F * L  # Max moment at the fixed end
+# For a uniform load w on a cantilever, the maximum deflection at x=L is:
+#   δ_max = w * L^4 / (8 * E * I)
+delta_analytical = w * (L**4) / (8 * E * I)
 
-# Compare FERS results with analytical solutions
+# The maximum moment at the fixed end is:
+#   M_max = w * L^2 / 2
+M_max_analytical = w * (L**2) / 2
+
 print("\nComparison of results:")
 print(f"Deflection at free end (FERS): {dy_fers:.6f} m")
 print(f"Deflection at free end (Analytical): {delta_analytical:.6f} m")
@@ -97,7 +113,6 @@ print("\nAll results validated successfully!")
 # =============================================================================
 # Notes for Users
 # =============================================================================
-# This script is both an example and a validation tool.
-# 1. It demonstrates how to set up and analyze a cantilever beam with an end load.
-# 2. It validates the FERS results against analytical solutions for deflection and moment.
-# 3. Run this script as-is to learn, or integrate it into your CI/CD pipeline for validation.
+# This script demonstrates how to set up and analyze a cantilever beam with a uniform distributed load.
+# It validates the FERS results against the classical analytical solutions for deflection and moment.
+# You can adapt this script for your own models or include it in a CI/CD pipeline for regression testing.

@@ -61,6 +61,8 @@ class DistributedLoad:
         self.start_pos = start_pos
         self.end_pos = end_pos
 
+        self.load_case.add_distributed_load(self)
+
     def to_dict(self) -> Dict[str, Any]:
         """
         Serialize the distributed load into a dictionary for JSON output.

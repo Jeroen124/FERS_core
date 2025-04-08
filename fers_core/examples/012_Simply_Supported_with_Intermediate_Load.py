@@ -1,5 +1,15 @@
 import os
-from FERS_core import Node, Member, FERS, Material, Section, MemberSet, NodalSupport, NodalLoad
+from FERS_core import (
+    Node,
+    Member,
+    FERS,
+    Material,
+    Section,
+    MemberSet,
+    NodalSupport,
+    NodalLoad,
+    SupportCondition,
+)
 import fers_calculations
 import ujson
 
@@ -15,8 +25,9 @@ from FERS_core.types.pydantic_models import Results
 calculation_1 = FERS()
 
 # Define the geometry of the beam
-node1 = Node(0, 0, 0)  # Fixed end of the beam
-node2 = Node(5, 0, 0)  # Free end of the beam, 5 meters away
+node1 = Node(0, 0, 0)  # Simply supported side of the beam at x=0
+node2 = Node(2, 0, 0)  # Free end of the beam, 5 meters away
+node3 = Node(6, 0, 0)  # Simply supported side of the beam at x=6
 
 # Define the material properties (Steel S235)
 Steel_S235 = Material(name="Steel", e_mod=210e9, g_mod=80.769e9, density=7850, yield_stress=235e6)
@@ -27,14 +38,24 @@ section = Section(
 )
 
 # Create the beam element
-beam = Member(start_node=node1, end_node=node2, section=section)
+beam1 = Member(start_node=node1, end_node=node2, section=section)
+beam2 = Member(start_node=node2, end_node=node3, section=section)
 
 # Apply a fixed support at the fixed end (node1)
-wall_support = NodalSupport()
-node1.nodal_support = wall_support
+
+simply_supported_support = NodalSupport(
+    rotation_conditions={
+        "X": SupportCondition(condition=SupportCondition.FREE),
+        "Y": SupportCondition(condition=SupportCondition.FREE),
+        "Z": SupportCondition(condition=SupportCondition.FREE),
+    }
+)
+
+node1.nodal_support = simply_supported_support
+node3.nodal_support = simply_supported_support
 
 # Add the beam to a member group
-membergroup1 = MemberSet(members=[beam])
+membergroup1 = MemberSet(members=[beam1, beam2])
 
 # Add the member group to the calculation model
 calculation_1.add_member_set(membergroup1)
@@ -48,7 +69,7 @@ end_load_case = calculation_1.create_load_case(name="End Load")
 nodal_load = NodalLoad(node=node2, load_case=end_load_case, magnitude=-1000, direction=(0, 1, 0))
 
 # Save the model to a file for FERS calculations
-file_path = os.path.join("1_cantilever_with_end_load.json")
+file_path = os.path.join("json_input_solver", "012_Simply_Supported_with_Intermediate_Load.json")
 calculation_1.save_to_json(file_path, indent=4)
 
 # Step 3: Run FERS calculation
@@ -67,14 +88,16 @@ Mz_fers = parsed_results.reaction_forces[0].mz  # Reaction moment at the fixed e
 # ----------------------------------------------------
 # Analytical solution parameters
 F = 1000  # Force in Newtons
-L = 5  # Length of the beam in meters
+L = 6  # Length of the beam in meters
 E = 210e9  # Modulus of elasticity in Pascals
 I = 10.63e-6  # Moment of inertia in m^4
-x = L  # Distance to the free end for max deflection and slope
-
+x = 4  # Distance to the free end for max deflection and slope
+b = 2
 # Calculate analytical solutions for deflection and moment
-delta_analytical = (-F * x**2 / (6 * E * I)) * (3 * L - x)  # Max deflection
-M_max_analytical = F * L  # Max moment at the fixed end
+
+
+delta_analytical = -((F * b * x) / (6 * L * E * I)) * (L**2 - b**2 - x**2)  # Max deflection
+M_max_analytical = (F * b * (L - b)) / L  # Max moment at the fixed end
 
 # Compare FERS results with analytical solutions
 print("\nComparison of results:")

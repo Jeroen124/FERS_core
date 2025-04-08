@@ -41,8 +41,21 @@
     "load_cases": [
         {
             "id": 1,
-            "name": "Uniform Load",
-            "nodal_loads": [],
+            "name": "End Load",
+            "nodal_loads": [
+                {
+                    "id": 1,
+                    "node": 2,
+                    "load_case": 1,
+                    "magnitude": -1000,
+                    "direction": [
+                        0,
+                        1,
+                        0
+                    ],
+                    "load_type": "force"
+                }
+            ],
             "nodal_moments": [],
             "distributed_loads": [],
             "rotation_imperfections": [],
@@ -52,9 +65,9 @@
     "load_combinations": [],
     "imperfection_cases": [],
     "settings": {
-        "id": 1,
+        "id": 5,
         "analysis_option": {
-            "id": 1,
+            "id": 5,
             "solve_loadcases": true,
             "solver": "newton_raphson",
             "tolerance": 0.01,
