@@ -26,10 +26,10 @@ class Material:
         return {
             "id": self.id,
             "name": self.name,
-            "e_mod": self.e_mod,
-            "g_mod": self.g_mod,
+            "eMod": self.e_mod,
+            "gMod": self.g_mod,
             "density": self.density,
-            "yield_stress": self.yield_stress,
+            "yieldStress": self.yield_stress,
         }
 
     @classmethod
