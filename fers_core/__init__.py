@@ -8,8 +8,8 @@ from .members.memberset import MemberSet
 from .supports.nodalsupport import NodalSupport
 from .loads.loadcase import LoadCase
 from .loads.nodalload import NodalLoad
-from .loads.distributedload import DistributedLoad
 from .loads.nodalmoment import NodalMoment
+from .loads.distributedload import DistributedLoad
 from .imperfections.imperfectioncase import ImperfectionCase
 from .imperfections.rotationimperfection import RotationImperfection
 from .imperfections.translationimperfection import TranslationImperfection

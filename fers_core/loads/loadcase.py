@@ -73,7 +73,7 @@ class LoadCase:
             "name": self.name,
             "nodal_loads": [nl.to_dict() for nl in self.nodal_loads],
             "nodal_moments": [nm.to_dict() for nm in self.nodal_moments],
-            "distributed_loads": [ll.to_dict() for ll in self.distributed_loads],
+            "distributed_loads": [dl.to_dict() for dl in self.distributed_loads],
             "rotation_imperfections": [ri.id for ri in self.rotation_imperfections],
             "translation_imperfections": [ti.id for ti in self.translation_imperfections],
         }
@@ -110,7 +110,7 @@ class LoadCase:
         members, classification, load_case, magnitude, direction, start_pos=0, end_pos=1
     ):
         """
-        Apply a line load to members that match the given type.
+        Apply a distributed load to members that match the given type.
 
         Args:
             members (list): The list of members to search through.
