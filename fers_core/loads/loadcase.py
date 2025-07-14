@@ -92,7 +92,7 @@ class LoadCase:
             start_pos (float): The relative start position of the load along the member (0 = start, 1 = end).
             end_pos (float): The relative end position of the load along the member (0 = start, 1 = end).
         """
-        from FERS_core.loads.distributedload import DistributedLoad
+        from ..loads.distributedload import DistributedLoad
 
         for member in members:
             magnitude = -9.81 * member.weight
@@ -121,7 +121,7 @@ class LoadCase:
             start_pos (float): The relative start position of the load along the member (0 = start, 1 = end).
             end_pos (float): The relative end position of the load along the member (0 = start, 1 = end).
         """
-        from FERS_core.loads.distributedload import DistributedLoad
+        from ..loads.distributedload import DistributedLoad
 
         for member in members:
             if member.classification == classification:

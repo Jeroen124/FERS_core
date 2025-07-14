@@ -6,26 +6,26 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pyvista as pv
 
-from FERS_core.fers.deformation_utils import (
+from ..fers.deformation_utils import (
     get_rotation_matrix,
     interpolate_beam_local,
     transform_dofs_global_to_local,
     extrude_along_path,
 )
-from FERS_core.imperfections.imperfectioncase import ImperfectionCase
-from FERS_core.loads.loadcase import LoadCase
-from FERS_core.loads.loadcombination import LoadCombination
-from FERS_core.loads.nodalload import NodalLoad
-from FERS_core.members.material import Material
-from FERS_core.members.member import Member
-from FERS_core.members.section import Section
-from FERS_core.members.memberhinge import MemberHinge
-from FERS_core.members.memberset import MemberSet
-from FERS_core.members.shapepath import ShapePath
-from FERS_core.nodes.node import Node
-from FERS_core.supports.nodalsupport import NodalSupport
-from FERS_core.settings.settings import Settings
-from FERS_core.types.pydantic_models import Results
+from ..imperfections.imperfectioncase import ImperfectionCase
+from ..loads.loadcase import LoadCase
+from ..loads.loadcombination import LoadCombination
+from ..loads.nodalload import NodalLoad
+from ..members.material import Material
+from ..members.member import Member
+from ..members.section import Section
+from ..members.memberhinge import MemberHinge
+from ..members.memberset import MemberSet
+from ..members.shapepath import ShapePath
+from ..nodes.node import Node
+from ..supports.nodalsupport import NodalSupport
+from ..settings.settings import Settings
+from ..types.pydantic_models import Results
 
 
 class FERS:

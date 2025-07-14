@@ -1,6 +1,6 @@
 from typing import Optional
-from FERS_core.members.material import Material
-from FERS_core.members.shapepath import ShapePath
+from ..members.material import Material
+from ..members.shapepath import ShapePath
 from sectionproperties.pre.library.steel_sections import i_section
 from sectionproperties.analysis.section import Section as SP_section
 

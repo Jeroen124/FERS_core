@@ -1,10 +1,10 @@
 from typing import Optional, Dict, Any, List, Union
 
-from FERS_core.loads.loadcombination import LoadCombination
-from FERS_core.validation.checktype import CheckType
-from FERS_core.nodes.node import Node
-from FERS_core.members.member import Member
-from FERS_core.members.memberset import MemberSet
+from ..loads.loadcombination import LoadCombination
+from ..validation.checktype import CheckType
+from ..nodes.node import Node
+from ..members.member import Member
+from ..members.memberset import MemberSet
 
 
 class ValidationCheck:

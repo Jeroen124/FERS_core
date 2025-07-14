@@ -1,7 +1,7 @@
 from typing import List, Optional
 import matplotlib.pyplot as plt
 
-from FERS_core.members.shapecommand import ShapeCommand
+from ..members.shapecommand import ShapeCommand
 
 
 class ShapePath:

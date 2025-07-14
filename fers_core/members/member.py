@@ -1,11 +1,11 @@
-from FERS_core.nodes.node import Node
+from ..nodes.node import Node
 
 from typing import Optional
 import numpy as np
 
-from FERS_core.members.memberhinge import MemberHinge
-from FERS_core.members.enums import MemberType
-from FERS_core.members.section import Section
+from ..members.memberhinge import MemberHinge
+from ..members.enums import MemberType
+from ..members.section import Section
 
 
 class Member:
@@ -18,15 +18,15 @@ class Member:
         end_node: Node,
         section: Section,
         id: Optional[int] = None,
-        start_hinge: MemberHinge = None,
-        end_hinge: MemberHinge = None,
+        start_hinge: Optional[MemberHinge] = None,
+        end_hinge: Optional[MemberHinge] = None,
         classification: str = "",
         rotation_angle: float = 0.0,
-        weight: float = None,
-        chi: float = None,
+        weight: Optional[float] = None,
+        chi: Optional[float] = None,
         reference_member: Optional["Member"] = None,
         reference_node: Optional["Node"] = None,
-        member_type: str = MemberType.NORMAL,
+        member_type: MemberType = MemberType.NORMAL,
     ):
         self.id = id or Member._member_counter
         if id is None:
@@ -100,9 +100,11 @@ class Member:
         dx = abs(self.end_node.X - self.start_node.X)
         return dx
 
-    def weight(self):
+    def weight(self) -> float:
         length = self.length()
-        return self.section.material.density * self.section.area * length
+        if length and self.section.material.density and self.section.area:
+            return self.section.material.density * self.section.area * length
+        return 0.0
 
     def weight_per_mm(self):
         return self.section.material.density * self.section.area

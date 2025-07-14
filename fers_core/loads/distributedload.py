@@ -1,8 +1,8 @@
 # distributed_load.py
 from typing import Optional, Dict, Any, Tuple
-from FERS_core.members.member import Member
-from FERS_core.loads.loadcase import LoadCase
-from FERS_core.loads.distributionshape import DistributionShape
+from ..members.member import Member
+from ..loads.loadcase import LoadCase
+from ..loads.distributionshape import DistributionShape
 
 
 class DistributedLoad:

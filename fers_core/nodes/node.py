@@ -1,5 +1,5 @@
 from typing import List, Optional
-from FERS_core.supports.nodalsupport import NodalSupport
+from ..supports.nodalsupport import NodalSupport
 
 
 class Node:

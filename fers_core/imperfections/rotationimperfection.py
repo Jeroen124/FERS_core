@@ -1,4 +1,4 @@
-from FERS_core.members.memberset import MemberSet
+from ..members.memberset import MemberSet
 
 
 class RotationImperfection:

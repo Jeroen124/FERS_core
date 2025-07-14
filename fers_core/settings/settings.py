@@ -1,6 +1,6 @@
 from typing import Optional
-from FERS_core.settings.anlysis_options import AnalysisOptions
-from FERS_core.settings.general_info import GeneralInfo
+from ..settings.anlysis_options import AnalysisOptions
+from ..settings.general_info import GeneralInfo
 
 
 class Settings:

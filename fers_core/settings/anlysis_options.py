@@ -1,5 +1,5 @@
 from typing import Optional
-from FERS_core.settings.enums import AnalysisOrder, Dimensionality
+from ..settings.enums import AnalysisOrder, Dimensionality
 
 
 class AnalysisOptions:

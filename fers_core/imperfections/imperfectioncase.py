@@ -1,6 +1,6 @@
-from FERS_core.imperfections.rotationimperfection import RotationImperfection
-from FERS_core.imperfections.translationimperfection import TranslationImperfection
-from FERS_core.loads.loadcombination import LoadCombination
+from ..imperfections.rotationimperfection import RotationImperfection
+from ..imperfections.translationimperfection import TranslationImperfection
+from ..loads.loadcombination import LoadCombination
 from typing import Optional
 
 

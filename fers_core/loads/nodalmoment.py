@@ -1,5 +1,5 @@
 from typing import Dict, Any, Tuple
-from FERS_core.nodes.node import Node
+from ..nodes.node import Node
 
 
 class NodalMoment:
