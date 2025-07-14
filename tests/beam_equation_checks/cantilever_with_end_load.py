@@ -1,6 +1,7 @@
 # fers_beam.py
 import math
-from fers_core import Node, Material, Section, Member, MemberSet, NodalSupport, NodalLoad, FERS
+
+from FERS_core import Node, Material, Section, Member, MemberSet, NodalSupport, NodalLoad, FERS
 
 
 def cantilever_with_end_load(

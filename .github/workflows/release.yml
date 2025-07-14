@@ -32,7 +32,8 @@ jobs:
           pip install --upgrade pip
           pip install pytest
           pip install -r requirements.txt
-      - run: pytest --maxfail=0 --disable-warnings -q
+          pip install -e .
+      - run: pytest --maxfail=1 --disable-warnings -q
 
   deploy:
     name: 📦 Build & Publish to PyPI
