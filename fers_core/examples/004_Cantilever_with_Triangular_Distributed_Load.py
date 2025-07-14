@@ -1,5 +1,5 @@
 import os
-from FERS_core import (
+from fers_core import (
     Node,
     Member,
     FERS,

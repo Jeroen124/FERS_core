@@ -1,10 +1,10 @@
 import os
-from FERS_core import Node, Member, FERS, Material, Section, MemberSet, NodalSupport
+from fers_core import Node, Member, FERS, Material, Section, MemberSet, NodalSupport
 import fers_calculations
 import ujson
 
-from FERS_core.loads.nodalmoment import NodalMoment
-from FERS_core.types.pydantic_models import Results
+from fers_core.loads.nodalmoment import NodalMoment
+from fers_core.types.pydantic_models import Results
 
 # =============================================================================
 # Example and Validation: Cantilever Beam with End Load

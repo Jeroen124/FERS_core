@@ -1,4 +1,4 @@
-from FERS_core import Node, Member, FERS, Material, Section, MemberSet, NodalSupport, NodalLoad
+from fers_core import Node, Member, FERS, Material, Section, MemberSet, NodalSupport, NodalLoad
 import os
 
 # =============================================================================

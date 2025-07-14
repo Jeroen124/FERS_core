@@ -1,36 +1,53 @@
-name: Release FERS_core Python Package
+# .github/workflows/ci-and-release.yml
+name: Lint, Test & Release
 
 on:
   push:
-    branches:
-      - main
+  pull_request:
   workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-  build-and-publish:
-    name: Build & Publish to PyPI
+  lint:
+    name: 🔍 Ruff Lint
     runs-on: ubuntu-latest
-
     steps:
-      - name: Check out code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with: { python-version: "3.12" }
+      - run: pip install ruff
+      - run: ruff check .
 
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.12"
+  test:
+    name: 🧪 Pytest
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with: { python-version: "3.12" }
+      - run: |
+          pip install --upgrade pip
+          pip install pytest
+          pip install -r requirements.txt
+      - run: pytest --maxfail=0 --disable-warnings -q
 
-      - name: Install build tools
-        run: |
+  deploy:
+    name: 📦 Build & Publish to PyPI
+    needs: [lint, test]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with: { python-version: "3.12" }
+      - run: |
           pip install --upgrade pip
           pip install build twine
-
-      - name: Build source & wheel
+      - name: Build sdist & wheel
         run: python -m build --sdist --wheel
-
       - name: Publish to PyPI
         env:
           TWINE_USERNAME: __token__
