@@ -89,8 +89,8 @@ class LoadCase:
             load_case (LoadCase): The load case to which the load belongs.
             magnitude (float): The magnitude of the load per unit length.
             direction (str): The direction of the load ('Y' for vertical loads, etc.).
-            start_pos (float): The relative start position of the load along the member (0 = start, 1 = end).
-            end_pos (float): The relative end position of the load along the member (0 = start, 1 = end).
+            start_frac (float): The relative start position of the load along the member (0 = start, 1 = end).
+            end_frac (float): The relative end position of the load along the member (0 = start, 1 = end).
         """
         from ..loads.distributedload import DistributedLoad
 
@@ -101,13 +101,13 @@ class LoadCase:
                 load_case=load_case,
                 magnitude=magnitude,
                 direction=direction,
-                start_pos=0,
-                end_pos=1,
+                start_frac=0,
+                end_frac=1,
             )
 
     @staticmethod
     def apply_load_to_members_with_classification(
-        members, classification, load_case, magnitude, direction, start_pos=0, end_pos=1
+        members, classification, load_case, magnitude, direction, start_frac=0, end_frac=1
     ):
         """
         Apply a distributed load to members that match the given type.
@@ -118,8 +118,8 @@ class LoadCase:
             load_case (LoadCase): The load case to which the load belongs.
             magnitude (float): The magnitude of the load per unit length.
             direction (str): The direction of the load ('Y' for vertical loads, etc.).
-            start_pos (float): The relative start position of the load along the member (0 = start, 1 = end).
-            end_pos (float): The relative end position of the load along the member (0 = start, 1 = end).
+            start_frac (float): The relative start position of the load along the member (0 = start, 1 = end).
+            end_frac (float): The relative end position of the load along the member (0 = start, 1 = end).
         """
         from ..loads.distributedload import DistributedLoad
 
@@ -130,6 +130,6 @@ class LoadCase:
                     load_case=load_case,
                     magnitude=magnitude,
                     direction=direction,
-                    start_pos=start_pos,
-                    end_pos=end_pos,
+                    start_frac=start_frac,
+                    end_frac=end_frac,
                 )

@@ -1,5 +1,9 @@
 import os
-from FERS_core import Node, Member, FERS, Material, Section, MemberSet, NodalSupport, NodalLoad
+from fers_core import Node, Member, FERS, Material, Section, MemberSet, NodalSupport, NodalLoad
+import fers_calculations
+import ujson
+
+from fers_core.types.pydantic_models import Results
 
 
 # =============================================================================
@@ -51,21 +55,20 @@ end_load_case = calculation_1.create_load_case(name="End Load")
 nodal_load = NodalLoad(node=node2, load_case=end_load_case, magnitude=-1000, direction=(0, 1, 0))
 
 # Save the model to a file for FERS calculations
-file_path = os.path.join("json_input_solver", "101_visual_cantilever_with_end_load.json")
+file_path = os.path.join("1_cantilever_with_end_load.json")
 calculation_1.save_to_json(file_path, indent=4)
 
 # Step 3: Run FERS calculation
 # ----------------------------
 # Perform the analysis using the saved JSON model file
 print("Running the analysis...")
-calculation_1.run_analysis()
-
+result = fers_calculations.calculate_from_file(file_path)
+result_dict = ujson.loads(result)
+parsed_results = Results(**result_dict)
 
 # Extract results from the analysis
-# Displacement at the free end in the y-direction
-dy_fers = calculation_1.results.displacement_nodes["2"].dy
-# Reaction moment at the fixed end
-Mz_fers = calculation_1.results.reaction_forces[0].mz
+dy_fers = parsed_results.displacement_nodes[1].dy  # Displacement at the free end in the y-direction
+Mz_fers = parsed_results.reaction_forces[0].mz  # Reaction moment at the fixed end
 
 # Step 4: Validate Results Against Analytical Solution
 # ----------------------------------------------------

@@ -1,5 +1,5 @@
 import os
-from FERS_core import (
+from fers_core import (
     Node,
     Member,
     FERS,
@@ -13,7 +13,7 @@ from FERS_core import (
 import fers_calculations
 import ujson
 
-from FERS_core.types.pydantic_models import Results
+from fers_core.types.pydantic_models import Results
 
 # =============================================================================
 # Example and Validation: Cantilever Beam with End Load
