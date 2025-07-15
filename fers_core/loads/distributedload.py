@@ -18,8 +18,8 @@ class DistributedLoad:
         magnitude (float): The load magnitude at end_pos (N/m).
         direction (Tuple[float, float, float]): The load direction as a 3-tuple in the
             global coordinate system.
-        start_pos (float): The start position along the member's length (in meters).
-        end_pos (float): The end position along the member's length (in meters).
+        start_frac (float): The start position along the member's length as a fraction (default 0.0).
+        end_frac (float): The end position along the member's length as a fraction (default 1.0).
     """
 
     _distributed_load_counter = 1
@@ -31,8 +31,8 @@ class DistributedLoad:
         distribution_shape: DistributionShape = DistributionShape.UNIFORM,
         magnitude: float = 0.0,
         direction: Tuple[float, float, float] = (0, -1, 0),
-        start_pos: float = 0,
-        end_pos: Optional[float] = 1,
+        start_frac: float = 0.0,
+        end_frac: float = 1.0,
         id: Optional[int] = None,
     ) -> None:
         """
@@ -42,13 +42,23 @@ class DistributedLoad:
             member: The member to which the load is applied.
             load_case: The load case this load belongs to.
             distribution_shape: The shape of the distribution (uniform, triangular, inverse_triangular).
-            magnitude: Load magnitude (N/m) at the end_pos of the member segment.
+            magnitude: Load magnitude (N/m) at the end_frac of the member segment.
             direction: The direction of the load in global coordinates (default: (0, -1, 0) = downward).
-            start_pos: The start position along the member length in meters (default 0.0).
-            end_pos: The end position along the member length in meters (default 1.0).
-            load_type: A descriptor for the load type (default: "distributed").
+            start_frac: The start position along the member as a fraction of the length (default 0.0).
+            end_frac: The end position along the member as a fraction of the length (default 1.0).
             id: Optional unique identifier. If None, auto-increment.
         """
+
+        if not (0.0 <= start_frac <= 1.0) or not (0.0 <= end_frac <= 1.0):
+            raise ValueError(
+                f"start_frac and end_frac must both be between 0 and 1: "
+                f"got start_frac={start_frac}, end_frac={end_frac}"
+            )
+        if start_frac >= end_frac:
+            raise ValueError(
+                f"start_frac ({start_frac}) cannot be greater or equal than end_frac ({end_frac})"
+            )
+
         self.id = id or DistributedLoad._distributed_load_counter
         if id is None:
             DistributedLoad._distributed_load_counter += 1
@@ -58,8 +68,8 @@ class DistributedLoad:
         self.distribution_shape = distribution_shape
         self.magnitude = magnitude
         self.direction = direction
-        self.start_pos = start_pos
-        self.end_pos = end_pos
+        self.start_frac = start_frac
+        self.end_frac = end_frac
 
         self.load_case.add_distributed_load(self)
 
@@ -74,6 +84,6 @@ class DistributedLoad:
             "distribution_shape": self.distribution_shape.value,
             "magnitude": self.magnitude,
             "direction": self.direction,
-            "start_pos": self.start_pos,
-            "end_pos": self.end_pos,
+            "start_frac": self.start_frac,
+            "end_frac": self.end_frac,
         }

@@ -57,8 +57,6 @@ distributed_load = DistributedLoad(
     load_case=load_case,
     magnitude=1000.0,  # 1000 N/m (example uniform load)
     direction=(0, -1, 0),  # Downward in the global Y-axis
-    start_pos=0.0,
-    end_pos=beam.length(),
 )
 
 # Save the model to a file for FERS calculations
@@ -91,7 +89,7 @@ section = Section(
 
 # For a uniform load w on a cantilever, the maximum deflection at x=L is:
 #   δ_max = w * L^4 / (8 * E * I)
-delta_analytical = w * (L**4) / (8 * E * I)
+delta_analytical = -w * (L**4) / (8 * E * I)
 
 # The maximum moment at the fixed end is:
 #   M_max = w * L^2 / 2

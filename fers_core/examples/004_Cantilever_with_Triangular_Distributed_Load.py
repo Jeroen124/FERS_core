@@ -55,11 +55,9 @@ load_case = calculation_1.create_load_case(name="Uniform Load")
 distributed_load = DistributedLoad(
     member=beam,
     load_case=load_case,
-    distribution_shape=DistributionShape.UNIFORM,
+    distribution_shape=DistributionShape.TRIANGULAR,
     magnitude=1000.0,  # 1000 N/m (example uniform load)
     direction=(0, -1, 0),  # Downward in the global Y-axis
-    start_pos=0.0,
-    end_pos=beam.length(),
 )
 
 # Save the model to a file for FERS calculations
@@ -87,11 +85,11 @@ I = 10.63e-6  # Moment of inertia (m^4)
 
 # For a uniform load w on a cantilever, the maximum deflection at x=L is:
 #   δ_max = w * L^4 / (8 * E * I)
-delta_analytical = w * (L**4) / (8 * E * I)
+delta_analytical = -w * (L**4) / (30 * E * I)
 
 # The maximum moment at the fixed end is:
 #   M_max = w * L^2 / 2
-M_max_analytical = w * (L**2) / 2
+M_max_analytical = w * (L**2) / 6
 
 print("\nComparison of results:")
 print(f"Deflection at free end (FERS): {dy_fers:.6f} m")
