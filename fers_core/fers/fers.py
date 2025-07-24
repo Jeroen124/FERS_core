@@ -92,11 +92,10 @@ class FERS:
         except Exception as e:
             raise RuntimeError(f"Failed to run calculation: {e}")
 
-        # Parse and validate the results
         try:
-            results_dict = ujson.loads(result_string)  # Use ujson for performance
-            validated_results = Results(**results_dict)  # Validate with Pydantic
-            self.results = validated_results  # Update instance's results
+            results_dict = ujson.loads(result_string)
+            validated_results = Results(**results_dict)
+            self.results = validated_results
         except Exception as e:
             raise ValueError(f"Failed to parse or validate results: {e}")
 

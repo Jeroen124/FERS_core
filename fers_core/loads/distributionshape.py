@@ -2,6 +2,6 @@ from enum import Enum
 
 
 class DistributionShape(Enum):
-    UNIFORM = "uniform"
-    TRIANGULAR = "triangular"
-    INVERSE_TRIANGULAR = "inverse_triangular"
+    UNIFORM = "Uniform"
+    TRIANGULAR = "Triangular"
+    INVERSE_TRIANGULAR = "InverseTriangular"

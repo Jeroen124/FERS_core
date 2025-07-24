@@ -33,6 +33,7 @@ class DistributedLoad:
         direction: Tuple[float, float, float] = (0, -1, 0),
         start_frac: float = 0.0,
         end_frac: float = 1.0,
+        end_magnitude: Optional[float] = None,
         id: Optional[int] = None,
     ) -> None:
         """
@@ -63,6 +64,9 @@ class DistributedLoad:
         if id is None:
             DistributedLoad._distributed_load_counter += 1
 
+        if end_magnitude is None:
+            end_magnitude = magnitude
+
         self.member = member
         self.load_case = load_case
         self.distribution_shape = distribution_shape
@@ -72,6 +76,7 @@ class DistributedLoad:
         self.end_frac = end_frac
 
         self.load_case.add_distributed_load(self)
+        self.end_magnitude = end_magnitude
 
     def to_dict(self) -> Dict[str, Any]:
         """
@@ -86,4 +91,5 @@ class DistributedLoad:
             "direction": self.direction,
             "start_frac": self.start_frac,
             "end_frac": self.end_frac,
+            "end_magnitude": self.end_magnitude,
         }

@@ -106,8 +106,6 @@ if abs(Mz_fers - M_max_analytical) < 1e-3:
 else:
     print("Reaction moment does NOT match the analytical solution ❌")
 
-print("\nAll results validated successfully!")
-
 # =============================================================================
 # Notes for Users
 # =============================================================================

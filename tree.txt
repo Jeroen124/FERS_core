@@ -1,0 +1,345 @@
+Folder PATH listing for volume Windows
+Volume serial number is 00000001 F089:920A
+C:.
+¦   .env
+¦   .gitignore
+¦   .pre-commit-config.yaml
+¦   clean.py
+¦   LICENSE
+¦   MANIFEST.in
+¦   pyproject.toml
+¦   README.md
+¦   requirements-dev.txt
+¦   requirements.txt
+¦   setup.py
+¦   transformation_matrix_member_1.csv
+¦   tree.txt
+¦   
++---.github
+¦   +---workflows
+¦           release.yml
+¦           
++---.pytest_cache
+¦   ¦   .gitignore
+¦   ¦   CACHEDIR.TAG
+¦   ¦   README.md
+¦   ¦   
+¦   +---v
+¦       +---cache
+¦               lastfailed
+¦               nodeids
+¦               stepwise
+¦               
++---.ruff_cache
+¦   ¦   .gitignore
+¦   ¦   CACHEDIR.TAG
+¦   ¦   
+¦   +---0.6.7
+¦   ¦       10332622061302154643
+¦   ¦       10360497945632212927
+¦   ¦       1095433294533325834
+¦   ¦       1124513315861992542
+¦   ¦       11348505526122406644
+¦   ¦       11407954236541443385
+¦   ¦       11413649363812747860
+¦   ¦       11599978941732120838
+¦   ¦       11602039117030885276
+¦   ¦       12004477024008197429
+¦   ¦       1210044778815797404
+¦   ¦       12215739347469672364
+¦   ¦       13543613101549929947
+¦   ¦       13947408181004464515
+¦   ¦       14294492884765241032
+¦   ¦       1437019523207261796
+¦   ¦       14380990883564766734
+¦   ¦       15419474471709398297
+¦   ¦       15526731764702478240
+¦   ¦       15743530658235930584
+¦   ¦       16108201692668972666
+¦   ¦       16168948058112851109
+¦   ¦       16581786428105381022
+¦   ¦       16655519880867358912
+¦   ¦       17085757111772108570
+¦   ¦       17104228004889285273
+¦   ¦       17180566700581738302
+¦   ¦       17220355604884358340
+¦   ¦       17522276223549901446
+¦   ¦       17562280764169868476
+¦   ¦       18108948784652071868
+¦   ¦       18426596953740472156
+¦   ¦       1961478367791433065
+¦   ¦       222509103942428521
+¦   ¦       2489646501182780923
+¦   ¦       2597539567158964330
+¦   ¦       3177843887046670538
+¦   ¦       3300040878100106814
+¦   ¦       3532733181957607144
+¦   ¦       4207397984254065764
+¦   ¦       4375729382942567812
+¦   ¦       452373402471388914
+¦   ¦       4540737748852433269
+¦   ¦       4584307278111605670
+¦   ¦       4594155193914232404
+¦   ¦       5239260718047141809
+¦   ¦       5713158177716533179
+¦   ¦       6052978608045719720
+¦   ¦       6117814139409726605
+¦   ¦       6334116062361330441
+¦   ¦       633626956593441754
+¦   ¦       6362342726032087513
+¦   ¦       7290639336236132532
+¦   ¦       7388832607475163341
+¦   ¦       7519001649106543963
+¦   ¦       7619369556825147425
+¦   ¦       7980665893802574496
+¦   ¦       8093253695239850589
+¦   ¦       8606362914523289788
+¦   ¦       8950196056613496128
+¦   ¦       9064144866984034977
+¦   ¦       9965065473059018124
+¦   ¦       9978675265275618555
+¦   ¦       
+¦   +---content
++---build
+¦   +---bdist.win-amd64
+¦   +---lib
+¦       +---FERS_core
+¦           ¦   solver.py
+¦           ¦   __init__.py
+¦           ¦   
+¦           +---examples
+¦           ¦       001_Cantilever_with_End_Load.py
+¦           ¦       002_Cantilever_with_Intermediate_Load.py
+¦           ¦       003_Cantilever_with_Uniform_Distributed_Load.py
+¦           ¦       004_Cantilever_with_Triangular_Distributed_Load.py
+¦           ¦       005_Cantilever_with_End_Moment.py
+¦           ¦       011_Simply_Supported_with_Center_Load.py
+¦           ¦       012_Simply_Supported_with_Intermediate_Load.py
+¦           ¦       101_visual_cantilever_with_end_load.py
+¦           ¦       21_two_bar_truss copy.py
+¦           ¦       911_double_cantilever.py
+¦           ¦       912_triple_cantilever.py
+¦           ¦       91_visual_cantilever_with_end_load.py
+¦           ¦       922_two_bar_truss_with_visual.py
+¦           ¦       
+¦           +---fers
+¦           ¦       deformation_utils.py
+¦           ¦       fers.py
+¦           ¦       __init__.py
+¦           ¦       
+¦           +---imperfections
+¦           ¦       imperfectioncase.py
+¦           ¦       rotationimperfection.py
+¦           ¦       translationimperfection.py
+¦           ¦       __init__.py
+¦           ¦       
+¦           +---loads
+¦           ¦       distributedload.py
+¦           ¦       distributionshape.py
+¦           ¦       loadcase.py
+¦           ¦       loadcombination.py
+¦           ¦       nodalload.py
+¦           ¦       nodalmoment.py
+¦           ¦       __init__.py
+¦           ¦       
+¦           +---members
+¦           ¦       enums.py
+¦           ¦       material.py
+¦           ¦       member.py
+¦           ¦       memberhinge.py
+¦           ¦       memberset.py
+¦           ¦       section.py
+¦           ¦       shapecommand.py
+¦           ¦       shapepath.py
+¦           ¦       __init__.py
+¦           ¦       
+¦           +---nodes
+¦           ¦       node.py
+¦           ¦       __init__.py
+¦           ¦       
+¦           +---settings
+¦           ¦       anlysis_options.py
+¦           ¦       enums.py
+¦           ¦       general_info.py
+¦           ¦       settings.py
+¦           ¦       __init__.py
+¦           ¦       
+¦           +---supports
+¦           ¦       nodalsupport.py
+¦           ¦       supportcondition.py
+¦           ¦       __init__.py
+¦           ¦       
+¦           +---types
+¦                   pydantic_models.py
+¦                   __init__.py
+¦                   
++---FERS.egg-info
+¦       dependency_links.txt
+¦       not-zip-safe
+¦       PKG-INFO
+¦       requires.txt
+¦       SOURCES.txt
+¦       top_level.txt
+¦       
++---FERS_core
+¦   ¦   solver.py
+¦   ¦   __init__.py
+¦   ¦   
+¦   +---examples
+¦   ¦   ¦   001_Cantilever_with_End_Load.py
+¦   ¦   ¦   002_Cantilever_with_Intermediate_Load.py
+¦   ¦   ¦   003_Cantilever_with_Uniform_Distributed_Load.py
+¦   ¦   ¦   004_Cantilever_with_Triangular_Distributed_Load.py
+¦   ¦   ¦   005_Cantilever_with_End_Moment.py
+¦   ¦   ¦   011_Simply_Supported_with_Center_Load.py
+¦   ¦   ¦   012_Simply_Supported_with_Intermediate_Load.py
+¦   ¦   ¦   101_visual_cantilever_with_end_load.py
+¦   ¦   ¦   911_double_cantilever.py
+¦   ¦   ¦   912_triple_cantilever.py
+¦   ¦   ¦   922_two_bar_truss_with_visual.py
+¦   ¦   ¦   
+¦   ¦   +---json_input_solver
+¦   ¦           001_Cantilever_with_End_Load.json
+¦   ¦           002_Cantilever_with_Intermediate_Load.json
+¦   ¦           003_Cantilever_with_Uniform_Distributed_Load.json
+¦   ¦           004_Cantilever_with_Triangular_Distributed_Load.json
+¦   ¦           005_Cantilever_with_End_Moment.json
+¦   ¦           011_Simply_Supported_with_Center_Load.json
+¦   ¦           012_Simply_Supported_with_Intermediate_Load.json
+¦   ¦           101_visual_cantilever_with_end_load.json
+¦   ¦           
+¦   +---fers
+¦   ¦   ¦   deformation_utils.py
+¦   ¦   ¦   fers.py
+¦   ¦   ¦   __init__.py
+¦   ¦   ¦   
+¦   ¦   +---__pycache__
+¦   ¦           deformation_utils.cpython-312.pyc
+¦   ¦           fers.cpython-312.pyc
+¦   ¦           __init__.cpython-312.pyc
+¦   ¦           
+¦   +---imperfections
+¦   ¦   ¦   imperfectioncase.py
+¦   ¦   ¦   rotationimperfection.py
+¦   ¦   ¦   translationimperfection.py
+¦   ¦   ¦   __init__.py
+¦   ¦   ¦   
+¦   ¦   +---__pycache__
+¦   ¦           imperfectioncase.cpython-312.pyc
+¦   ¦           rotationimperfection.cpython-312.pyc
+¦   ¦           translationimperfection.cpython-312.pyc
+¦   ¦           __init__.cpython-312.pyc
+¦   ¦           
+¦   +---loads
+¦   ¦   ¦   distributedload.py
+¦   ¦   ¦   distributionshape.py
+¦   ¦   ¦   loadcase.py
+¦   ¦   ¦   loadcombination.py
+¦   ¦   ¦   nodalload.py
+¦   ¦   ¦   nodalmoment.py
+¦   ¦   ¦   __init__.py
+¦   ¦   ¦   
+¦   ¦   +---__pycache__
+¦   ¦           distributedload.cpython-312.pyc
+¦   ¦           distributionshape.cpython-312.pyc
+¦   ¦           lineload.cpython-312.pyc
+¦   ¦           loadcase.cpython-312.pyc
+¦   ¦           loadcombination.cpython-312.pyc
+¦   ¦           nodalload.cpython-312.pyc
+¦   ¦           nodalmoment.cpython-312.pyc
+¦   ¦           __init__.cpython-312.pyc
+¦   ¦           
+¦   +---members
+¦   ¦   ¦   enums.py
+¦   ¦   ¦   material.py
+¦   ¦   ¦   member.py
+¦   ¦   ¦   memberhinge.py
+¦   ¦   ¦   memberset.py
+¦   ¦   ¦   section.py
+¦   ¦   ¦   shapecommand.py
+¦   ¦   ¦   shapepath.py
+¦   ¦   ¦   __init__.py
+¦   ¦   ¦   
+¦   ¦   +---__pycache__
+¦   ¦           enums.cpython-312.pyc
+¦   ¦           material.cpython-312.pyc
+¦   ¦           member.cpython-312.pyc
+¦   ¦           memberhinge.cpython-312.pyc
+¦   ¦           memberset.cpython-312.pyc
+¦   ¦           section.cpython-312.pyc
+¦   ¦           shapecommand.cpython-312.pyc
+¦   ¦           shapepath.cpython-312.pyc
+¦   ¦           __init__.cpython-312.pyc
+¦   ¦           
+¦   +---nodes
+¦   ¦   ¦   node.py
+¦   ¦   ¦   __init__.py
+¦   ¦   ¦   
+¦   ¦   +---__pycache__
+¦   ¦           node.cpython-312.pyc
+¦   ¦           __init__.cpython-312.pyc
+¦   ¦           
+¦   +---report
+¦   +---settings
+¦   ¦   ¦   anlysis_options.py
+¦   ¦   ¦   enums.py
+¦   ¦   ¦   general_info.py
+¦   ¦   ¦   settings.py
+¦   ¦   ¦   __init__.py
+¦   ¦   ¦   
+¦   ¦   +---__pycache__
+¦   ¦           anlysis_options.cpython-312.pyc
+¦   ¦           enums.cpython-312.pyc
+¦   ¦           general_info.cpython-312.pyc
+¦   ¦           settings.cpython-312.pyc
+¦   ¦           __init__.cpython-312.pyc
+¦   ¦           
+¦   +---supports
+¦   ¦   ¦   nodalsupport.py
+¦   ¦   ¦   supportcondition.py
+¦   ¦   ¦   __init__.py
+¦   ¦   ¦   
+¦   ¦   +---__pycache__
+¦   ¦           nodalsupport.cpython-312.pyc
+¦   ¦           supportcondition.cpython-312.pyc
+¦   ¦           __init__.cpython-312.pyc
+¦   ¦           
+¦   +---types
+¦   ¦   ¦   pydantic_models.py
+¦   ¦   ¦   __init__.py
+¦   ¦   ¦   
+¦   ¦   +---__pycache__
+¦   ¦           pydantic_models.cpython-312.pyc
+¦   ¦           __init__.cpython-312.pyc
+¦   ¦           
+¦   +---validation
+¦   ¦       checktype.py
+¦   ¦       validationcheck.py
+¦   ¦       
+¦   +---__pycache__
+¦           __init__.cpython-312.pyc
+¦           
++---tests
+¦   ¦   conftest.py
+¦   ¦   test_beam_equation_checks.py
+¦   ¦   
+¦   +---beam_equation_checks
+¦   ¦   ¦   cantilever_with_end_load.py
+¦   ¦   ¦   cantilever_with_intermediate_load.py
+¦   ¦   ¦   __init__.py
+¦   ¦   ¦   
+¦   ¦   +---__pycache__
+¦   ¦           cantilever_with_end_load.cpython-312.pyc
+¦   ¦           cantilever_with_intermediate_load.cpython-312.pyc
+¦   ¦           __init__.cpython-312.pyc
+¦   ¦           
+¦   +---__pycache__
+¦           conftest.cpython-312-pytest-8.3.3.pyc
+¦           test_beam_equation_checks.cpython-312-pytest-8.3.3.pyc
+¦           
++---wheels
+        fers_calculations-0.1.0-cp312-cp312-macosx_10_12_x86_64.whl
+        fers_calculations-0.1.0-cp312-cp312-macosx_11_0_arm64.whl
+        fers_calculations-0.1.0-cp312-cp312-manylinux_2_34_x86_64.whl
+        fers_calculations-0.1.0-cp312-cp312-win_amd64.whl
+        
