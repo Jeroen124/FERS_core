@@ -10,10 +10,7 @@ from fers_core import (
     NodalLoad,
     SupportCondition,
 )
-import fers_calculations
-import ujson
 
-from fers_core.types.pydantic_models import Results
 
 # =============================================================================
 # Example and Validation: Cantilever Beam with End Load
@@ -26,7 +23,7 @@ calculation_1 = FERS()
 
 # Define the geometry of the beam
 node1 = Node(0, 0, 0)  # Simply supported side of the beam at x=0
-node2 = Node(3, 0, 0)  # Free end of the beam, 5 meters away
+node2 = Node(3, 0, 0)  # Intermediate node at x=3
 node3 = Node(6, 0, 0)  # Simply supported side of the beam at x=6
 
 # Define the material properties (Steel S235)
@@ -45,7 +42,7 @@ beam2 = Member(start_node=node2, end_node=node3, section=section)
 
 simply_supported_support = NodalSupport(
     rotation_conditions={
-        "X": SupportCondition(condition=SupportCondition.FREE),
+        "X": SupportCondition(condition=SupportCondition.FIXED),
         "Y": SupportCondition(condition=SupportCondition.FREE),
         "Z": SupportCondition(condition=SupportCondition.FREE),
     }
@@ -63,10 +60,10 @@ calculation_1.add_member_set(membergroup1)
 # Step 2: Apply the load
 # ----------------------
 # Create a load case for the analysis
-end_load_case = calculation_1.create_load_case(name="End Load")
+intermediate_load_case = calculation_1.create_load_case(name="Intermediate Load")
 
 # Apply a 1 kN downward force (global y-axis) at the free end (node2)
-nodal_load = NodalLoad(node=node2, load_case=end_load_case, magnitude=-1000, direction=(0, 1, 0))
+nodal_load = NodalLoad(node=node2, load_case=intermediate_load_case, magnitude=-1000, direction=(0, 1, 0))
 
 # Save the model to a file for FERS calculations
 file_path = os.path.join("json_input_solver", "011_Simply_Supported_with_Center_Load.json")
@@ -76,20 +73,21 @@ calculation_1.save_to_json(file_path, indent=4)
 # ----------------------------
 # Perform the analysis using the saved JSON model file
 print("Running the analysis...")
-result = fers_calculations.calculate_from_file(file_path)
-result_dict = ujson.loads(result)
-parsed_results = Results(**result_dict)
+calculation_1.run_analysis()
+result_loadcase = calculation_1.results.loadcases["Intermediate Load"]
 
 # Extract results from the analysis
-dy_fers = parsed_results.displacement_nodes[1].dy  # Displacement at the free end in the y-direction
-Mz_fers = parsed_results.reaction_forces[0].mz  # Reaction moment at the fixed end
+dy_fers = result_loadcase.displacement_nodes[
+    "2"
+].dy  # Displacement at the intermediate node in the y-direction
+Mz_fers = result_loadcase.reaction_forces[0].mz  # Reaction moment at the left fixed end
 
 # Step 4: Validate Results Against Analytical Solution
 # ----------------------------------------------------
 # Analytical solution parameters
 F = 1000  # Force in Newtons
 L = 6  # Length of the beam in meters
-E = 212e9  # Modulus of elasticity in Pascals
+E = 210e9  # Modulus of elasticity in Pascals
 I = 10.63e-6  # Moment of inertia in m^4
 x = L / 2  # Distance to the free end for max deflection and slope
 
