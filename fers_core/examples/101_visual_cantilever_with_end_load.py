@@ -1,9 +1,5 @@
 import os
 from fers_core import Node, Member, FERS, Material, Section, MemberSet, NodalSupport, NodalLoad
-import fers_calculations
-import ujson
-
-from fers_core.types.pydantic_models import Results
 
 
 # =============================================================================
@@ -37,7 +33,7 @@ ipe_section = Section.create_ipe_section(
 beam = Member(start_node=node1, end_node=node2, section=ipe_section)
 
 # Apply a fixed support at the fixed end (node1)
-wall_support = NodalSupport()
+wall_support = NodalSupport(id=1)
 node1.nodal_support = wall_support
 
 # Add the beam to a member group
@@ -55,20 +51,20 @@ end_load_case = calculation_1.create_load_case(name="End Load")
 nodal_load = NodalLoad(node=node2, load_case=end_load_case, magnitude=-1000, direction=(0, 1, 0))
 
 # Save the model to a file for FERS calculations
-file_path = os.path.join("101_cantilever_with_end_load.json")
+file_path = os.path.join("json_input_solver", "101_cantilever_with_end_load.json")
 calculation_1.save_to_json(file_path, indent=4)
 
 # Step 3: Run FERS calculation
 # ----------------------------
 # Perform the analysis using the saved JSON model file
 print("Running the analysis...")
-result = fers_calculations.calculate_from_file(file_path)
-result_dict = ujson.loads(result)
-parsed_results = Results(**result_dict)
+calculation_1.run_analysis()
+result_loadcase = calculation_1.results.loadcases["End Load"]
+
 
 # Extract results from the analysis
-dy_fers = parsed_results.displacement_nodes[1].dy  # Displacement at the free end in the y-direction
-Mz_fers = parsed_results.reaction_forces[0].mz  # Reaction moment at the fixed end
+dy_fers = result_loadcase.displacement_nodes["2"].dy  # Displacement at the free end in the y-direction
+Mz_fers = result_loadcase.reaction_forces[0].mz  # Reaction moment at the fixed end
 
 # Step 4: Validate Results Against Analytical Solution
 # ----------------------------------------------------
@@ -108,3 +104,7 @@ print("\nAll results validated successfully!")
 # 1. It demonstrates how to set up and analyze a cantilever beam with an end load.
 # 2. It validates the FERS results against analytical solutions for deflection and moment.
 # 3. Run this script as-is to learn
+
+calculation_1.show_results_3d(loadcase=1)
+# Alternatively you can do:
+# calculation_1.show_results_3d(loadcase='End Load')
