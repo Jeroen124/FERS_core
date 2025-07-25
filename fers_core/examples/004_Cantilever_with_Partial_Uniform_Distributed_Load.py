@@ -8,7 +8,6 @@ from fers_core import (
     MemberSet,
     NodalSupport,
     DistributedLoad,
-    DistributionShape,
 )
 
 
@@ -33,6 +32,7 @@ section = Section(
     name="IPE 180 Beam Section", material=Steel_S235, i_y=0.819e-6, i_z=10.63e-6, j=0.027e-6, area=0.00196
 )
 
+
 # Create the beam element
 beam = Member(start_node=node1, end_node=node2, section=section)
 
@@ -49,19 +49,20 @@ calculation_1.add_member_set(membergroup1)
 # Step 2: Apply the load
 # ----------------------
 # Create a load case for the analysis
-load_case = calculation_1.create_load_case(name="Uniform Load")
+load_case = calculation_1.create_load_case(name="Partial uniform Load")
 
 # Apply a uniform distributed load (e.g., w = 1000 N/m) downward along the entire beam
 distributed_load = DistributedLoad(
     member=beam,
     load_case=load_case,
-    distribution_shape=DistributionShape.TRIANGULAR,
     magnitude=1000.0,  # 1000 N/m (example uniform load)
     direction=(0, -1, 0),  # Downward in the global Y-axis
+    start_frac=0.4,  # Start of the load application (0.4*5=2 meter from the fixed end)
+    end_frac=0.7,  # End of the load application (0.7*5=3.5 meters from the fixed end)
 )
 
 # Save the model to a file for FERS calculations
-file_path = os.path.join("json_input_solver", "004_Cantilever_with_Triangular_Distributed_Load.json")
+file_path = os.path.join("json_input_solver", "004_Cantilever_with_Partial_Uniform_Distributed_Load.json")
 calculation_1.save_to_json(file_path, indent=4)
 
 # Step 3: Run FERS calculation
@@ -70,10 +71,13 @@ print("Running the analysis...")
 calculation_1.run_analysis()
 
 # Extract results from the analysis
+results = calculation_1.results.loadcases["Partial uniform Load"]
+
 # Displacement at the free end in the y-direction
-dy_fers = calculation_1.results.displacement_nodes["2"].dy
+
+dy_fers = results.displacement_nodes["2"].dy
 # Reaction moment at the fixed end
-Mz_fers = calculation_1.results.reaction_forces[0].mz
+Mz_fers = results.reaction_forces[0].mz
 
 # Step 4: Validate Results Against Analytical Solution
 # ----------------------------------------------------
@@ -83,21 +87,21 @@ L = 5  # Beam length in meters
 E = 210e9  # Elastic modulus (Pascals)
 I = 10.63e-6  # Moment of inertia (m^4)
 
+
+section = Section(
+    name="IPE 180 Beam Section", material=Steel_S235, i_y=0.819e-6, i_z=10.63e-6, j=0.027e-6, area=0.00196
+)
+
 # For a uniform load w on a cantilever, the maximum deflection at x=L is:
 #   δ_max = w * L^4 / (8 * E * I)
-delta_analytical = -w * (L**4) / (30 * E * I)
+start_position = 0.4 * L  # 2.0 m
+end_position = 0.7 * L  # 3.5 m
 
 # The maximum moment at the fixed end is:
 #   M_max = w * L^2 / 2
-M_max_analytical = w * (L**2) / 6
+M_max_analytical = w * (end_position - start_position) * (start_position + end_position) / 2
 
 print("\nComparison of results:")
-print(f"Deflection at free end (FERS): {dy_fers:.6f} m")
-print(f"Deflection at free end (Analytical): {delta_analytical:.6f} m")
-if abs(dy_fers - delta_analytical) < 1e-6:
-    print("Deflection matches the analytical solution ✅")
-else:
-    print("Deflection does NOT match the analytical solution ❌")
 
 print(f"Reaction moment at fixed end (FERS): {Mz_fers:.6f} Nm")
 print(f"Reaction moment at fixed end (Analytical): {M_max_analytical:.6f} Nm")

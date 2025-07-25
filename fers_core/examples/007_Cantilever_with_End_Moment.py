@@ -1,10 +1,7 @@
 import os
 from fers_core import Node, Member, FERS, Material, Section, MemberSet, NodalSupport
-import fers_calculations
-import ujson
 
 from fers_core.loads.nodalmoment import NodalMoment
-from fers_core.types.pydantic_models import Results
 
 # =============================================================================
 # Example and Validation: Cantilever Beam with End Load
@@ -54,33 +51,32 @@ end_moment = NodalMoment(
 )
 
 # Save the model to a file for FERS calculations
-file_path = os.path.join("json_input_solver", "005_Cantilever_with_End_Moment.json")
+file_path = os.path.join("json_input_solver", "007_Cantilever_with_End_Moment.json")
 calculation_1.save_to_json(file_path, indent=4)
 
 # Step 3: Run FERS calculation
 # ----------------------------
 # Perform the analysis using the saved JSON model file
 print("Running the analysis...")
-result = fers_calculations.calculate_from_file(file_path)
-result_dict = ujson.loads(result)
-parsed_results = Results(**result_dict)
+calculation_1.run_analysis()
+results_end_load = calculation_1.results.loadcases["End Load"]
 
 # Extract results from the analysis
-dy_fers = parsed_results.displacement_nodes[1].dy  # Displacement at the free end in the y-direction
-Mz_fers = parsed_results.reaction_forces[0].mz  # Reaction moment at the fixed end
+dy_fers = results_end_load.displacement_nodes["2"].dy  # Displacement at the free end in the y-direction
+Mz_fers = results_end_load.reaction_forces[0].mz  # Reaction moment at the fixed end
 
 # Step 4: Validate Results Against Analytical Solution
 # ----------------------------------------------------
 # Analytical solution parameters
-F = 1000  # Force in Newtons
+M = 500  # Moment in Newton-meters
 L = 5  # Length of the beam in meters
 E = 210e9  # Modulus of elasticity in Pascals
 I = 10.63e-6  # Moment of inertia in m^4
 x = L  # Distance to the free end for max deflection and slope
 
 # Calculate analytical solutions for deflection and moment
-delta_analytical = (-F * x**2 / (6 * E * I)) * (3 * L - x)  # Max deflection
-M_max_analytical = F * L  # Max moment at the fixed end
+delta_analytical = M * x**2 / (2 * E * I)  # Max deflection
+M_max_analytical = -M  # Max moment at the fixed end
 
 # Compare FERS results with analytical solutions
 print("\nComparison of results:")

@@ -25,7 +25,7 @@ from ..members.shapepath import ShapePath
 from ..nodes.node import Node
 from ..supports.nodalsupport import NodalSupport
 from ..settings.settings import Settings
-from ..types.pydantic_models import Results
+from ..types.pydantic_models import ResultsBundle
 
 
 class FERS:
@@ -64,7 +64,7 @@ class FERS:
         # Parse and validate the results
         try:
             results_dict = ujson.loads(result_string)
-            validated_results = Results(**results_dict)
+            validated_results = ResultsBundle(**results_dict)
             self.results = validated_results
         except Exception as e:
             raise ValueError(f"Failed to parse or validate results: {e}")
@@ -94,7 +94,7 @@ class FERS:
 
         try:
             results_dict = ujson.loads(result_string)
-            validated_results = Results(**results_dict)
+            validated_results = ResultsBundle(**results_dict)
             self.results = validated_results
         except Exception as e:
             raise ValueError(f"Failed to parse or validate results: {e}")
