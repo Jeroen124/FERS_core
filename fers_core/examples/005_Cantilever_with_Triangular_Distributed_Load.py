@@ -86,8 +86,8 @@ results_inverse = calculation_1.results.loadcases["Inverse Triangular Load"]
 dy_fers_triangular = results_triangular.displacement_nodes["2"].dy
 dy_fers_triangular_inverse = results_inverse.displacement_nodes["2"].dy
 # Reaction moment at the fixed end
-Mz_fers_triangular = results_triangular.reaction_forces[0].mz
-Mz_fers_triangular_inverse = results_inverse.reaction_forces[0].mz
+Mz_fers_triangular = results_triangular.reaction_nodes["1"].nodal_forces.mz
+Mz_fers_triangular_inverse = results_inverse.reaction_nodes["1"].nodal_forces.mz
 
 # Step 4: Validate Results Against Analytical Solution
 # ----------------------------------------------------

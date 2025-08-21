@@ -66,7 +66,7 @@ dy_fers_intermediate = results.displacement_nodes["3"].dy
 # Displacement at the free end in the y-direction
 dy_fers_end = results.displacement_nodes["2"].dy
 # Reaction moment at the fixed end
-Mz_fers = results.reaction_forces[0].mz
+Mz_fers = results.reaction_nodes["1"].nodal_forces.mz
 
 # Step 4: Validate Results Against Analytical Solution
 # ----------------------------------------------------

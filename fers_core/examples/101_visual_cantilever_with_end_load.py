@@ -64,7 +64,7 @@ result_loadcase = calculation_1.results.loadcases["End Load"]
 
 # Extract results from the analysis
 dy_fers = result_loadcase.displacement_nodes["2"].dy  # Displacement at the free end in the y-direction
-Mz_fers = result_loadcase.reaction_forces[0].mz  # Reaction moment at the fixed end
+Mz_fers = result_loadcase.reaction_nodes["1"].nodal_forces.mz  # Reaction moment at the fixed end
 
 # Step 4: Validate Results Against Analytical Solution
 # ----------------------------------------------------

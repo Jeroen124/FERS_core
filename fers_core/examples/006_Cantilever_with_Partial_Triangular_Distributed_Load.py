@@ -75,7 +75,7 @@ distributed_load = DistributedLoad(
 )
 
 # Save the model to a file for FERS calculations
-file_path = os.path.join("json_input_solver", "004_Cantilever_with_Triangular_Distributed_Load.json")
+file_path = os.path.join("json_input_solver", "006_Cantilever_with_Triangular_Distributed_Load.json")
 calculation_1.save_to_json(file_path, indent=4)
 
 # Step 3: Run FERS calculation
@@ -90,11 +90,11 @@ results_inverse = calculation_1.results.loadcases["Inverse Triangular Load"]
 dy_fers_triangular = results_triangular.displacement_nodes["2"].dy
 dy_fers_triangular_inverse = results_inverse.displacement_nodes["2"].dy
 # Reaction moment at the fixed end
-Fy_fers_triangular = results_triangular.reaction_forces[0].fy
-Fy_fers_triangular_inverse = results_inverse.reaction_forces[0].fy
+Fy_fers_triangular = results_triangular.reaction_nodes["1"].nodal_forces.fy
+Fy_fers_triangular_inverse = results_inverse.reaction_nodes["1"].nodal_forces.fy
 
-Mz_fers_triangular = results_triangular.reaction_forces[0].mz
-Mz_fers_triangular_inverse = results_inverse.reaction_forces[0].mz
+Mz_fers_triangular = results_triangular.reaction_nodes["1"].nodal_forces.mz
+Mz_fers_triangular_inverse = results_inverse.reaction_nodes["1"].nodal_forces.mz
 
 # Step 4: Validate Results Against Analytical Solution
 # ----------------------------------------------------

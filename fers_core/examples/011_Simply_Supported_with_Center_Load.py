@@ -77,10 +77,9 @@ calculation_1.run_analysis()
 result_loadcase = calculation_1.results.loadcases["Intermediate Load"]
 
 # Extract results from the analysis
-dy_fers = result_loadcase.displacement_nodes[
-    "2"
-].dy  # Displacement at the intermediate node in the y-direction
-Mz_fers = result_loadcase.reaction_forces[0].mz  # Reaction moment at the left fixed end
+dy_fers = result_loadcase.displacement_nodes["2"].dy
+Mz_fers_begin_end = result_loadcase.reaction_nodes["1"].nodal_forces.mz
+Mz_fers_intermediate = result_loadcase.member_results["1"].end_node_forces.mz
 
 # Step 4: Validate Results Against Analytical Solution
 # ----------------------------------------------------
@@ -93,8 +92,8 @@ x = L / 2  # Distance to the free end for max deflection and slope
 
 # Calculate analytical solutions for deflection and moment
 delta_analytical = -(F * L**3) / (48 * E * I)  # Max deflection
-M_max_analytical = (F * L) / 4  # Max moment at the fixed end
-M_begin_end = 0  # Max moment at the fixed end
+M_max_analytical = (F * L) / 4  # Max moment at intermediate node
+Mz_begin_end = 0  # Max moment at the fixed end
 
 # Compare FERS results with analytical solutions
 print("\nComparison of results:")
@@ -107,10 +106,9 @@ else:
 
 print()
 
-print("\nComparison of results:")
-print(f"Bending moment at middle node (FERS): {dy_fers:.6f} m")
-print(f"Bending moment at middle node (Analytical): {M_max_analytical:.6f} m")
-if abs(dy_fers - M_max_analytical) < 1e-6:
+print(f"Bending moment at middle node (FERS): {Mz_fers_intermediate:.6f} Nm")
+print(f"Bending moment at middle node (Analytical): {M_max_analytical:.6f} Nm")
+if abs(Mz_fers_intermediate - M_max_analytical) < 1e-6:
     print("Bending moment matches the analytical solution ✅")
 else:
     print("Bending moment does NOT match the analytical solution ❌")
@@ -118,9 +116,9 @@ else:
 print()
 
 
-print(f"Reaction moment at fixed end (FERS): {Mz_fers:.6f} Nm")
-print(f"Reaction moment at fixed end (Analytical): {M_begin_end:.6f} Nm")
-if abs(Mz_fers - M_begin_end) < 1e-3:
+print(f"Reaction moment at begin (FERS): {Mz_fers_begin_end:.6f} Nm")
+print(f"Reaction moment at begin (Analytical): {Mz_begin_end:.6f} Nm")
+if abs(Mz_fers_begin_end - Mz_begin_end) < 1e-3:
     print("Reaction moment matches the analytical solution ✅")
 else:
     print("Reaction moment does NOT match the analytical solution ❌")
