@@ -98,8 +98,8 @@ x = L / 2  # Distance to the free end for max deflection and slope
 
 # Calculate analytical solutions for deflection and moment
 delta_analytical = -(W * L**4) / (384 * E * I)  # Max deflection
-Mz_intermediate = (W * L) / 24  # Max moment at intermediate node
-Mz_begin_end = (W * L) / 12  # Max moment at the fixed end
+Mz_intermediate = (W * L**2) / 24  # Max moment at intermediate node
+Mz_begin_end = (W * L**2) / 12  # Max moment at the fixed end
 
 # Compare FERS results with analytical solutions
 print("\nComparison of results:")

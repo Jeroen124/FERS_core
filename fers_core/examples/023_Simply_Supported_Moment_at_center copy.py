@@ -87,7 +87,7 @@ result_loadcase = calculation_1.results.loadcases["Intermediate moment"]
 dy_fers_intermediate = result_loadcase.displacement_nodes["3"].dy
 dy_fers_quarter = result_loadcase.displacement_nodes["2"].dy
 Mz_fers_begin_end = result_loadcase.member_results["1"].start_node_forces.mz
-Mz_fers_intermediate = result_loadcase.member_results["1"].end_node_forces.mz
+Mz_fers_intermediate = result_loadcase.member_results["2"].end_node_forces.mz
 Vy_fers_start_node = result_loadcase.reaction_nodes["1"].nodal_forces.fy
 
 # Step 4: Validate Results Against Analytical Solution
