@@ -701,7 +701,7 @@ class FERS:
         self,
         show_nodes=True,
         show_sections=True,
-        show_local_axes=True,
+        show_local_axes=False,
         display_Local_axes_scale=1,
         load_case=None,
         display_load_scale=1,  # Added scale factor for point loads, default = 1
@@ -860,7 +860,14 @@ class FERS:
 
         # Add a legend and grid
         plotter.add_legend()
-        plotter.show_grid(color="gray")
+        min_coords, max_coords = self.get_structure_bounds()
+        if min_coords and max_coords:
+            margin = 0.5  # meters, adjust to taste
+            x_min, y_min, z_min = (c - margin for c in min_coords)
+            x_max, y_max, z_max = (c + margin for c in max_coords)
+            plotter.show_grid(bounds=[x_min, x_max, y_min, y_max, z_min, z_max], color="gray")
+        else:
+            plotter.show_grid(color="gray")
         plotter.show(title="FERS 3D Model")
 
     def show_results_3d(

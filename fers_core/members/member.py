@@ -130,58 +130,50 @@ class Member:
 
     def local_coordinate_system(self):
         """
-        Calculates the local coordinate system (x, y, z) for the member.
-
-        Returns:
-        - local_x (numpy array): The local x-axis (unit vector along the member's axis).
-        - local_y (numpy array): The local y-axis (unit vector perpendicular to x and z).
-        - local_z (numpy array): The local z-axis (unit vector orthogonal to x and y).
+        Returns unit vectors (local_x, local_y, local_z) forming a right-handed local frame.
+        local_x is along the member (start -> end).
+        local_y and local_z are orthonormal and derived from a global reference direction.
+        Applies rotation_angle as a roll about local_x (if non-zero).
         """
-        # Compute the local x-axis (direction vector from start_node to end_node)
         dx = self.end_node.X - self.start_node.X
         dy = self.end_node.Y - self.start_node.Y
         dz = self.end_node.Z - self.start_node.Z
-        length = np.sqrt(dx**2 + dy**2 + dz**2)
-        start_node_array = np.array([self.start_node.X, self.start_node.Y, self.start_node.Z])
+        length = float(np.sqrt(dx * dx + dy * dy + dz * dz))
         if length < 1e-12:
             raise ValueError("Start and end nodes are the same or too close to define a direction.")
 
-        local_x = np.array([dx / length, dy / length, dz / length])
+        local_x = np.array([dx, dy, dz], dtype=float) / length
 
-        # Define the primary reference vector (global Y-axis)
-        primary_ref = np.array([0, 1, 0]) + start_node_array
+        # Use a pure global direction as reference (no addition of start node coordinates)
+        reference_vector = np.array([0.0, 1.0, 0.0], dtype=float)
+        cos_theta = float(np.dot(local_x, reference_vector))  # both are unit or unit-like
+        if abs(cos_theta) > 1.0 - 1e-6:
+            reference_vector = np.array([0.0, 0.0, 1.0], dtype=float)
 
-        # Check if local_x is parallel or nearly parallel to the primary reference vector
-        cos_theta = np.dot(local_x, primary_ref) / (np.linalg.norm(local_x) * np.linalg.norm(primary_ref))
-        if np.abs(cos_theta) > 1.0 - 1e-6:
-            # If parallel, choose an alternative reference vector (global Z-axis)
-            reference_vector = np.array([0, 0, 1]) + start_node_array
-        else:
-            # Otherwise, use the primary reference vector
-            reference_vector = primary_ref
-
-        # Compute the local z-axis as the cross product of local_x and reference_vector
         local_z = np.cross(local_x, reference_vector)
-        norm_z = np.linalg.norm(local_z)
+        norm_z = float(np.linalg.norm(local_z))
         if norm_z < 1e-12:
-            # If the cross product is near zero, choose a different reference vector
-            # Here, we can choose the global X-axis or another non-parallel vector
-            reference_vector = np.array([1, 0, 0]) + start_node_array
+            # Last-resort fallback, though with the logic above this should be very rare
+            reference_vector = np.array([1.0, 0.0, 0.0], dtype=float)
             local_z = np.cross(local_x, reference_vector)
-            norm_z = np.linalg.norm(local_z)
+            norm_z = float(np.linalg.norm(local_z))
             if norm_z < 1e-12:
-                raise ValueError(
-                    "Cannot define a valid local_z axis; local_x is collinear with all reference vectors."
-                )
-
+                raise ValueError("Cannot define a valid local_z axis.")
         local_z /= norm_z
 
-        # Compute the local y-axis as the cross product of local_z and local_x
         local_y = np.cross(local_z, local_x)
-        norm_y = np.linalg.norm(local_y)
+        norm_y = float(np.linalg.norm(local_y))
         if norm_y < 1e-12:
-            raise ValueError("Cannot define local_y axis; local_z and local_x are collinear.")
-
+            raise ValueError("Cannot define a valid local_y axis.")
         local_y /= norm_y
+
+        # Apply roll about local_x by rotation_angle (radians)
+        phi = float(self.rotation_angle or 0.0)
+        if abs(phi) > 0.0:
+            c = np.cos(phi)
+            s = np.sin(phi)
+            y_rot = c * local_y + s * local_z
+            z_rot = -s * local_y + c * local_z
+            local_y, local_z = y_rot, z_rot
 
         return local_x, local_y, local_z
