@@ -1,4 +1,4 @@
-from FERS_core import Node, Member, FERS, Material, Section, MemberSet, NodalSupport, NodalLoad
+from fers_core import Node, Member, FERS, Material, Section, MemberSet, NodalSupport, NodalLoad
 import os
 
 # =============================================================================
@@ -56,13 +56,17 @@ calculation_1.save_to_json(file_path, indent=4)
 # Perform the analysis using the saved JSON model file
 print("Running the analysis...")
 calculation_1.run_analysis()
+
+# Extract results from the analysis
+results = calculation_1.results.loadcases["Intermediate Load"]
+
 # Extract results from the analysis
 # Displacement at the intermediate point in the y-direction
-dy_fers_intermediate = calculation_1.results.displacement_nodes["3"].dy
+dy_fers_intermediate = results.displacement_nodes["3"].dy
 # Displacement at the free end in the y-direction
-dy_fers_end = calculation_1.results.displacement_nodes["2"].dy
+dy_fers_end = results.displacement_nodes["2"].dy
 # Reaction moment at the fixed end
-Mz_fers = calculation_1.results.reaction_forces[0].mz
+Mz_fers = results.reaction_nodes["1"].nodal_forces.mz
 
 # Step 4: Validate Results Against Analytical Solution
 # ----------------------------------------------------

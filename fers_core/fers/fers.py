@@ -1,4 +1,5 @@
 import re
+from typing import Dict, Optional, Tuple, Union
 import fers_calculations
 import ujson
 
@@ -7,7 +8,6 @@ import matplotlib.pyplot as plt
 import pyvista as pv
 
 from ..fers.deformation_utils import (
-    get_rotation_matrix,
     interpolate_beam_local,
     transform_dofs_global_to_local,
     extrude_along_path,
@@ -25,7 +25,7 @@ from ..members.shapepath import ShapePath
 from ..nodes.node import Node
 from ..supports.nodalsupport import NodalSupport
 from ..settings.settings import Settings
-from ..types.pydantic_models import Results
+from ..types.pydantic_models import Results, ResultsBundle
 
 
 class FERS:
@@ -64,7 +64,7 @@ class FERS:
         # Parse and validate the results
         try:
             results_dict = ujson.loads(result_string)
-            validated_results = Results(**results_dict)
+            validated_results = ResultsBundle(**results_dict)
             self.results = validated_results
         except Exception as e:
             raise ValueError(f"Failed to parse or validate results: {e}")
@@ -92,11 +92,10 @@ class FERS:
         except Exception as e:
             raise RuntimeError(f"Failed to run calculation: {e}")
 
-        # Parse and validate the results
         try:
-            results_dict = ujson.loads(result_string)  # Use ujson for performance
-            validated_results = Results(**results_dict)  # Validate with Pydantic
-            self.results = validated_results  # Update instance's results
+            results_dict = ujson.loads(result_string)
+            validated_results = ResultsBundle(**results_dict)
+            self.results = validated_results
         except Exception as e:
             raise ValueError(f"Failed to parse or validate results: {e}")
 
@@ -802,7 +801,7 @@ class FERS:
                     dx = end_node.X - start_node.X
                     dy = end_node.Y - start_node.Y
                     dz = end_node.Z - start_node.Z
-                    extruded_section = section_polydata.extrude([dx, dy, dz])
+                    extruded_section = section_polydata.extrude([dx, dy, dz], capping=True)
 
                     # Add extruded section to the plot
                     plotter.add_mesh(extruded_section, color="steelblue", label=f"Section {section.name}")
@@ -854,7 +853,7 @@ class FERS:
         if show_nodes:
             # Plot spheres at each unique node location
             unique_nodes = self.get_all_nodes()
-            node_points = [(node.X, node.Y, node.Z) for node in unique_nodes]
+            node_points = np.array([(node.X, node.Y, node.Z) for node in unique_nodes], dtype=np.float32)
             point_cloud = pv.PolyData(node_points)
             glyph = point_cloud.glyph(geom=pv.Sphere(radius=0.1), scale=False, orient=False)
             plotter.add_mesh(glyph, color="red", label="Nodes")
@@ -865,270 +864,210 @@ class FERS:
         plotter.show(title="FERS 3D Model")
 
     def show_results_3d(
-        self, show_nodes=True, show_sections=True, displacement=True, displacement_scale=100.0, num_points=20
+        self,
+        *,
+        loadcase: Optional[Union[int, str]] = None,
+        loadcombination: Optional[Union[int, str]] = None,
+        show_nodes: bool = True,
+        show_sections: bool = True,
+        displacement: bool = True,
+        displacement_scale: float = 100.0,
+        num_points: int = 20,
     ):
         """
-        Visualizes the results of the analysis in 3D using PyVista, including displacements if enabled.
-        Now updated to do local transformations for each member.
+        Visualizes any one of the loaded cases or combinations in 3D using PyVista.
 
         Args:
-            displacement (bool): Whether to show the displacement results.
-            show_sections (bool): Whether to extrude sections along members' axes.
-            show_nodes (bool): Whether to show node spheres in the plot.
-            displacement_scale (float): Scale factor for visualizing displacements.
-            num_points (int): Number of interpolation points along each member.
+            loadcase (int or str, optional): If you want a load‑case, specify either its
+                one‑based index (1, 2, …) or its name ("Dead Load", "End Load", …).
+            loadcombination (int or str, optional): Likewise for load‑combinations.
+            show_sections (bool): Extrude and draw section profiles.
+            show_nodes (bool): Draw the nodes as spheres.
+            displacement (bool): Show the deformed shape as well as the original.
+            displacement_scale (float): How much to scale nodal displacements.
+            num_points (int): Number of points per member for interpolation.
         """
-        if self.results is None:
-            print("No results to display. Please run an analysis first.")
-            return
+        # pick the right Results object out of the Bundle
+        bundle = self.results  # assume this is a ResultsBundle
+        chosen: Results
+        if loadcase is not None and loadcombination is not None:
+            raise ValueError("Please specify either loadcase or loadcombination, not both.")
+        if loadcase is not None:
+            keys = list(bundle.loadcases.keys())
+            if isinstance(loadcase, int):
+                try:
+                    key = keys[loadcase - 1]
+                except IndexError:
+                    raise IndexError(f"Loadcase index {loadcase} is out of range.")
+            else:
+                key = loadcase
+                if key not in bundle.loadcases:
+                    raise KeyError(f"Loadcase '{key}' not found.")
+            chosen = bundle.loadcases[key]
+        elif loadcombination is not None:
+            keys = list(bundle.loadcombinations.keys())
+            if isinstance(loadcombination, int):
+                try:
+                    key = keys[loadcombination - 1]
+                except IndexError:
+                    raise IndexError(f"Loadcombination index {loadcombination} is out of range.")
+            else:
+                key = loadcombination
+                if key not in bundle.loadcombinations:
+                    raise KeyError(f"Loadcombination '{key}' not found.")
+            chosen = bundle.loadcombinations[key]
+        else:
+            # neither was given: if there's exactly one loadcase and zero combinations, take it
+            if len(bundle.loadcases) == 1 and not bundle.loadcombinations:
+                chosen = next(iter(bundle.loadcases.values()))
+            else:
+                raise ValueError(
+                    "Multiple results available – please specify " "`loadcase=` or `loadcombination=`."
+                )
 
-        # Extract nodes and their global displacements from the results
-        displacement_nodes = self.results.displacement_nodes
-        node_positions = {}
-        node_displacements_global = {}
+        # now 'chosen' is a Results object; pull out exactly what you need
+        displacement_nodes = chosen.displacement_nodes
 
-        for node_id_str, disp in displacement_nodes.items():
-            node_id = int(node_id_str)
-            node = self.get_node_by_pk(node_id)
-            if node:
-                original_position = np.array([node.X, node.Y, node.Z])
-                node_positions[node_id] = original_position
+        # ---------------------------------------------------
+        # HELPER FUNCTIONS TO REMOVE DUPLICATION
+        # ---------------------------------------------------
+        def get_local_transform(member):
+            lx, ly, lz = member.local_coordinate_system()
+            return np.column_stack([lx, ly, lz])
 
-                if disp and displacement:
-                    # Global displacement vector
-                    d_global = np.array([disp.dx, disp.dy, disp.dz])  # Displacements in m
-                    r_global = np.array([disp.rx, disp.ry, disp.rz])  # rotations in rad
+        def interpolate_member(member, d_start, r_start, d_end, r_end):
+            L = member.length()
+            local_deflections = interpolate_beam_local(
+                0.0,
+                L,
+                d_start,
+                d_end,
+                r_start,
+                r_end,
+                num_points,
+            )
+            return local_deflections * displacement_scale
 
-                else:
-                    d_global = np.array([0.0, 0.0, 0.0])
-                    r_global = np.array([0.0, 0.0, 0.0])
+        def plot_section(member, d_start_vec, r_start_vec, d_end_vec, r_end_vec):
+            # build the section polydata once
+            section = member.section
+            coords_2d, edges = section.shape_path.get_shape_geometry()
+            coords_local = np.array([[0.0, y, z] for y, z in coords_2d], dtype=np.float32)
+            R = get_local_transform(member)
 
-                node_displacements_global[node_id] = (d_global, r_global)
+            # original
+            start = member.start_node
+            end = member.end_node
+            origin = np.array([start.X, start.Y, start.Z])
+            coords_global = (coords_local @ R.T + origin).astype(np.float32)
+            pd = pv.PolyData(coords_global)
+            line_array = []
+            for a, b in edges:
+                line_array.extend((2, a, b))
+            pd.lines = np.array(line_array, dtype=np.int32)
+            direction = np.array([end.X, end.Y, end.Z]) - origin
+            orig_extruded = pd.extrude(direction, capping=True)
+            plotter.add_mesh(orig_extruded, color="steelblue", label=f"Section {section.name}")
 
-        # Create a PyVista plotter
+            # deformed
+            if displacement:
+                # transform global → local
+                dls, rls = transform_dofs_global_to_local(d_start_vec, r_start_vec, R)
+                dle, rle = transform_dofs_global_to_local(d_end_vec, r_end_vec, R)
+                local_def = interpolate_member(member, dls, rls, dle, rle)
+
+                # build the deformed path in global coords
+                t_vals = np.linspace(0, 1, num_points)
+                curve_pts = []
+                for i, t in enumerate(t_vals):
+                    orig_pt = origin + t * direction
+                    defl_local = local_def[i]
+                    defl_global = R @ defl_local
+                    curve_pts.append(orig_pt + defl_global)
+                curve_pts = np.array(curve_pts)
+
+                spline = pv.Spline(curve_pts, num_points * 2)
+                if not isinstance(spline, pv.PolyData):
+                    raise ValueError("Extrusion path invalid.")
+                deformed = extrude_along_path(section.shape_path, spline.points)
+                plotter.add_mesh(deformed, color="red", label=f"Deformed Section {section.name}")
+
+        # ---------------------------------------------------
+        # START DRAWING
+        # ---------------------------------------------------
         plotter = pv.Plotter()
-        plotter.add_axes()  # 3D axes
+        plotter.add_axes()
 
-        # Plot sections
+        # precompute all nodal positions and displacements
+        node_pos: Dict[int, np.ndarray] = {}
+        node_disp: Dict[int, Tuple[np.ndarray, np.ndarray]] = {}
+        for nid_str, nodisp in displacement_nodes.items():
+            nid = int(nid_str)
+            node = self.get_node_by_pk(nid)
+            if node is None:
+                continue
+            pos = np.array([node.X, node.Y, node.Z])
+            node_pos[nid] = pos
+            if displacement and nodisp:
+                dgl = np.array([nodisp.dx, nodisp.dy, nodisp.dz])
+                rgl = np.array([nodisp.rx, nodisp.ry, nodisp.rz])
+            else:
+                dgl = np.zeros(3)
+                rgl = np.zeros(3)
+            node_disp[nid] = (dgl, rgl)
+
         if show_sections:
             for member in self.get_all_members():
-                start_node = member.start_node
-                end_node = member.end_node
-                section = member.section
+                ds, rs = node_disp[member.start_node.id]
+                de, re = node_disp[member.end_node.id]
+                plot_section(member, ds, rs, de, re)
 
-                if section.shape_path is not None:
-                    # Original section coordinates in local space
-                    coords_2d, edges = section.shape_path.get_shape_geometry()
-                    coords_local = np.array([[0.0, y, z] for y, z in coords_2d], dtype=np.float32)
-
-                    # Get the local coordinate system
-                    local_x, local_y, local_z = member.local_coordinate_system()
-                    R = np.column_stack([local_x, local_y, local_z])  # Transformation matrix
-
-                    # Transform and extrude for original shape
-                    transformed_coords = coords_local @ R.T + np.array(
-                        [start_node.X, start_node.Y, start_node.Z]
-                    )
-                    section_polydata = pv.PolyData(transformed_coords)
-                    lines = []
-                    for edge in edges:
-                        lines.extend([2, edge[0], edge[1]])
-                    section_polydata.lines = np.array(lines, dtype=np.int32)
-
-                    dx, dy, dz = np.array([end_node.X, end_node.Y, end_node.Z]) - np.array(
-                        [start_node.X, start_node.Y, start_node.Z]
-                    )
-                    original_section = section_polydata.extrude([dx, dy, dz])
-                    plotter.add_mesh(original_section, color="steelblue", label=f"Section {section.name}")
-
-                    # Deformed shape
-                    if displacement:
-                        # Get displacements at start and end nodes
-                        d_global_start, r_global_start = node_displacements_global.get(
-                            start_node.id, (np.zeros(3), None)
-                        )
-                        d_global_end, r_global_end = node_displacements_global.get(
-                            end_node.id, (np.zeros(3), None)
-                        )
-
-                        # Local coordinate system and transformation matrix
-                        local_x, local_y, local_z = member.local_coordinate_system()
-                        R = np.column_stack([local_x, local_y, local_z])  # Transformation matrix
-
-                        # Transform global displacements to local
-                        d_local_start, r_local_start = transform_dofs_global_to_local(
-                            d_global_start, r_global_start, R
-                        )
-                        d_local_end, r_local_end = transform_dofs_global_to_local(
-                            d_global_end, r_global_end, R
-                        )
-
-                        # Interpolate along the beam
-                        deflections_local = interpolate_beam_local(
-                            0.0,
-                            member.length(),
-                            d_local_start,
-                            d_local_end,
-                            r_local_start,
-                            r_local_end,
-                            num_points,
-                        )
-
-                        # Generate the deformed curve in global space
-                        deformed_curve_global = []
-                        for i, t in enumerate(np.linspace(0, 1, num_points)):
-                            # Original position along the beam axis
-                            orig_pt_global = (1 - t) * np.array(
-                                [start_node.X, start_node.Y, start_node.Z]
-                            ) + t * np.array([end_node.X, end_node.Y, end_node.Z])
-
-                            # Deformation in local coordinates
-                            deflection_local = deflections_local[i]
-
-                            # Transform local deflection to global
-                            deflection_global = R @ deflection_local
-
-                            # Deformed position in global space
-                            deformed_curve_global.append(
-                                orig_pt_global + deflection_global * displacement_scale
-                            )
-
-                        deformed_curve_global = np.array(deformed_curve_global)
-
-                        # Extrude the section along the deformed curve
-                        path_polydata = pv.Spline(deformed_curve_global, num_points * 2)
-                        transformed_coords = coords_local @ R.T + np.array(
-                            [start_node.X, start_node.Y, start_node.Z]
-                        )
-                        section_polydata = pv.PolyData(transformed_coords)
-                        lines = []
-                        for edge in edges:
-                            lines.extend([2, edge[0], edge[1]])
-                        section_polydata.lines = np.array(lines, dtype=np.int32)
-
-                        if path_polydata is not None and isinstance(path_polydata, pv.PolyData):
-                            path_points = path_polydata.points  # Extract Nx3 array of points
-                            deformed_section = extrude_along_path(member.section.shape_path, path_points)
-                        else:
-                            raise ValueError(
-                                "Invalid path for extrusion. Ensure path_polydata is a valid PolyData object."
-                            )
-
-                        print(path_polydata)
-                        plotter.add_mesh(
-                            deformed_section, color="red", label=f"Deformed Section {section.name}"
-                        )
-
-        # Plot nodes
         if show_nodes:
-            unique_nodes = self.get_all_nodes()
-            original_node_positions = []
-            deformed_node_positions = []
+            originals = []
+            deformed = []
+            for node in self.get_all_nodes():
+                pid = node.id
+                orig = np.array([node.X, node.Y, node.Z])
+                originals.append(orig)
+                dgl, _ = node_disp.get(pid, (np.zeros(3), None))
+                deformed.append(orig + dgl * displacement_scale)
+            originals = np.array(originals)
+            deformed = np.array(deformed)
 
-            for node in unique_nodes:
-                node_id = node.id
-                original_position = np.array([node.X, node.Y, node.Z])
-                original_node_positions.append(original_position)
-
-                if node_id in node_displacements_global:
-                    d_global, _ = node_displacements_global[node_id]
-                    deformed_position = original_position + d_global * displacement_scale
-                    deformed_node_positions.append(deformed_position)
-
-            # Convert to numpy arrays
-            original_node_positions = np.array(original_node_positions)
-            deformed_node_positions = np.array(deformed_node_positions)
-
-            # Plot original nodes as blue spheres
             plotter.add_mesh(
-                pv.PolyData(original_node_positions).glyph(scale=False, geom=pv.Sphere(radius=0.05)),
+                pv.PolyData(originals).glyph(scale=False, geom=pv.Sphere(radius=0.05)),
                 color="blue",
                 label="Original Nodes",
             )
-
-            # Plot deformed nodes as red spheres
             plotter.add_mesh(
-                pv.PolyData(deformed_node_positions).glyph(scale=False, geom=pv.Sphere(radius=0.05)),
+                pv.PolyData(deformed).glyph(scale=False, geom=pv.Sphere(radius=0.05)),
                 color="red",
                 label="Deformed Nodes",
             )
 
-        # Now, loop over members and plot
+        # finally each member’s center‐line
         for member in self.get_all_members():
-            # Original line in global
             start_id = member.start_node.id
             end_id = member.end_node.id
+            p0 = node_pos[start_id]
+            p1 = node_pos[end_id]
+            d0, r0 = node_disp[start_id]
+            d1, r1 = node_disp[end_id]
 
-            start_pos_global = node_positions[start_id]
-            end_pos_global = node_positions[end_id]
-
-            # Grab the global disp & rotations
-            d_global_start, r_global_start = node_displacements_global[start_id]
-            d_global_end, r_global_end = node_displacements_global[end_id]
-
-            # local axes
-            local_x, local_y, local_z = member.local_coordinate_system()
-            R = get_rotation_matrix(local_x, local_y, local_z)
-
-            # 1) Transform the start/end DOFs to local
-            d_local_start, r_local_start = transform_dofs_global_to_local(d_global_start, r_global_start, R)
-            d_local_end, r_local_end = transform_dofs_global_to_local(d_global_end, r_global_end, R)
-
-            # 2) The local "x" coordinate for the start node is 0, for the end node is member.length()
-            #    We'll just say xstart=0, xend=L
-            L = member.length()
-
-            # 3) Interpolate the local deflection.
-            #    local_disp_start = (u_x, u_y, u_z) at the start
-            #    local_rot_start  = (phi_x, phi_y, phi_z) at the start, etc.
-            local_disp_start = d_local_start
-            local_disp_end = d_local_end
-            local_rot_start = r_local_start
-            local_rot_end = r_local_end
-
-            deflections_local = interpolate_beam_local(
-                0.0, L, local_disp_start, local_disp_end, local_rot_start, local_rot_end, num_points
+            R = get_local_transform(member)
+            local_def = interpolate_member(
+                member, *transform_dofs_global_to_local(d0, r0, R), *transform_dofs_global_to_local(d1, r1, R)
             )
-            deflections_local *= displacement_scale
+            t_vals = np.linspace(0, 1, num_points)
+            orig_curve = np.array([p0 + t * (p1 - p0) for t in t_vals])
+            def_curve = np.array([orig_curve[i] + (R @ local_def[i]) for i in range(num_points)])
 
-            # shape (n_points, 3) => each row is [ux, uy, uz] in local coords
+            plotter.add_lines(orig_curve, color="blue", width=2, label="Original Shape")
+            plotter.add_lines(def_curve, color="red", width=2, label="Deformed Shape")
 
-            # 4) Convert local deflections back to global
-            #    But we also need the local coordinate of each point along the beam's axis in global space.
-            #    A param s in [0..1],
-            #    the global position = start_pos_global + s*(end_pos_global - start_pos_global).
-            s_vals = np.linspace(0, 1, num_points)
-            original_curve_global = []
-            deformed_curve_global = []
-
-            for i, s in enumerate(s_vals):
-                # original global coordinate
-                orig_pt = start_pos_global + s * (end_pos_global - start_pos_global)
-                original_curve_global.append(orig_pt)
-
-                # local deflection at this point
-                defl_loc = deflections_local[i]
-
-                # transform local deflection to global
-                defl_g = R @ defl_loc
-
-                # add the node's base position in global + deflection + (optionally scale factor)
-                defl_pt_global = orig_pt + defl_g
-                deformed_curve_global.append(defl_pt_global)
-
-            original_curve_global = np.array(original_curve_global)
-            deformed_curve_global = np.array(deformed_curve_global)
-
-            # Plot original curve in BLUE
-            plotter.add_lines(original_curve_global, color="blue", width=2, label="Original Shape")
-
-            # Plot deformed curve in RED
-            plotter.add_lines(deformed_curve_global, color="red", width=2, label="Deformed Shape")
-
-        # Show
         plotter.add_legend()
         plotter.show_grid(color="gray")
-        plotter.show(title="3D Beam Displacement Visualization (Local -> Global)")
+        plotter.show(title=f"3D Results: “{chosen.name}”")
 
     def plot_model(self, plane="yz"):
         """

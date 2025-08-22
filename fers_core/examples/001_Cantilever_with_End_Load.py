@@ -1,5 +1,5 @@
 import os
-from FERS_core import Node, Member, FERS, Material, Section, MemberSet, NodalSupport, NodalLoad
+from fers_core import Node, Member, FERS, Material, Section, MemberSet, NodalSupport, NodalLoad
 
 
 # =============================================================================
@@ -55,10 +55,13 @@ print("Running the analysis...")
 calculation_1.run_analysis()
 
 # Extract results from the analysis
+results = calculation_1.results.loadcases["End Load"]
+
+# Extract results from the analysis
 # Displacement at the free end in the y-direction
-dy_fers = calculation_1.results.displacement_nodes["2"].dy
+dy_fers = results.displacement_nodes["2"].dy
 # Reaction moment at the fixed end
-Mz_fers = calculation_1.results.reaction_forces[0].mz
+Mz_fers = results.reaction_nodes["1"].nodal_forces.mz
 
 # Step 4: Validate Results Against Analytical Solution
 # ----------------------------------------------------

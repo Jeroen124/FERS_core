@@ -1,5 +1,5 @@
 import os
-from FERS_core import Node, Member, FERS, Material, Section, MemberSet, NodalSupport, NodalLoad
+from fers_core import Node, Member, FERS, Material, Section, MemberSet, NodalSupport, NodalLoad
 
 
 # =============================================================================
@@ -53,25 +53,9 @@ end_load_case = calculation_1.create_load_case(name="End Load")
 nodal_load = NodalLoad(node=node4, load_case=end_load_case, magnitude=-1000, direction=(1, 0, 0))
 
 
-file_path = os.path.join("examples", "json_input_solver", "12_triple_cantilever.json")
+file_path = os.path.join("json_input_solver", "12_triple_cantilever.json")
 calculation_1.save_to_json(file_path, indent=4)
 
 
 # Run analysis
-# result = FERS_calculation(calculation_1)
-
-# # Print results
-# print("Displacement at free end (node2):")
-# print(f"dy = {node2.displacement[1]:.6f} m")
-
-# print("\nReaction forces at fixed end (node1):")
-# print(f"Fy = {node1.reaction_force[1]:.2f} kN")
-# print(f"Mz = {node1.reaction_moment[2]:.2f} kN·m")
-
-# # Calculate and print maximum bending stress
-# i_z = beam.moment_of_inertia_z
-# y_max = beam.height / 2
-# M_max = abs(node1.reaction_moment[2])
-# sigma_max = M_max * y_max / i_z
-
-# print(f"\nMaximum bending stress: {sigma_max:.2f} MPa")
+calculation_1.run_analysis()

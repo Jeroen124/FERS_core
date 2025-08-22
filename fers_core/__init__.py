@@ -16,8 +16,12 @@ from .imperfections.translationimperfection import TranslationImperfection
 from .loads.distributionshape import DistributionShape
 from .supports.supportcondition import SupportCondition
 from .supports.supportcondition import SupportConditionType
+from .settings.anlysis_options import AnalysisOrder, Dimensionality
+
 
 __all__ = [
+    "Dimensionality",
+    "AnalysisOrder",
     "Node",
     "Member",
     "FERS",

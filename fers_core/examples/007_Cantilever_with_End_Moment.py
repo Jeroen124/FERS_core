@@ -1,10 +1,7 @@
 import os
-from FERS_core import Node, Member, FERS, Material, Section, MemberSet, NodalSupport, NodalLoad
-import fers_calculations
-import ujson
+from fers_core import Node, Member, FERS, Material, Section, MemberSet, NodalSupport
 
-from FERS_core.types.pydantic_models import Results
-
+from fers_core.loads.nodalmoment import NodalMoment
 
 # =============================================================================
 # Example and Validation: Cantilever Beam with End Load
@@ -23,18 +20,12 @@ node2 = Node(5, 0, 0)  # Free end of the beam, 5 meters away
 Steel_S235 = Material(name="Steel", e_mod=210e9, g_mod=80.769e9, density=7850, yield_stress=235e6)
 
 # Define the beam cross-section (IPE 180)
-ipe_section = Section.create_ipe_section(
-    name="IPE 180 Beam Section",
-    material=Steel_S235,
-    h=0.177,
-    b=0.091,
-    t_f=0.0065,
-    t_w=0.0043,
-    r=0.009,
+section = Section(
+    name="IPE 180 Beam Section", material=Steel_S235, i_y=0.819e-6, i_z=10.63e-6, j=0.027e-6, area=0.00196
 )
 
 # Create the beam element
-beam = Member(start_node=node1, end_node=node2, section=ipe_section)
+beam = Member(start_node=node1, end_node=node2, section=section)
 
 # Apply a fixed support at the fixed end (node1)
 wall_support = NodalSupport()
@@ -52,36 +43,40 @@ calculation_1.add_member_set(membergroup1)
 end_load_case = calculation_1.create_load_case(name="End Load")
 
 # Apply a 1 kN downward force (global y-axis) at the free end (node2)
-nodal_load = NodalLoad(node=node2, load_case=end_load_case, magnitude=-1000, direction=(0, 1, 0))
+end_moment = NodalMoment(
+    node=node2,
+    load_case=end_load_case,
+    magnitude=500.0,
+    direction=(0, 0, 1),
+)
 
 # Save the model to a file for FERS calculations
-file_path = os.path.join("1_cantilever_with_end_load.json")
+file_path = os.path.join("json_input_solver", "007_Cantilever_with_End_Moment.json")
 calculation_1.save_to_json(file_path, indent=4)
 
 # Step 3: Run FERS calculation
 # ----------------------------
 # Perform the analysis using the saved JSON model file
 print("Running the analysis...")
-result = fers_calculations.calculate_from_file(file_path)
-result_dict = ujson.loads(result)
-parsed_results = Results(**result_dict)
+calculation_1.run_analysis()
+results_end_load = calculation_1.results.loadcases["End Load"]
 
 # Extract results from the analysis
-dy_fers = parsed_results.displacement_nodes[1].dy  # Displacement at the free end in the y-direction
-Mz_fers = parsed_results.reaction_forces[0].mz  # Reaction moment at the fixed end
+dy_fers = results_end_load.displacement_nodes["2"].dy
+Mz_fers = results_end_load.reaction_nodes["1"].nodal_forces.mz  # Reaction moment at the fixed end
 
 # Step 4: Validate Results Against Analytical Solution
 # ----------------------------------------------------
 # Analytical solution parameters
-F = 1000  # Force in Newtons
+M = 500  # Moment in Newton-meters
 L = 5  # Length of the beam in meters
 E = 210e9  # Modulus of elasticity in Pascals
 I = 10.63e-6  # Moment of inertia in m^4
 x = L  # Distance to the free end for max deflection and slope
 
 # Calculate analytical solutions for deflection and moment
-delta_analytical = (-F * x**2 / (6 * E * I)) * (3 * L - x)  # Max deflection
-M_max_analytical = F * L  # Max moment at the fixed end
+delta_analytical = M * x**2 / (2 * E * I)  # Max deflection
+M_max_analytical = -M  # Max moment at the fixed end
 
 # Compare FERS results with analytical solutions
 print("\nComparison of results:")
@@ -107,4 +102,4 @@ print("\nAll results validated successfully!")
 # This script is both an example and a validation tool.
 # 1. It demonstrates how to set up and analyze a cantilever beam with an end load.
 # 2. It validates the FERS results against analytical solutions for deflection and moment.
-# 3. Run this script as-is to learn
+# 3. Run this script as-is to learn, or integrate it into your CI/CD pipeline for validation.

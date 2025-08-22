@@ -1,5 +1,5 @@
 import os
-from FERS_core import (
+from fers_core import (
     Node,
     Member,
     FERS,
@@ -10,10 +10,6 @@ from FERS_core import (
     NodalLoad,
     SupportCondition,
 )
-import fers_calculations
-import ujson
-
-from FERS_core.types.pydantic_models import Results
 
 # =============================================================================
 # Example and Validation: Cantilever Beam with End Load
@@ -26,8 +22,9 @@ calculation_1 = FERS()
 
 # Define the geometry of the beam
 node1 = Node(0, 0, 0)  # Simply supported side of the beam at x=0
-node2 = Node(3, 0, 0)  # Free end of the beam, 5 meters away
-node3 = Node(6, 0, 0)  # Simply supported side of the beam at x=6
+node2 = Node(2, 0, 0)  # Free end of the beam, 5 meters away
+node3 = Node(4, 0, 0)  # Free end of the beam, 5 meters away
+node4 = Node(6, 0, 0)  # Simply supported side of the beam at x=6
 
 # Define the material properties (Steel S235)
 Steel_S235 = Material(name="Steel", e_mod=210e9, g_mod=80.769e9, density=7850, yield_stress=235e6)
@@ -40,22 +37,23 @@ section = Section(
 # Create the beam element
 beam1 = Member(start_node=node1, end_node=node2, section=section)
 beam2 = Member(start_node=node2, end_node=node3, section=section)
+beam3 = Member(start_node=node3, end_node=node4, section=section)
 
 # Apply a fixed support at the fixed end (node1)
 
 simply_supported_support = NodalSupport(
     rotation_conditions={
-        "X": SupportCondition(condition=SupportCondition.FREE),
+        "X": SupportCondition(condition=SupportCondition.FIXED),
         "Y": SupportCondition(condition=SupportCondition.FREE),
         "Z": SupportCondition(condition=SupportCondition.FREE),
     }
 )
 
 node1.nodal_support = simply_supported_support
-node3.nodal_support = simply_supported_support
+node4.nodal_support = simply_supported_support
 
 # Add the beam to a member group
-membergroup1 = MemberSet(members=[beam1, beam2])
+membergroup1 = MemberSet(members=[beam1, beam2, beam3])
 
 # Add the member group to the calculation model
 calculation_1.add_member_set(membergroup1)
@@ -63,52 +61,66 @@ calculation_1.add_member_set(membergroup1)
 # Step 2: Apply the load
 # ----------------------
 # Create a load case for the analysis
-end_load_case = calculation_1.create_load_case(name="End Load")
+intermediate_load_case = calculation_1.create_load_case(name="Intermediate Load")
 
 # Apply a 1 kN downward force (global y-axis) at the free end (node2)
-nodal_load = NodalLoad(node=node2, load_case=end_load_case, magnitude=-1000, direction=(0, 1, 0))
+nodal_load = NodalLoad(node=node2, load_case=intermediate_load_case, magnitude=-1000, direction=(0, 1, 0))
+nodal_load = NodalLoad(node=node3, load_case=intermediate_load_case, magnitude=-1000, direction=(0, 1, 0))
 
 # Save the model to a file for FERS calculations
-file_path = os.path.join("json_input_solver", "011_Simply_Supported_with_Center_Load.json")
+file_path = os.path.join("json_input_solver", "013_Simply_Supported_with_Double_symmetric_Load.json")
 calculation_1.save_to_json(file_path, indent=4)
 
 # Step 3: Run FERS calculation
 # ----------------------------
 # Perform the analysis using the saved JSON model file
 print("Running the analysis...")
-result = fers_calculations.calculate_from_file(file_path)
-result_dict = ujson.loads(result)
-parsed_results = Results(**result_dict)
+calculation_1.run_analysis()
+result_loadcase = calculation_1.results.loadcases["Intermediate Load"]
 
 # Extract results from the analysis
-dy_fers = parsed_results.displacement_nodes[1].dy  # Displacement at the free end in the y-direction
-Mz_fers = parsed_results.reaction_forces[0].mz  # Reaction moment at the fixed end
+dy_fers = result_loadcase.displacement_nodes["2"].dy
+Mz_fers_begin_end = result_loadcase.reaction_nodes["1"].nodal_forces.mz
+Mz_fers_intermediate = result_loadcase.member_results["1"].end_node_forces.mz
 
 # Step 4: Validate Results Against Analytical Solution
 # ----------------------------------------------------
 # Analytical solution parameters
 F = 1000  # Force in Newtons
 L = 6  # Length of the beam in meters
-E = 212e9  # Modulus of elasticity in Pascals
+E = 210e9  # Modulus of elasticity in Pascals
 I = 10.63e-6  # Moment of inertia in m^4
-x = L / 2  # Distance to the free end for max deflection and slope
-
+x = 2  # Distance to the free end for max deflection and slope
+a = 2
 # Calculate analytical solutions for deflection and moment
-delta_analytical = (F * L**3) / (48 * E * I)  # Max deflection
-M_max_analytical = (F * L) / 4  # Max moment at the fixed end
+
+delta_analytical = -((F * a) / (6 * E * I)) * (3 * a * L - 3 * a**2 - x**2)  # Max deflection
+M_max_analytical = F * a  # Max moment at the fixed end
+Mz_begin_end = 0
 
 # Compare FERS results with analytical solutions
 print("\nComparison of results:")
-print(f"Deflection at free end (FERS): {dy_fers:.6f} m")
-print(f"Deflection at free end (Analytical): {delta_analytical:.6f} m")
+print(f"Deflection at middle node (FERS): {dy_fers:.6f} m")
+print(f"Deflection at middle node (Analytical): {delta_analytical:.6f} m")
 if abs(dy_fers - delta_analytical) < 1e-6:
     print("Deflection matches the analytical solution ✅")
 else:
     print("Deflection does NOT match the analytical solution ❌")
 
-print(f"Reaction moment at fixed end (FERS): {Mz_fers:.6f} Nm")
-print(f"Reaction moment at fixed end (Analytical): {M_max_analytical:.6f} Nm")
-if abs(Mz_fers - M_max_analytical) < 1e-3:
+print()
+
+print(f"Bending moment at middle node (FERS): {Mz_fers_intermediate:.6f} Nm")
+print(f"Bending moment at middle node (Analytical): {M_max_analytical:.6f} Nm")
+if abs(Mz_fers_intermediate - M_max_analytical) < 1e-6:
+    print("Bending moment matches the analytical solution ✅")
+else:
+    print("Bending moment does NOT match the analytical solution ❌")
+
+print()
+
+print(f"Reaction moment at begin (FERS): {Mz_fers_begin_end:.6f} Nm")
+print(f"Reaction moment at begin (Analytical): {M_max_analytical:.6f} Nm")
+if abs(Mz_fers_begin_end - Mz_begin_end) < 1e-3:
     print("Reaction moment matches the analytical solution ✅")
 else:
     print("Reaction moment does NOT match the analytical solution ❌")

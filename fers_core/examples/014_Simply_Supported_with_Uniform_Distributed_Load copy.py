@@ -7,9 +7,10 @@ from fers_core import (
     Section,
     MemberSet,
     NodalSupport,
-    NodalLoad,
     SupportCondition,
 )
+from fers_core.loads.distributedload import DistributedLoad
+
 
 # =============================================================================
 # Example and Validation: Cantilever Beam with End Load
@@ -22,7 +23,7 @@ calculation_1 = FERS()
 
 # Define the geometry of the beam
 node1 = Node(0, 0, 0)  # Simply supported side of the beam at x=0
-node2 = Node(2, 0, 0)  # Free end of the beam, 5 meters away
+node2 = Node(3, 0, 0)  # Intermediate node at x=3
 node3 = Node(6, 0, 0)  # Simply supported side of the beam at x=6
 
 # Define the material properties (Steel S235)
@@ -61,11 +62,23 @@ calculation_1.add_member_set(membergroup1)
 # Create a load case for the analysis
 intermediate_load_case = calculation_1.create_load_case(name="Intermediate Load")
 
-# Apply a 1 kN downward force (global y-axis) at the free end (node2)
-nodal_load = NodalLoad(node=node2, load_case=intermediate_load_case, magnitude=-1000, direction=(0, 1, 0))
+# Apply a uniform distributed load (e.g., w = 1000 N/m) downward along the entire beam
+distributed_load = DistributedLoad(
+    member=beam1,
+    load_case=intermediate_load_case,
+    magnitude=1000.0,  # 1000 N/m (example uniform load)
+    direction=(0, -1, 0),  # Downward in the global Y-axis
+)
+distributed_load = DistributedLoad(
+    member=beam2,
+    load_case=intermediate_load_case,
+    magnitude=1000.0,  # 1000 N/m (example uniform load)
+    direction=(0, -1, 0),  # Downward in the global Y-axis
+)
+
 
 # Save the model to a file for FERS calculations
-file_path = os.path.join("json_input_solver", "012_Simply_Supported_with_Intermediate_Load.json")
+file_path = os.path.join("json_input_solver", "014_Simply_Supported_with_Uniform_Distributed_Load.json")
 calculation_1.save_to_json(file_path, indent=4)
 
 # Step 3: Run FERS calculation
@@ -83,17 +96,16 @@ Mz_fers_intermediate = result_loadcase.member_results["1"].end_node_forces.mz
 # Step 4: Validate Results Against Analytical Solution
 # ----------------------------------------------------
 # Analytical solution parameters
-F = 1000  # Force in Newtons
+W = 1000  # Force in Newtons
 L = 6  # Length of the beam in meters
 E = 210e9  # Modulus of elasticity in Pascals
 I = 10.63e-6  # Moment of inertia in m^4
-x = 4  # Distance to the free end for max deflection and slope
-b = 2
-# Calculate analytical solutions for deflection and moment
+x = L / 2  # Distance to the free end for max deflection and slope
 
-delta_analytical = -((F * b * x) / (6 * L * E * I)) * (L**2 - b**2 - x**2)  # Max deflection
-M_max_analytical = (F * b * (L - b)) / L  # Max moment at the fixed end
-Mz_begin_end = 0
+# Calculate analytical solutions for deflection and moment
+delta_analytical = -(5 * W * L**4) / (384 * E * I)  # Max deflection
+M_max_analytical = (W * L**2) / 8  # Max moment at intermediate node
+Mz_begin_end = 0  # Max moment at the fixed end
 
 # Compare FERS results with analytical solutions
 print("\nComparison of results:")
@@ -115,8 +127,9 @@ else:
 
 print()
 
+
 print(f"Reaction moment at begin (FERS): {Mz_fers_begin_end:.6f} Nm")
-print(f"Reaction moment at begin (Analytical): {M_max_analytical:.6f} Nm")
+print(f"Reaction moment at begin (Analytical): {Mz_begin_end:.6f} Nm")
 if abs(Mz_fers_begin_end - Mz_begin_end) < 1e-3:
     print("Reaction moment matches the analytical solution ✅")
 else:

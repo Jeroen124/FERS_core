@@ -11,9 +11,9 @@ class AnalysisOptions:
         solve_loadcases: Optional[bool] = True,
         solver: Optional[str] = "newton_raphson",
         tolerance: Optional[float] = 0.01,
-        max_iterations: Optional[int] = None,
+        max_iterations: Optional[int] = 30,
         dimensionality: Optional[Dimensionality] = Dimensionality.THREE_DIMENSIONAL,
-        order: Optional[AnalysisOrder] = AnalysisOrder.LINEAR,
+        order: Optional[AnalysisOrder] = AnalysisOrder.NONLINEAR,
     ):
         self.analysis_options_id = id or AnalysisOptions._analysis_options_counter
         if id is None:

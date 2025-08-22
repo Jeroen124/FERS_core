@@ -8,6 +8,7 @@ from fers_core import (
     MemberSet,
     NodalSupport,
     DistributedLoad,
+    DistributionShape,
 )
 
 
@@ -49,33 +50,44 @@ calculation_1.add_member_set(membergroup1)
 # Step 2: Apply the load
 # ----------------------
 # Create a load case for the analysis
-load_case = calculation_1.create_load_case(name="Uniform Load")
+load_case_1 = calculation_1.create_load_case(name="Triangular Load")
+load_case_2 = calculation_1.create_load_case(name="Inverse Triangular Load")
 
 # Apply a uniform distributed load (e.g., w = 1000 N/m) downward along the entire beam
 distributed_load = DistributedLoad(
     member=beam,
-    load_case=load_case,
-    magnitude=1000.0,  # 1000 N/m (example uniform load)
+    load_case=load_case_1,
+    distribution_shape=DistributionShape.TRIANGULAR,
+    magnitude=1000.0,  # 1000 N/m (example triangular load)
+    direction=(0, -1, 0),  # Downward in the global Y-axis
+)
+
+distributed_load = DistributedLoad(
+    member=beam,
+    load_case=load_case_2,
+    distribution_shape=DistributionShape.INVERSE_TRIANGULAR,
+    magnitude=1000.0,  # 1000 N/m (example triangular load)
     direction=(0, -1, 0),  # Downward in the global Y-axis
 )
 
 # Save the model to a file for FERS calculations
-file_path = os.path.join("json_input_solver", "003_Cantilever_with_Uniform_Distributed_Load.json")
+file_path = os.path.join("json_input_solver", "005_Cantilever_with_Triangular_Distributed_Load.json")
 calculation_1.save_to_json(file_path, indent=4)
 
 # Step 3: Run FERS calculation
 # ----------------------------
 print("Running the analysis...")
 calculation_1.run_analysis()
+results_triangular = calculation_1.results.loadcases["Triangular Load"]
+results_inverse = calculation_1.results.loadcases["Inverse Triangular Load"]
 
 # Extract results from the analysis
-results = calculation_1.results.loadcases["Uniform Load"]
-
 # Displacement at the free end in the y-direction
-
-dy_fers = results.displacement_nodes["2"].dy
+dy_fers_triangular = results_triangular.displacement_nodes["2"].dy
+dy_fers_triangular_inverse = results_inverse.displacement_nodes["2"].dy
 # Reaction moment at the fixed end
-Mz_fers = results.reaction_nodes["1"].nodal_forces.mz
+Mz_fers_triangular = results_triangular.reaction_nodes["1"].nodal_forces.mz
+Mz_fers_triangular_inverse = results_inverse.reaction_nodes["1"].nodal_forces.mz
 
 # Step 4: Validate Results Against Analytical Solution
 # ----------------------------------------------------
@@ -85,30 +97,41 @@ L = 5  # Beam length in meters
 E = 210e9  # Elastic modulus (Pascals)
 I = 10.63e-6  # Moment of inertia (m^4)
 
-
-section = Section(
-    name="IPE 180 Beam Section", material=Steel_S235, i_y=0.819e-6, i_z=10.63e-6, j=0.027e-6, area=0.00196
-)
-
 # For a uniform load w on a cantilever, the maximum deflection at x=L is:
-#   δ_max = w * L^4 / (8 * E * I)
-delta_analytical = -w * (L**4) / (8 * E * I)
+delta_analytical_triangular = -w * (L**4) / (30 * E * I)
+# delta_analytical_inverse = -w * (L**4) / (10 * E * I)
 
 # The maximum moment at the fixed end is:
-#   M_max = w * L^2 / 2
-M_max_analytical = w * (L**2) / 2
+M_max_analytical_triangular = w * (L**2) / 6
+M_max_analytical_inverse = w * (L**2) / 3
 
 print("\nComparison of results:")
-print(f"Deflection at free end (FERS): {dy_fers:.6f} m")
-print(f"Deflection at free end (Analytical): {delta_analytical:.6f} m")
-if abs(dy_fers - delta_analytical) < 1e-6:
+print(f"Deflection at free end triangular (FERS): {dy_fers_triangular:.6f} m")
+print(f"Deflection at free end triangular (Analytical): {delta_analytical_triangular:.6f} m")
+if abs(dy_fers_triangular - delta_analytical_triangular) < 1e-6:
     print("Deflection matches the analytical solution ✅")
 else:
     print("Deflection does NOT match the analytical solution ❌")
 
-print(f"Reaction moment at fixed end (FERS): {Mz_fers:.6f} Nm")
-print(f"Reaction moment at fixed end (Analytical): {M_max_analytical:.6f} Nm")
-if abs(Mz_fers - M_max_analytical) < 1e-3:
+print(f"Reaction moment at fixed end (FERS): {Mz_fers_triangular:.6f} Nm")
+print(f"Reaction moment at fixed end (Analytical): {M_max_analytical_triangular:.6f} Nm")
+if abs(Mz_fers_triangular - M_max_analytical_triangular) < 1e-3:
+    print("Reaction moment matches the analytical solution ✅")
+else:
+    print("Reaction moment does NOT match the analytical solution ❌")
+
+print()
+
+# print(f"Deflection at free end inverse triangular (FERS): {dy_fers_triangular_inverse:.6f} m")
+# print(f"Deflection at free end inverse triangular (Analytical): {delta_analytical_inverse:.6f} m")
+# if abs(dy_fers_triangular_inverse - delta_analytical_inverse) < 1e-6:
+#     print("Deflection matches the analytical solution ✅")
+# else:
+#     print("Deflection does NOT match the analytical solution ❌")
+
+print(f"Reaction moment at fixed end inverse (FERS): {Mz_fers_triangular_inverse:.6f} Nm")
+print(f"Reaction moment at fixed end inverse (Analytical): {M_max_analytical_inverse:.6f} Nm")
+if abs(Mz_fers_triangular_inverse - M_max_analytical_inverse) < 1e-3:
     print("Reaction moment matches the analytical solution ✅")
 else:
     print("Reaction moment does NOT match the analytical solution ❌")
