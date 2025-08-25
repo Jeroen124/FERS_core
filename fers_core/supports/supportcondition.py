@@ -71,12 +71,12 @@ class SupportCondition:
     def to_dict(self) -> dict:
         """
         {
-          "type": "Fixed" | "Free" | "Spring" | "Positive-only" | "Negative-only",
+          "condition_type": "Fixed" | "Free" | "Spring" | "Positive-only" | "Negative-only",
           "stiffness": number | null
         }
         """
         return {
-            "type": self.condition_type.value,
+            "condition_type": self.condition_type.value,
             "stiffness": self.stiffness,
         }
 
