@@ -99,8 +99,8 @@ class Section:
         ipe_geometry = i_section(d=h, b=b, t_f=t_f, t_w=t_w, r=r, n_r=16).shift_section(
             x_offset=-b / 2, y_offset=-h / 2
         )
-        mesh = ipe_geometry.create_mesh(mesh_sizes=[b / 1000])
-        analysis_section = SP_section(ipe_geometry, mesh)
+        ipe_geometry.create_mesh(mesh_sizes=[b / 1000])
+        analysis_section = SP_section(ipe_geometry, time_info=False)
         analysis_section.calculate_geometric_properties()
         analysis_section.calculate_warping_properties()
 

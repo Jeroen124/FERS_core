@@ -44,9 +44,9 @@ beam3 = Member(start_node=node3, end_node=node4, section=section)
 
 simply_supported_support = NodalSupport(
     rotation_conditions={
-        "X": SupportCondition(condition=SupportCondition.FIXED),
-        "Y": SupportCondition(condition=SupportCondition.FREE),
-        "Z": SupportCondition(condition=SupportCondition.FREE),
+        "X": SupportCondition.fixed(),
+        "Y": SupportCondition.free(),
+        "Z": SupportCondition.free(),
     }
 )
 
