@@ -142,29 +142,29 @@
             "classification": null,
             "displacement_conditions": {
                 "X": {
-                    "type": "Fixed",
+                    "condition_type": "Fixed",
                     "stiffness": null
                 },
                 "Y": {
-                    "type": "Fixed",
+                    "condition_type": "Fixed",
                     "stiffness": null
                 },
                 "Z": {
-                    "type": "Fixed",
+                    "condition_type": "Fixed",
                     "stiffness": null
                 }
             },
             "rotation_conditions": {
                 "X": {
-                    "type": "Fixed",
+                    "condition_type": "Fixed",
                     "stiffness": null
                 },
                 "Y": {
-                    "type": "Fixed",
+                    "condition_type": "Fixed",
                     "stiffness": null
                 },
                 "Z": {
-                    "type": "Fixed",
+                    "condition_type": "Fixed",
                     "stiffness": null
                 }
             }
