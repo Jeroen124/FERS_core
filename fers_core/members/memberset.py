@@ -62,13 +62,10 @@ class MemberSet:
         """
         Plot the members in the MemberSet on the specified plane ('xy' or 'xz' or 'yz'),
         including nodes plotted as dots.
-
-        Parameters:
-        - plane: A string specifying the plot plane, either 'xy' or 'xz'.
         """
         if fig is None or ax is None:
             fig, ax = plt.subplots()
-        # Loop through members and plot them
+
         for member in self.members:
             start_node = member.start_node
             end_node = member.end_node
@@ -78,39 +75,34 @@ class MemberSet:
                 secondary_values = [start_node.Y, end_node.Y]
                 ax.set_xlabel("X Coordinate")
                 ax.set_ylabel("Y Coordinate")
-                ax.plot(start_node.X, start_node.Y, "o", color="red")  # Start node
-                ax.plot(end_node.X, end_node.Y, "o", color="red")  # End node
+                ax.plot(start_node.X, start_node.Y, "o", color="red")
+                ax.plot(end_node.X, end_node.Y, "o", color="red")
 
             elif plane == "xz":
                 primary_values = [start_node.X, end_node.X]
                 secondary_values = [start_node.Z, end_node.Z]
                 ax.set_xlabel("X Coordinate")
                 ax.set_ylabel("Z Coordinate")
-                ax.plot(start_node.X, start_node.Z, "o", color="red")  # Start node
-                ax.plot(end_node.X, end_node.Z, "o", color="red")  # End node
+                ax.plot(start_node.X, start_node.Z, "o", color="red")
+                ax.plot(end_node.X, end_node.Z, "o", color="red")
 
             elif plane == "yz":
                 primary_values = [start_node.Z, end_node.Z]
                 secondary_values = [start_node.Y, end_node.Y]
                 ax.set_xlabel("Z Coordinate")
                 ax.set_ylabel("Y Coordinate")
-
-                ax.plot(start_node.Z, start_node.Y, "o", color="red")  # Start node
-                ax.plot(end_node.Z, end_node.Y, "o", color="red")  # End node
+                ax.plot(start_node.Z, start_node.Y, "o", color="red")
+                ax.plot(end_node.Z, end_node.Y, "o", color="red")
 
             else:
                 raise ValueError("Invalid plane specified. Use 'xy', 'xz' or 'yz'.")
 
-            # Plot member line
             ax.plot(primary_values, secondary_values, label=f"Member {member.id}")
-            # Plot start and end nodes as dots
 
-        # Customize plot settings
         if set_aspect:
             ax.set_aspect("equal", adjustable="box")
         if show_title:
-            ax.set_title(f"Member Set: {self.id}")
-        # Set the legend outside the plot
+            ax.set_title(f"Member Set: {self.memberset_id}")  # fixed
         if not show_legend:
             ax.legend_ = None
         else:

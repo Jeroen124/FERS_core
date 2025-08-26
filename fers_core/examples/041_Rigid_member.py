@@ -26,14 +26,14 @@ section = Section(
 
 # Create the beam element
 beam = Member(start_node=node1, end_node=node2, section=section)
-rigid_member = Member(start_node=node2, end_node=node3, type="RIGID")
+rigid_member = Member(start_node=node2, end_node=node3, member_type="RIGID")
 
 # Apply a fixed support at the fixed end (node1)
 wall_support = NodalSupport()
 node1.nodal_support = wall_support
 
 # Add the beam to a member group
-membergroup1 = MemberSet(members=[beam])
+membergroup1 = MemberSet(members=[beam, rigid_member])
 
 # Add the member group to the calculation model
 calculation_1.add_member_set(membergroup1)
@@ -77,7 +77,7 @@ x = L  # Distance to the free end for max deflection and slope
 # Calculate analytical solutions for deflection and moment
 delta_analytical = (-F * x**2 / (6 * E * I)) * (3 * L - x)  # Max deflection
 M_max_analytical = F * L  # Max moment at the fixed end
-
+rotation_end_elastic_member = F * L**2 / (2 * E * I)
 # Compare FERS results with analytical solutions
 print("\nComparison of results:")
 print(f"Deflection at free end (FERS): {dy_fers:.6f} m")

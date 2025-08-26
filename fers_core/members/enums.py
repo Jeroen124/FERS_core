@@ -2,7 +2,12 @@ from enum import Enum
 from typing import Union
 
 
-from ..members.enums import MemberType
+class MemberType(Enum):
+    NORMAL = "Normal"
+    TRUSS = "Truss"
+    TENSION = "Tension"
+    COMPRESSION = "Compression"
+    RIGID = "Rigid"
 
 
 def normalize_member_type(value: Union[MemberType, str]) -> MemberType:
@@ -26,11 +31,3 @@ def normalize_member_type(value: Union[MemberType, str]) -> MemberType:
         f"Unknown member_type: {value!r}. Valid options are: "
         f"{', '.join(mapping.keys())} or MemberType values."
     )
-
-
-class MemberType(Enum):
-    NORMAL = "Normal"
-    TRUSS = "Truss"
-    TENSION = "Tension"
-    COMPRESSION = "Compression"
-    RIGID = "Rigid"
