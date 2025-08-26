@@ -1,0 +1,145 @@
+{
+    "member_sets": [
+        {
+            "id": 1,
+            "l_y": null,
+            "l_z": null,
+            "classification": null,
+            "members": [
+                {
+                    "id": 1,
+                    "start_node": {
+                        "id": 1,
+                        "classification": "",
+                        "X": 0,
+                        "Y": 0,
+                        "Z": 0,
+                        "nodal_support": 1
+                    },
+                    "end_node": {
+                        "id": 2,
+                        "classification": "",
+                        "X": 5,
+                        "Y": 0,
+                        "Z": 0,
+                        "nodal_support": null
+                    },
+                    "section": 1,
+                    "rotation_angle": 0.0,
+                    "start_hinge": null,
+                    "end_hinge": null,
+                    "classification": "",
+                    "weight": 76.92999999999999,
+                    "chi": null,
+                    "reference_member": null,
+                    "reference_node": null,
+                    "member_type": "Normal"
+                }
+            ]
+        }
+    ],
+    "load_cases": [
+        {
+            "id": 1,
+            "name": "End Load",
+            "nodal_loads": [
+                {
+                    "id": 1,
+                    "node": 2,
+                    "load_case": 1,
+                    "magnitude": -1000,
+                    "direction": [
+                        0,
+                        1,
+                        0
+                    ],
+                    "load_type": "force"
+                }
+            ],
+            "nodal_moments": [],
+            "distributed_loads": [],
+            "rotation_imperfections": [],
+            "translation_imperfections": []
+        }
+    ],
+    "load_combinations": [],
+    "imperfection_cases": [],
+    "settings": {
+        "id": 1,
+        "analysis_option": {
+            "id": 1,
+            "solve_loadcases": true,
+            "solver": "newton_raphson",
+            "tolerance": 0.01,
+            "max_iterations": 30,
+            "dimensionality": "3D",
+            "order": "Nonlinear"
+        },
+        "general_info": {
+            "project_name": "Unnamed Project",
+            "author": "Unknown",
+            "version": "1.0"
+        }
+    },
+    "results": null,
+    "memberhinges": [],
+    "materials": [
+        {
+            "id": 1,
+            "name": "Steel",
+            "e_mod": 210000000000.0,
+            "g_mod": 80769000000.0,
+            "density": 7850,
+            "yield_stress": 235000000.0
+        }
+    ],
+    "sections": [
+        {
+            "id": 1,
+            "name": "IPE 180 Beam Section",
+            "material": 1,
+            "h": null,
+            "b": null,
+            "i_y": 8.19e-7,
+            "i_z": 1.063e-5,
+            "j": 2.7e-8,
+            "area": 0.00196,
+            "shape_path": null
+        }
+    ],
+    "nodal_supports": [
+        {
+            "id": 1,
+            "classification": null,
+            "displacement_conditions": {
+                "X": {
+                    "condition_type": "Fixed",
+                    "stiffness": null
+                },
+                "Y": {
+                    "condition_type": "Fixed",
+                    "stiffness": null
+                },
+                "Z": {
+                    "condition_type": "Fixed",
+                    "stiffness": null
+                }
+            },
+            "rotation_conditions": {
+                "X": {
+                    "condition_type": "Fixed",
+                    "stiffness": null
+                },
+                "Y": {
+                    "condition_type": "Fixed",
+                    "stiffness": null
+                },
+                "Z": {
+                    "condition_type": "Fixed",
+                    "stiffness": null
+                }
+            }
+        }
+    ],
+    "shape_paths": []
+}

@@ -7,6 +7,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pyvista as pv
 
+
 from ..fers.deformation_utils import (
     interpolate_beam_local,
     transform_dofs_global_to_local,
@@ -836,7 +837,7 @@ class FERS:
                         plotter.add_arrows(
                             np.array([node.X, node.Y, node.Z]),
                             direction * arrow_scale_factor,  # Scale arrows
-                            color="FFA500",  # Orange
+                            color="#FFA500",  # Orange
                             label="Point Load",
                         )
                         # Calculate the midpoint for the label position
@@ -846,7 +847,7 @@ class FERS:
                             midpoint,
                             [f"{magnitude:.2f}"],  # Format magnitude to 2 decimal places
                             font_size=20 * arrow_scale_factor,
-                            text_color="FFA500",
+                            text_color="#FFA500",
                             always_visible=show_load_labels,
                         )
 
@@ -958,6 +959,9 @@ class FERS:
         def plot_section(member, d_start_vec, r_start_vec, d_end_vec, r_end_vec):
             # build the section polydata once
             section = member.section
+            if section.shape_path is None:
+                return
+
             coords_2d, edges = section.shape_path.get_shape_geometry()
             coords_local = np.array([[0.0, y, z] for y, z in coords_2d], dtype=np.float32)
             R = get_local_transform(member)

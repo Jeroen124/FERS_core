@@ -1,4 +1,6 @@
+from __future__ import annotations
 from enum import Enum
+from typing import Optional
 
 
 class SupportConditionType(Enum):
@@ -10,50 +12,78 @@ class SupportConditionType(Enum):
 
 
 class SupportCondition:
-    _support_condition_counter = 1
+    """
+    A single-degree-of-freedom condition for a node support axis:
+    - FIXED: exact Dirichlet constraint (handled on the Rust side as a constraint/elimination)
+    - FREE: no resistance
+    - SPRING: linear spring with 'stiffness' (force/disp for translations, moment/rad for rotations)
+    - POSITIVE_ONLY / NEGATIVE_ONLY: unilateral (contact-like). Stiffness is optional:
+        * If provided, acts as a spring active only in the allowed direction.
+        * If omitted, treat as an ideal unilateral constraint (handled iteratively on the Rust side).
+    """
 
-    FIXED = SupportConditionType.FIXED
-    FREE = SupportConditionType.FREE
-    SPRING = SupportConditionType.SPRING
-    POSITIVE_ONLY = SupportConditionType.POSITIVE_ONLY
-    NEGATIVE_ONLY = SupportConditionType.NEGATIVE_ONLY
+    def __init__(
+        self,
+        condition_type: SupportConditionType,
+        stiffness: Optional[float] = None,
+    ):
+        self.condition_type = condition_type
+        self.stiffness = stiffness
+        self._validate()
 
-    def __init__(self, condition=None, stiffness=None, id=None):
-        """
-        Initializes a support condition that defines how a structure can move or deform at a support point.
-        The condition can be fixed, free, spring, positive-only, or negative-only.
+    def _validate(self) -> None:
+        if self.condition_type == SupportConditionType.SPRING:
+            if self.stiffness is None:
+                raise ValueError("SPRING requires a positive stiffness value.")
+            if self.stiffness <= 0.0:
+                raise ValueError("SPRING stiffness must be positive.")
+        else:
+            if self.condition_type in (
+                SupportConditionType.POSITIVE_ONLY,
+                SupportConditionType.NEGATIVE_ONLY,
+            ):
+                if self.stiffness is not None and self.stiffness <= 0.0:
+                    raise ValueError("Unilateral stiffness, if provided, must be positive.")
+            else:
+                if self.stiffness is not None:
+                    raise ValueError(f"{self.condition_type.value} must not specify stiffness.")
 
-        :param condition: An instance of SupportConditionType indicating the type of support condition.
-                          This should be provided for fixed, free, positive-only, or negative-only conditions.
-        :param stiffness: A float representing the stiffness in the specified direction. This should only be
-                          provided when the condition is SPRING, and must be a positive value.
-        :param id: Optional unique identifier for the support condition.
+    @classmethod
+    def fixed(cls) -> "SupportCondition":
+        return cls(SupportConditionType.FIXED)
 
-        Raises:
-            ValueError: If an invalid combination of condition and stiffness is provided.
-        """
-        if condition is not None and not isinstance(condition, SupportConditionType):
-            raise ValueError("Invalid condition type")
-        if condition is not None and stiffness is not None:
-            raise ValueError("Cannot specify both a condition and stiffness.")
+    @classmethod
+    def free(cls) -> "SupportCondition":
+        return cls(SupportConditionType.FREE)
 
-        self.id = id or SupportCondition._support_condition_counter
-        if id is None:
-            SupportCondition._support_condition_counter += 1
-        self.condition = condition
-        self.stiffness = stiffness if condition is None else None
+    @classmethod
+    def spring(cls, stiffness: float) -> "SupportCondition":
+        return cls(SupportConditionType.SPRING, stiffness=stiffness)
 
-    def __eq__(self, other):
-        if isinstance(other, SupportCondition):
-            return self.condition == other.condition and self.stiffness == other.stiffness
-        elif isinstance(other, SupportConditionType):
-            return self.condition == other
-        return NotImplemented
+    @classmethod
+    def positive_only(cls, stiffness: Optional[float] = None) -> "SupportCondition":
+        return cls(SupportConditionType.POSITIVE_ONLY, stiffness=stiffness)
+
+    @classmethod
+    def negative_only(cls, stiffness: Optional[float] = None) -> "SupportCondition":
+        return cls(SupportConditionType.NEGATIVE_ONLY, stiffness=stiffness)
 
     def to_dict(self) -> dict:
-        """Convert the support condition instance to a dictionary."""
+        """
+        {
+          "condition_type": "Fixed" | "Free" | "Spring" | "Positive-only" | "Negative-only",
+          "stiffness": number | null
+        }
+        """
         return {
-            "id": self.id,
-            "condition": self.condition.value if self.condition else None,
+            "condition_type": self.condition_type.value,
             "stiffness": self.stiffness,
         }
+
+    def to_display_string(self) -> str:
+        if self.condition_type == SupportConditionType.SPRING:
+            return f"Spring (stiffness={self.stiffness})"
+        return self.condition_type.value
+
+    def __repr__(self) -> str:
+        return f"SupportCondition(type={self.condition_type.value}, stiffness={self.stiffness})"

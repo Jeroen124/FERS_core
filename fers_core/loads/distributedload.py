@@ -69,6 +69,16 @@ class DistributedLoad:
 
         self.member = member
         self.load_case = load_case
+
+        if isinstance(distribution_shape, str):
+            try:
+                distribution_shape = DistributionShape[distribution_shape]
+            except KeyError:
+                raise ValueError(
+                    f"Invalid distribution_shape '{distribution_shape}'. "
+                    f"Must be one of {[s.name for s in DistributionShape]}"
+                )
+
         self.distribution_shape = distribution_shape
         self.magnitude = magnitude
         self.direction = direction
