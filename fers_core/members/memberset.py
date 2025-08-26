@@ -117,12 +117,10 @@ class MemberSet:
         """
         fig, ax = plt.subplots()
 
-        # Loop through members and plot them, including node numbers
         for member in self.members:
             start_node = member.start_node
             end_node = member.end_node
 
-            # Determine plotting coordinates based on the specified plane
             if plane == "xy":
                 start_coords = (start_node.X, start_node.Y)
                 end_coords = (end_node.X, end_node.Y)
@@ -138,68 +136,55 @@ class MemberSet:
             else:
                 raise ValueError("Invalid plane specified. Use 'xy', 'xz' or 'yz'.")
 
-            # Plot start and end nodes as dots
             ax.plot(*start_coords, "o", color="red")
             ax.plot(*end_coords, "o", color="red")
 
-            # Plot member line
             ax.plot(
                 [start_coords[0], end_coords[0]],
                 [start_coords[1], end_coords[1]],
                 label=f"Member {member.id}",
             )
 
-            # Display node numbers as floating text near each node
             ax.text(start_coords[0], start_coords[1], f"{start_node.id}", verticalalignment="bottom")
             ax.text(end_coords[0], end_coords[1], f"{end_node.id}", verticalalignment="bottom")
 
-        # Set labels and title
         ax.set_xlabel(label_axis[0])
         ax.set_ylabel(label_axis[1])
-        ax.set_title(f"Member Set: {self.id}")
+        ax.set_title(f"Member Set: {self.memberset_id}")  # fixed
 
-        # Set the legend outside the plot
         ax.legend(loc="upper left", bbox_to_anchor=(1, 1))
-
-        plt.tight_layout()  # Adjust the layout to make room for the legend
-
-        # Show the plot
+        plt.tight_layout()
         plt.show()
 
-    def get_unique_sections(self, ids_only=False):
+    def get_unique_sections(self, ids_only: bool = False):
         """
         Returns a list of unique sections used in the MemberSet, based on section id.
-
-        Parameters:
-            ids_only (bool): If True, returns only the unique section IDs. If False, returns section objects.
-                           Defaults to False.
-
-        Returns:
-            list: List of unique section objects or section IDs.
+        Members without a section (e.g., rigid links) are ignored.
         """
         unique_sections = {}
         for member in self.members:
-            section = member.section
+            section = getattr(member, "section", None)
+            if section is None:
+                continue
             unique_sections[section.id] = section
 
         if ids_only:
             return list(unique_sections.keys())
         return list(unique_sections.values())
 
-    def get_unique_materials(self, ids_only=False):
+    def get_unique_materials(self, ids_only: bool = False):
         """
         Returns a list of unique materials used in the MemberSet, based on material id.
-
-        Parameters:
-            ids_only (bool): If True, returns only the unique material IDs. If False, returns material objects
-                           Defaults to False.
-
-        Returns:
-            list: List of unique material objects or material IDs.
+        Members without a section (e.g., rigid links) are ignored.
         """
         unique_materials = {}
         for member in self.members:
-            material = member.section.material
+            section = getattr(member, "section", None)
+            if section is None:
+                continue
+            material = getattr(section, "material", None)
+            if material is None:
+                continue
             unique_materials[material.id] = material
 
         if ids_only:
@@ -243,58 +228,68 @@ class MemberSet:
 
     def get_minimal_Wy_el(self):
         """
-        Returns the member with the smallest moment of inertia about the local y-axis (W_y).
+        Returns the smallest elastic section modulus about local y (W_y).
+        Ignores members without a section. Returns None if none available.
         """
         if not self.members:
             return None
         unique_sections = self.get_unique_sections()
-
+        if not unique_sections:
+            return None
         smallest_Wy_section = min(unique_sections, key=lambda section: section.W_y_el)
         return smallest_Wy_section.W_y_el
 
     def get_minimal_Wz_el(self):
         """
-        Returns the member with the smallest moment of inertia about the local z-axis (W_z).
+        Returns the smallest elastic section modulus about local z (W_z).
+        Ignores members without a section. Returns None if none available.
         """
         if not self.members:
             return None
         unique_sections = self.get_unique_sections()
-
+        if not unique_sections:
+            return None
         smallest_Wz_section = min(unique_sections, key=lambda section: section.W_z_el)
         return smallest_Wz_section.W_z_el
 
     def get_minimal_Iy(self):
         """
-        Returns the member with the smallest moment of inertia about the local y-axis (i_y).
+        Returns the smallest second moment of area about local y (i_y).
+        Ignores members without a section. Returns None if none available.
         """
         if not self.members:
             return None
         unique_sections = self.get_unique_sections()
-
+        if not unique_sections:
+            return None
         smallest_Iy_section = min(unique_sections, key=lambda section: section.i_y)
         return smallest_Iy_section.i_y
 
     def get_minimal_Iz(self):
         """
-        Returns the member with the smallest moment of inertia about the local z-axis (i_z).
+        Returns the smallest second moment of area about local z (i_z).
+        Ignores members without a section. Returns None if none available.
         """
         if not self.members:
             return None
         unique_sections = self.get_unique_sections()
-
+        if not unique_sections:
+            return None
         smallest_Iz_section = min(unique_sections, key=lambda section: section.i_z)
         return smallest_Iz_section.i_z
 
     def get_minimal_yield_stress(self):
         """
-        Returns the material with the lowest yield stress among the members.
+        Returns the lowest yield stress among the materials used by members with a section.
+        Returns None if no such materials exist.
         """
         if not self.members:
             return None
-        # Extract all unique materials first to avoid comparing the same material multiple times
         unique_materials = self.get_unique_materials()
-        lowest_yield_stress_material = min(unique_materials, key=lambda material: material.yield_stress)
-        return lowest_yield_stress_material.yield_stress
+        if not unique_materials:
+            return None
+        lowest = min(unique_materials, key=lambda material: material.yield_stress)
+        return lowest.yield_stress
 
     def get_first_member(self):
         """
