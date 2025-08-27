@@ -10,7 +10,7 @@ from fers_core import (
 )
 
 from fers_core.loads.distributionshape import DistributionShape
-from tests.beam_equation_checks.common_functions import (
+from tests.common_functions import (
     build_steel_s235,
     build_ipe180,
     TOL,

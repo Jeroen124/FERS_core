@@ -34,6 +34,35 @@
                     "reference_member": null,
                     "reference_node": null,
                     "member_type": "Normal"
+                },
+                {
+                    "id": 2,
+                    "start_node": {
+                        "id": 2,
+                        "classification": "",
+                        "X": 5,
+                        "Y": 0,
+                        "Z": 0,
+                        "nodal_support": null
+                    },
+                    "end_node": {
+                        "id": 3,
+                        "classification": "",
+                        "X": 10,
+                        "Y": 0,
+                        "Z": 0,
+                        "nodal_support": null
+                    },
+                    "section": null,
+                    "rotation_angle": 0.0,
+                    "start_hinge": null,
+                    "end_hinge": null,
+                    "classification": "",
+                    "weight": 0.0,
+                    "chi": null,
+                    "reference_member": null,
+                    "reference_node": null,
+                    "member_type": "Rigid"
                 }
             ]
         }

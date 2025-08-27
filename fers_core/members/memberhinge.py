@@ -4,7 +4,7 @@ class MemberHinge:
     def __init__(
         self,
         id: int = None,
-        type: str = "",
+        hinge_type: str = "",
         translational_release_vx: float = None,
         translational_release_vy: float = None,
         translational_release_vz: float = None,
@@ -38,14 +38,14 @@ class MemberHinge:
             max_moment_mz (float, optional): Maximum Moment Capacity Z.
         """
 
-        # Handle hinge numbering with an optional type
+        # Handle hinge numbering with an optional hinge_type
         if id is None:
             self.id = MemberHinge._hinge_counter
             MemberHinge._hinge_counter += 1
         else:
             self.id = id
 
-        self.type = type
+        self.hinge_type = hinge_type
         self.translational_release_vx = translational_release_vx
         self.translational_release_vy = translational_release_vy
         self.translational_release_vz = translational_release_vz
@@ -66,7 +66,7 @@ class MemberHinge:
     def to_dict(self):
         return {
             "id": self.id,
-            "type": self.type,
+            "hinge_type": self.hinge_type,
             "translational_release_vx": self.translational_release_vx,
             "translational_release_vy": self.translational_release_vy,
             "translational_release_vz": self.translational_release_vz,

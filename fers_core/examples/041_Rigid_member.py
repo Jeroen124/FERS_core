@@ -26,7 +26,9 @@ section = Section(
 
 # Create the beam element
 beam = Member(start_node=node1, end_node=node2, section=section)
-rigid_member = Member(start_node=node2, end_node=node3, member_type="RIGID")
+rigid_member = Member(
+    start_node=node2, end_node=node3, member_type="RIGID"
+)  # or "Rigid" or MemberType.RIGID, the solver doesnt care
 
 # Apply a fixed support at the fixed end (node1)
 wall_support = NodalSupport()
@@ -47,7 +49,7 @@ end_load_case = calculation_1.create_load_case(name="End Load")
 nodal_load = NodalLoad(node=node2, load_case=end_load_case, magnitude=-1000, direction=(0, 1, 0))
 
 # Save the model to a file for FERS calculations
-file_path = os.path.join("json_input_solver", "001_Cantilever_with_End_Load.json")
+file_path = os.path.join("json_input_solver", "041_Rigid_member.json")
 calculation_1.save_to_json(file_path, indent=4)
 
 # Step 3: Run FERS calculation
@@ -64,6 +66,9 @@ results = calculation_1.results.loadcases["End Load"]
 dy_fers = results.displacement_nodes["2"].dy
 # Reaction moment at the fixed end
 Mz_fers = results.reaction_nodes["1"].nodal_forces.mz
+# Rotation angle at intermediate node and at fixed member end
+rz_fers_intermediate = results.displacement_nodes["2"].rz
+rz_fers_fixed = results.displacement_nodes["3"].rz
 
 # Step 4: Validate Results Against Analytical Solution
 # ----------------------------------------------------
@@ -77,15 +82,41 @@ x = L  # Distance to the free end for max deflection and slope
 # Calculate analytical solutions for deflection and moment
 delta_analytical = (-F * x**2 / (6 * E * I)) * (3 * L - x)  # Max deflection
 M_max_analytical = F * L  # Max moment at the fixed end
-rotation_end_elastic_member = F * L**2 / (2 * E * I)
+rotation_end_elastic_member = -F * L**2 / (2 * E * I)
+rotation_end_rigid_member = rotation_end_elastic_member
+
 # Compare FERS results with analytical solutions
 print("\nComparison of results:")
-print(f"Deflection at free end (FERS): {dy_fers:.6f} m")
-print(f"Deflection at free end (Analytical): {delta_analytical:.6f} m")
+print(f"Deflection at intermediate node (FERS): {dy_fers:.6f} m")
+print(f"Deflection at intermediate node (Analytical): {delta_analytical:.6f} m")
 if abs(dy_fers - delta_analytical) < 1e-6:
     print("Deflection matches the analytical solution ✅")
 else:
     print("Deflection does NOT match the analytical solution ❌")
+
+print()
+
+
+print("\nComparison of rotation:")
+print(f"Rotation at intermediate end (FERS): {rz_fers_intermediate:.6f} rad")
+print(f"Rotation at free end (Analytical): {rotation_end_elastic_member:.6f} rad")
+if abs(rz_fers_intermediate - rotation_end_elastic_member) < 1e-6:
+    print("Rotation matches the analytical solution ✅")
+else:
+    print("Rotation does NOT match the analytical solution ❌")
+
+print()
+
+print("\nComparison of rotation:")
+print(f"Rotation at rigid end (FERS): {rz_fers_fixed:.6f} rad")
+print(f"Rotation at free end (Analytical): {rotation_end_rigid_member:.6f} rad")
+if abs(rz_fers_fixed - rotation_end_rigid_member) < 1e-6:
+    print("Rotation matches the analytical solution ✅")
+else:
+    print("Rotation does NOT match the analytical solution ❌")
+
+print()
+
 
 print(f"Reaction moment at fixed end (FERS): {Mz_fers:.6f} Nm")
 print(f"Reaction moment at fixed end (Analytical): {M_max_analytical:.6f} Nm")
