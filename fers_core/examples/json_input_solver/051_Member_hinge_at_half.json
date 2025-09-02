@@ -19,14 +19,14 @@
                     "end_node": {
                         "id": 2,
                         "classification": "",
-                        "X": 5.0,
+                        "X": 2.5,
                         "Y": 0.0,
                         "Z": 0.0,
                         "nodal_support": null
                     },
                     "section": null,
                     "rotation_angle": 0.0,
-                    "start_hinge": 1,
+                    "start_hinge": null,
                     "end_hinge": null,
                     "classification": "",
                     "weight": 0.0,
@@ -34,6 +34,35 @@
                     "reference_member": null,
                     "reference_node": null,
                     "member_type": "Rigid"
+                },
+                {
+                    "id": 2,
+                    "start_node": {
+                        "id": 2,
+                        "classification": "",
+                        "X": 2.5,
+                        "Y": 0.0,
+                        "Z": 0.0,
+                        "nodal_support": null
+                    },
+                    "end_node": {
+                        "id": 3,
+                        "classification": "",
+                        "X": 5.0,
+                        "Y": 0.0,
+                        "Z": 0.0,
+                        "nodal_support": null
+                    },
+                    "section": 1,
+                    "rotation_angle": 0.0,
+                    "start_hinge": 1,
+                    "end_hinge": null,
+                    "classification": "",
+                    "weight": 38.464999999999996,
+                    "chi": null,
+                    "reference_member": null,
+                    "reference_node": null,
+                    "member_type": "Normal"
                 }
             ]
         }
@@ -45,7 +74,7 @@
             "nodal_loads": [
                 {
                     "id": 1,
-                    "node": 2,
+                    "node": 3,
                     "load_case": 1,
                     "magnitude": -1000.0,
                     "direction": [
@@ -91,7 +120,7 @@
             "translational_release_vz": null,
             "rotational_release_mx": null,
             "rotational_release_my": null,
-            "rotational_release_mz": 50000.0,
+            "rotational_release_mz": 25000.0,
             "max_tension_vx": null,
             "max_tension_vy": null,
             "max_tension_vz": null,
@@ -100,8 +129,30 @@
             "max_moment_mz": null
         }
     ],
-    "materials": [],
-    "sections": [],
+    "materials": [
+        {
+            "id": 1,
+            "name": "Steel",
+            "e_mod": 210000000000.0,
+            "g_mod": 80769000000.0,
+            "density": 7850,
+            "yield_stress": 235000000.0
+        }
+    ],
+    "sections": [
+        {
+            "id": 1,
+            "name": "IPE 180 Beam Section",
+            "material": 1,
+            "h": null,
+            "b": null,
+            "i_y": 8.19e-7,
+            "i_z": 1.063e-5,
+            "j": 2.7e-8,
+            "area": 0.00196,
+            "shape_path": null
+        }
+    ],
     "nodal_supports": [
         {
             "id": 1,

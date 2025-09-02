@@ -1,6 +1,6 @@
+import math
 import os
 from fers_core import Node, Member, FERS, Material, Section, MemberSet, NodalSupport, NodalLoad
-
 
 # =============================================================================
 # Example and Validation: Cantilever Beam with End Load
@@ -61,14 +61,19 @@ calculation_1.run_analysis()
 # Extract results from the analysis
 results = calculation_1.results.loadcases["End Load"]
 
-# Extract results from the analysis
-# Displacement at the free end in the y-direction
-dy_fers = results.displacement_nodes["2"].dy
+
 # Reaction moment at the fixed end
 Mz_fers = results.reaction_nodes["1"].nodal_forces.mz
 # Rotation angle at intermediate node and at fixed member end
 rz_fers_intermediate = results.displacement_nodes["2"].rz
 rz_fers_fixed = results.displacement_nodes["3"].rz
+
+# Extract results from the analysis
+# Displacement at the free end in the y-direction
+dy_fers_end = results.displacement_nodes["3"].dy
+dy_fers_intermediate = results.displacement_nodes["2"].dy
+dy_end_calculated = dy_fers_intermediate + 5 * math.sin(rz_fers_intermediate)
+
 
 # Step 4: Validate Results Against Analytical Solution
 # ----------------------------------------------------
@@ -87,14 +92,12 @@ rotation_end_rigid_member = rotation_end_elastic_member
 
 # Compare FERS results with analytical solutions
 print("\nComparison of results:")
-print(f"Deflection at intermediate node (FERS): {dy_fers:.6f} m")
+print(f"Deflection at intermediate node (FERS): {dy_fers_intermediate:.6f} m")
 print(f"Deflection at intermediate node (Analytical): {delta_analytical:.6f} m")
-if abs(dy_fers - delta_analytical) < 1e-6:
+if abs(dy_fers_intermediate - delta_analytical) < 1e-6:
     print("Deflection matches the analytical solution ✅")
 else:
     print("Deflection does NOT match the analytical solution ❌")
-
-print()
 
 
 print("\nComparison of rotation:")
@@ -105,7 +108,6 @@ if abs(rz_fers_intermediate - rotation_end_elastic_member) < 1e-6:
 else:
     print("Rotation does NOT match the analytical solution ❌")
 
-print()
 
 print("\nComparison of rotation:")
 print(f"Rotation at rigid end (FERS): {rz_fers_fixed:.6f} rad")
@@ -114,6 +116,19 @@ if abs(rz_fers_fixed - rotation_end_rigid_member) < 1e-6:
     print("Rotation matches the analytical solution ✅")
 else:
     print("Rotation does NOT match the analytical solution ❌")
+
+print()
+
+# Compare FERS results with analytical solutions
+print(f"Deflection at end node (FERS): {dy_fers_end:.6f} m")
+print(
+    f"Deflection at end node by rotation of mid node and geometry "
+    f"of the length of rigid member(FERS): {dy_end_calculated:.6f} m"
+)
+if abs(dy_end_calculated - dy_fers_end) < 1e-6:
+    print("Deflection matches the analytical solution ✅")
+else:
+    print("Deflection does NOT match the analytical solution ❌")
 
 print()
 
