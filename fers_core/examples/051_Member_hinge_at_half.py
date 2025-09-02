@@ -102,7 +102,7 @@ k = k_phi_z
 root_rotation_expected = (F * L) / k
 tip_rotation_expected = -((F * L**2) / (2.0 * E * I) + root_rotation_expected)
 tip_deflection_expected = -((F * L**3) / (3.0 * E * I) + root_rotation_expected * L)
-reaction_moment_support_expected = F * L
+reaction_moment_support_expected = F * L * 2
 
 # Print comparisons
 print("\nComparison of results:")

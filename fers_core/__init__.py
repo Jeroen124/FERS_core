@@ -7,6 +7,7 @@ from .members.shapepath import ShapePath
 from .members.memberset import MemberSet
 from .supports.nodalsupport import NodalSupport
 from .loads.loadcase import LoadCase
+from .loads.loadcombination import LoadCombination
 from .loads.nodalload import NodalLoad
 from .loads.nodalmoment import NodalMoment
 from .loads.distributedload import DistributedLoad
@@ -17,27 +18,30 @@ from .loads.distributionshape import DistributionShape
 from .supports.supportcondition import SupportCondition
 from .supports.supportcondition import SupportConditionType
 from .settings.anlysis_options import AnalysisOrder, Dimensionality
+from .members.memberhinge import MemberHinge
 
 
 __all__ = [
-    "Dimensionality",
     "AnalysisOrder",
-    "Node",
-    "Member",
+    "Dimensionality",
+    "DistributedLoad",
+    "DistributionShape",
     "FERS",
+    "ImperfectionCase",
+    "LoadCase",
+    "LoadCombination",
     "Material",
+    "Member",
+    "MemberHinge",
+    "MemberSet",
+    "Node",
+    "NodalLoad",
+    "NodalMoment",
     "NodalSupport",
+    "RotationImperfection",
     "Section",
     "ShapePath",
-    "MemberSet",
-    "LoadCase",
-    "NodalLoad",
-    "DistributedLoad",
-    "NodalMoment",
-    "ImperfectionCase",
-    "RotationImperfection",
-    "TranslationImperfection",
-    "DistributionShape",
     "SupportCondition",
     "SupportConditionType",
+    "TranslationImperfection",
 ]
