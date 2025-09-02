@@ -127,60 +127,75 @@ class ShapePath:
         radius: float,
         quadrant: str,
         move_to_start: bool = False,
-    ) -> List[ShapeCommand]:
+        convex: bool = False,  # False = inner (concave), True = outer (convex)
+    ) -> List["ShapeCommand"]:
         """
-        90-degree fillet at the inside corner between a horizontal and a vertical segment.
+        Draw a 90° fillet at the intersection of a horizontal and a vertical edge.
 
-        The 'corner' is the sharp (un-filleted) intersection of the horizontal and vertical.
-        The arc center is shifted one radius "into the material":
-            top    → cy = corner_y - r
-            bottom → cy = corner_y + r
-            right  → cz = corner_z + r
-            left   → cz = corner_z - r
-
-        Parameterization (consistent with arc_cubic):
+        Coordinates on the yz plane (y horizontal, z vertical). The parameterization
+        in arc_cubic is:
             y(θ) = cy + r * cos(θ)
             z(θ) = cz + r * sin(θ)
+        with θ increasing counterclockwise.
 
-        IMPORTANT: θ increases counterclockwise. Depending on the quadrant and your traversal
-        direction, the inside fillet may be clockwise (decreasing θ). The start angle θ0 is
-        chosen to match the tangent point you lineTo just before calling this function; the
-        end angle θ1 is θ0 ± π/2 so we draw exactly one quarter circle.
+        Arguments:
+            corner_y, corner_z: the sharp intersection point of the two edges (before filleting)
+            radius: fillet radius
+            quadrant: one of {"top-right","top-left","bottom-right","bottom-left"} naming the corner
+            move_to_start: if True, emit a moveTo to the fillet's start point
+            convex: set to True for an outer (convex) fillet, False for an inner (concave) fillet
 
-        Correct angle mapping for inside fillets when you approach each corner in a standard
-        I-section loop (like your create_ipe_profile):
+        Notes:
+            - Center offset:
+                Inner (concave):   cy = corner_y + ( +r if "right"  else -r )
+                                    cz = corner_z + ( +r if "bottom" else -r )
+                Outer (convex):    cy = corner_y + ( -r if "right"  else +r )
+                                    cz = corner_z + ( +r if "bottom" else -r )
+            That is: Z-shift follows bottom/top in both cases; the Y-shift flips sign between inner and outer.
 
-            top-right:    θ0 = 0,         θ1 = -π/2
-            top-left:     θ0 =  π/2,      θ1 = 0
-            bottom-right: θ0 = -π/2,      θ1 = -π
-            bottom-left:  θ0 =  π,        θ1 =  π/2
+            - Start/end angles are chosen so the arc begins exactly at the tangent point
+            you typically reach with a prior lineTo in a clockwise perimeter build.
         """
-        quadrant = quadrant.lower()
         if radius <= 0.0:
             return []
 
-        # Compute arc center from corner and quadrant (toward the material)
-        dy = -radius if "top" in quadrant else radius
-        dz = radius if "right" in quadrant else -radius
+        q = quadrant.lower()
+        if q not in ("top-right", "top-left", "bottom-right", "bottom-left"):
+            raise ValueError("quadrant must be one of: top-right, top-left, bottom-right, bottom-left")
+
+        # ----- center (cy, cz)
+        if not convex:
+            # Inner (concave) fillet
+            dy = radius if "right" in q else -radius
+            dz = radius if "bottom" in q else -radius
+        else:
+            # Outer (convex) fillet
+            dy = -radius if "right" in q else radius
+            dz = radius if "bottom" in q else -radius
         cy = corner_y + dy
         cz = corner_z + dz
 
-        # Pick start/end angles so the arc begins at the tangent point you just reached
-        # with lineTo, and turns exactly 90° along the inside.
-        if quadrant == "top-right":
-            theta0 = 0.0
-            theta1 = -math.pi / 2.0
-        elif quadrant == "top-left":
-            theta0 = math.pi / 2.0
-            theta1 = 0.0
-        elif quadrant == "bottom-right":
-            theta0 = -math.pi / 2.0
-            theta1 = -math.pi
-        elif quadrant == "bottom-left":
-            theta0 = math.pi
-            theta1 = math.pi / 2.0
+        # ----- angle mapping (θ0 -> θ1). These match common path orders used in profiles.
+        if not convex:
+            # Inner fillets (concave)
+            if q == "top-right":
+                theta0, theta1 = 0.0, -math.pi / 2.0
+            elif q == "top-left":
+                theta0, theta1 = math.pi / 2.0, 0.0
+            elif q == "bottom-right":
+                theta0, theta1 = -math.pi / 2.0, -math.pi
+            else:  # "bottom-left"
+                theta0, theta1 = math.pi, math.pi / 2.0
         else:
-            raise ValueError("quadrant must be one of: top-right, top-left, bottom-right, bottom-left")
+            # Outer fillets (convex)
+            if q == "bottom-right":
+                theta0, theta1 = 0.0, -math.pi / 2.0
+            elif q == "bottom-left":
+                theta0, theta1 = math.pi, 1.5 * math.pi
+            elif q == "top-left":
+                theta0, theta1 = math.pi / 2.0, math.pi
+            else:  # "top-right"
+                theta0, theta1 = 0.0, math.pi / 2.0
 
         return ShapePath.arc_cubic(
             center_y=cy,
@@ -228,6 +243,7 @@ class ShapePath:
                     radius=r,
                     quadrant="top-right",
                     move_to_start=False,
+                    convex=True,
                 )
             )
             # Continue down the web after the fillet
@@ -269,6 +285,7 @@ class ShapePath:
                     radius=r,
                     quadrant="bottom-left",
                     move_to_start=False,
+                    convex=True,
                 )
             )
             # Up the left web to top-left fillet start
@@ -292,6 +309,89 @@ class ShapePath:
             commands.append(ShapeCommand("lineTo", z=z_web_left, y=y_bot_inner))
             commands.append(ShapeCommand("lineTo", z=z_web_left, y=y_top_inner))
             commands.append(ShapeCommand("lineTo", z=-half_b, y=y_top_inner))
+
+        commands.append(ShapeCommand("closePath"))
+        return commands
+
+    @staticmethod
+    def create_u_profile(h: float, b: float, t: float, r: float) -> List[ShapeCommand]:
+        """
+        Channel (U) outline with optional inner root fillets r at web↔flange corners.
+        Coordinates: z is horizontal, y is vertical. Centered on origin.
+        Open side is on the right (positive z). Web is on the left.
+
+        Inputs:
+            h: overall section height
+            b: overall section width (left outer web face to right flange tip)
+            t: uniform thickness for web and flanges
+            r: inner fillet radius at web↔flange corners (0 for sharp)
+
+        Returns:
+            List[ShapeCommand] forming a single closed path of the U-section outline.
+        """
+        commands: List[ShapeCommand] = []
+
+        half_width = b / 2.0
+        half_height = h / 2.0
+
+        # Inner faces (for the channel interior)
+        inner_top_y = half_height - t - r
+        inner_bottom_y = -half_height + t + r
+        inner_web_right_z = -half_width + t  # inside face of the web (web is on the left)
+
+        # Outer faces (bounding rectangle)
+        outer_left_z = -half_width
+        outer_right_z = +half_width
+        outer_top_y = +half_height
+        outer_bottom_y = -half_height
+
+        radius = r
+
+        # Start at outer top-left corner and go clockwise
+        commands.append(ShapeCommand("moveTo", z=outer_left_z, y=outer_top_y))
+        commands.append(ShapeCommand("lineTo", z=outer_right_z, y=outer_top_y))
+
+        # Go down the outer right edge to the start of the top flange return
+        commands.append(ShapeCommand("lineTo", z=outer_right_z, y=inner_top_y))
+
+        # Top inner flange: go left towards the web inside face
+        if radius > 0.0:
+            # Approach the fillet start along the top inner edge
+            commands.append(ShapeCommand("lineTo", z=inner_web_right_z + radius, y=inner_top_y))
+            # Top-left inner fillet at (inner_top_y, inner_web_right_z)
+            commands.extend(
+                ShapePath.quarter_fillet_hv(
+                    corner_y=inner_top_y,
+                    corner_z=inner_web_right_z,
+                    radius=radius,
+                    quadrant="top-left",
+                    convex=False,
+                )
+            )
+            # Down along the inside face of the web
+            commands.append(ShapeCommand("lineTo", z=inner_web_right_z, y=inner_bottom_y + radius))
+            # Bottom-left inner fillet at (inner_bottom_y, inner_web_right_z)
+            commands.extend(
+                ShapePath.quarter_fillet_hv(
+                    corner_y=inner_bottom_y,
+                    corner_z=inner_web_right_z,
+                    radius=radius,
+                    quadrant="bottom-left",
+                    move_to_start=False,
+                )
+            )
+            # Across the bottom inner flange back to the mouth
+            commands.append(ShapeCommand("lineTo", z=outer_right_z, y=inner_bottom_y))
+        else:
+            # Sharp inner corners
+            commands.append(ShapeCommand("lineTo", z=inner_web_right_z, y=inner_top_y))
+            commands.append(ShapeCommand("lineTo", z=inner_web_right_z, y=inner_bottom_y))
+            commands.append(ShapeCommand("lineTo", z=outer_right_z, y=inner_bottom_y))
+
+        # Finish the outer perimeter: down to outer bottom-right, across bottom, up left side
+        commands.append(ShapeCommand("lineTo", z=outer_right_z, y=outer_bottom_y))
+        commands.append(ShapeCommand("lineTo", z=outer_left_z, y=outer_bottom_y))
+        commands.append(ShapeCommand("lineTo", z=outer_left_z, y=outer_top_y))
 
         commands.append(ShapeCommand("closePath"))
         return commands

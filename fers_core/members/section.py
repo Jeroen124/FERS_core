@@ -1,7 +1,7 @@
 from typing import Optional
 from ..members.material import Material
 from ..members.shapepath import ShapePath
-from sectionproperties.pre.library.steel_sections import i_section
+from sectionproperties.pre.library.steel_sections import i_section, channel_section
 from sectionproperties.analysis.section import Section as SP_section
 
 import matplotlib.pyplot as plt
@@ -101,6 +101,60 @@ class Section:
         )
         ipe_geometry.create_mesh(mesh_sizes=[b / 1000])
         analysis_section = SP_section(ipe_geometry, time_info=False)
+        analysis_section.calculate_geometric_properties()
+        analysis_section.calculate_warping_properties()
+
+        return Section(
+            name=name,
+            material=material,
+            i_y=float(analysis_section.section_props.iyy_c),
+            i_z=float(analysis_section.section_props.ixx_c),
+            j=float(analysis_section.get_j()),
+            area=float(analysis_section.section_props.area),
+            h=h,
+            b=b,
+            shape_path=shape_path,
+        )
+
+    @staticmethod
+    def create_u_section(
+        name: str,
+        material: Material,
+        h: float,
+        b: float,
+        t: float,
+        r: float,
+    ) -> "Section":
+        """
+        Static method to create a U (channel) section with uniform thickness t.
+        Coordinates: z is horizontal, y is vertical. Centered on origin.
+        The U is open on the right side to match ShapePath.create_u_profile.
+
+        Parameters:
+            name (str): Name of the section.
+            material (Material): Material used for the section.
+            h (float): Total height of the channel.
+            b (float): Total width of the channel.
+            t (float): Uniform thickness for web and flanges.
+            r (float): Inner fillet radius at web↔flange corners.
+
+        Returns:
+            Section: A Section object representing the U profile.
+        """
+        # 1) Build the drawable shape path from your own path generator
+        shape_commands = ShapePath.create_u_profile(h=h, b=b, t=t, r=r)
+        shape_path = ShapePath(name=name, shape_commands=shape_commands)
+
+        # 2) Build a matching sectionproperties geometry:
+        #    channel_section expects separate flange/web thickness, but this U uses uniform t
+        u_geometry = channel_section(d=h, b=b, t_f=t, t_w=t, r=r, n_r=16).shift_section(
+            x_offset=-b / 2.0,
+            y_offset=-h / 2.0,
+        )
+
+        # 3) Mesh and analyze (mesh size similar to your IPE; tweak as you like)
+        u_geometry.create_mesh(mesh_sizes=[b / 1000.0])
+        analysis_section = SP_section(u_geometry, time_info=False)
         analysis_section.calculate_geometric_properties()
         analysis_section.calculate_warping_properties()
 
