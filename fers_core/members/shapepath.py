@@ -36,175 +36,42 @@ class ShapePath:
         }
 
     @staticmethod
-    def arc_cubic(
+    def arc_center_angles(
         center_y: float,
         center_z: float,
         radius: float,
-        start_angle_rad: float,
-        end_angle_rad: float,
+        theta0: float,
+        theta1: float,
         move_to_start: bool = False,
     ) -> List[ShapeCommand]:
         """
-        Returns commands for a circular arc approximated by cubic Bézier segments.
-        Parameterization used here (consistent with your yz plotting):
+        Add an arc by true geometric parameters (center, radius, start/end angles).
+        Angles in radians. Theta increases CCW with:
             z(theta) = center_z + radius * sin(theta)
             y(theta) = center_y + radius * cos(theta)
-        So theta = 0 lies on +y from the center, and theta increases counterclockwise
-        (toward +z then -y, etc.).
-        The arc is subdivided into segments with |Δθ| ≤ π/2. Each segment uses the exact
-        k-formula: k = 4/3 * tan(Δθ/4).
-        If move_to_start = True, the first command will be a moveTo to the start point.
-        Otherwise, it assumes your current pen position already equals the start point.
+        If move_to_start is True, a moveTo is emitted to the arc's start point.
         """
-        commands: List[ShapeCommand] = []
+        cmds: List[ShapeCommand] = []
 
-        # Normalize angle direction
-        total = end_angle_rad - start_angle_rad
-        if total == 0.0 or radius <= 0.0:
-            return commands
+        if radius <= 0.0 or theta0 == theta1:
+            return cmds
 
-        # Decide direction and step
-        direction = 1.0 if total > 0.0 else -1.0
-        remaining = abs(total)
-
-        current = start_angle_rad
-        # Add a moveTo to the start if requested
-        start_z = center_z + radius * math.sin(current)
-        start_y = center_y + radius * math.cos(current)
         if move_to_start:
-            commands.append(ShapeCommand("moveTo", y=start_y, z=start_z))
-
-        while remaining > 1e-12:
-            dtheta = min(remaining, math.pi / 2.0)
-            remaining -= dtheta
-            dtheta *= direction
-
-            theta0 = current
-            theta1 = current + dtheta
-
-            # Endpoints
             z0 = center_z + radius * math.sin(theta0)
             y0 = center_y + radius * math.cos(theta0)
-            z3 = center_z + radius * math.sin(theta1)
-            y3 = center_y + radius * math.cos(theta1)
+            cmds.append(ShapeCommand("moveTo", y=y0, z=z0))
 
-            # Tangent directions at endpoints (derivatives)
-            # dz/dθ = radius * cos(θ), dy/dθ = -radius * sin(θ)
-            dz0_dtheta = radius * math.cos(theta0)
-            dy0_dtheta = -radius * math.sin(theta0)
-            dz1_dtheta = radius * math.cos(theta1)
-            dy1_dtheta = -radius * math.sin(theta1)
-
-            # Bézier control distance factor
-            k = (4.0 / 3.0) * math.tan((theta1 - theta0) / 4.0)
-
-            # Control points in (z, y)
-            z1 = z0 + k * dz0_dtheta
-            y1 = y0 + k * dy0_dtheta
-            z2 = z3 - k * dz1_dtheta
-            y2 = y3 - k * dy1_dtheta
-
-            commands.append(
-                ShapeCommand(
-                    "cubicTo",
-                    y=y3,
-                    z=z3,
-                    control_y1=y1,
-                    control_z1=z1,
-                    control_y2=y2,
-                    control_z2=z2,
-                )
+        cmds.append(
+            ShapeCommand(
+                "arcTo",
+                r=radius,
+                center_y=center_y,
+                center_z=center_z,
+                theta0=theta0,
+                theta1=theta1,
             )
-
-            current = theta1
-
-        return commands
-
-    @staticmethod
-    def quarter_fillet_hv(
-        corner_y: float,
-        corner_z: float,
-        radius: float,
-        quadrant: str,
-        move_to_start: bool = False,
-        convex: bool = False,  # False = inner (concave), True = outer (convex)
-    ) -> List["ShapeCommand"]:
-        """
-        Draw a 90° fillet at the intersection of a horizontal and a vertical edge.
-
-        Coordinates on the yz plane (y horizontal, z vertical). The parameterization
-        in arc_cubic is:
-            y(θ) = cy + r * cos(θ)
-            z(θ) = cz + r * sin(θ)
-        with θ increasing counterclockwise.
-
-        Arguments:
-            corner_y, corner_z: the sharp intersection point of the two edges (before filleting)
-            radius: fillet radius
-            quadrant: one of {"top-right","top-left","bottom-right","bottom-left"} naming the corner
-            move_to_start: if True, emit a moveTo to the fillet's start point
-            convex: set to True for an outer (convex) fillet, False for an inner (concave) fillet
-
-        Notes:
-            - Center offset:
-                Inner (concave):   cy = corner_y + ( +r if "right"  else -r )
-                                    cz = corner_z + ( +r if "bottom" else -r )
-                Outer (convex):    cy = corner_y + ( -r if "right"  else +r )
-                                    cz = corner_z + ( +r if "bottom" else -r )
-            That is: Z-shift follows bottom/top in both cases; the Y-shift flips sign between inner and outer.
-
-            - Start/end angles are chosen so the arc begins exactly at the tangent point
-            you typically reach with a prior lineTo in a clockwise perimeter build.
-        """
-        if radius <= 0.0:
-            return []
-
-        q = quadrant.lower()
-        if q not in ("top-right", "top-left", "bottom-right", "bottom-left"):
-            raise ValueError("quadrant must be one of: top-right, top-left, bottom-right, bottom-left")
-
-        # ----- center (cy, cz)
-        if not convex:
-            # Inner (concave) fillet
-            dy = radius if "right" in q else -radius
-            dz = radius if "bottom" in q else -radius
-        else:
-            # Outer (convex) fillet
-            dy = -radius if "right" in q else radius
-            dz = radius if "bottom" in q else -radius
-        cy = corner_y + dy
-        cz = corner_z + dz
-
-        # ----- angle mapping (θ0 -> θ1). These match common path orders used in profiles.
-        if not convex:
-            # Inner fillets (concave)
-            if q == "top-right":
-                theta0, theta1 = 0.0, -math.pi / 2.0
-            elif q == "top-left":
-                theta0, theta1 = math.pi / 2.0, 0.0
-            elif q == "bottom-right":
-                theta0, theta1 = -math.pi / 2.0, -math.pi
-            else:  # "bottom-left"
-                theta0, theta1 = math.pi, math.pi / 2.0
-        else:
-            # Outer fillets (convex)
-            if q == "bottom-right":
-                theta0, theta1 = 0.0, -math.pi / 2.0
-            elif q == "bottom-left":
-                theta0, theta1 = math.pi, 1.5 * math.pi
-            elif q == "top-left":
-                theta0, theta1 = math.pi / 2.0, math.pi
-            else:  # "top-right"
-                theta0, theta1 = 0.0, math.pi / 2.0
-
-        return ShapePath.arc_cubic(
-            center_y=cy,
-            center_z=cz,
-            radius=radius,
-            start_angle_rad=theta0,
-            end_angle_rad=theta1,
-            move_to_start=move_to_start,
         )
+        return cmds
 
     @staticmethod
     def create_ipe_profile(h: float, b: float, t_f: float, t_w: float, r: float) -> List[ShapeCommand]:
@@ -217,95 +84,59 @@ class ShapePath:
         half_b = b / 2.0
         half_h = h / 2.0
 
-        # Useful inner lines
         y_top_inner = half_h - t_f
         y_bot_inner = -half_h + t_f
         z_web_right = t_w / 2.0
         z_web_left = -t_w / 2.0
 
-        # Limit radius so it fits
-        r = r
-
-        # Outer rectangle
         commands.append(ShapeCommand("moveTo", z=-half_b, y=+half_h))
         commands.append(ShapeCommand("lineTo", z=+half_b, y=+half_h))
         commands.append(ShapeCommand("lineTo", z=+half_b, y=y_top_inner))
 
         if r > 0.0:
-            # Top-right fillet (inside corner at intersection of top inner and right web inner)
-            # Move along the top inner to start point of the fillet
+            # ---- Top-right fillet (convex quarter)
             commands.append(ShapeCommand("lineTo", y=y_top_inner, z=z_web_right + r))
-            # Draw the quarter arc
-            commands.extend(
-                ShapePath.quarter_fillet_hv(
-                    corner_y=y_top_inner,
-                    corner_z=z_web_right,
-                    radius=r,
-                    quadrant="top-right",
-                    move_to_start=False,
-                    convex=True,
-                )
-            )
-            # Continue down the web after the fillet
+            cy, cz = y_top_inner - r, z_web_right + r  # center below the corner
+            theta0 = 0.0  # start: +y axis
+            theta1 = -math.pi / 2.0  # end: +z axis
+            commands.extend(ShapePath.arc_center_angles(cy, cz, r, theta0, theta1))
+
             commands.append(ShapeCommand("lineTo", y=y_bot_inner + r, z=z_web_right))
-            # Bottom-right fillet
-            corner_br_y = y_bot_inner
-            corner_br_z = z_web_right
-            commands.extend(
-                ShapePath.quarter_fillet_hv(
-                    corner_y=corner_br_y,
-                    corner_z=corner_br_z,
-                    radius=r,
-                    quadrant="bottom-right",
-                    move_to_start=False,
-                )
-            )
-            # Across bottom inner flange
+
+            # ---- Bottom-right fillet (concave quarter)
+            cy, cz = y_bot_inner + r, z_web_right + r  # center above the corner
+            theta0 = -math.pi / 2.0  # start: +z axis
+            theta1 = -math.pi  # end: -y axis
+            commands.extend(ShapePath.arc_center_angles(cy, cz, r, theta0, theta1))
+
             commands.append(ShapeCommand("lineTo", y=y_bot_inner, z=+half_b))
         else:
-            # Sharp inner at right
             commands.append(ShapeCommand("lineTo", z=z_web_right, y=y_top_inner))
             commands.append(ShapeCommand("lineTo", z=z_web_right, y=y_bot_inner))
             commands.append(ShapeCommand("lineTo", z=+half_b, y=y_bot_inner))
 
-        # Outer bottom and left
         commands.append(ShapeCommand("lineTo", z=+half_b, y=-half_h))
         commands.append(ShapeCommand("lineTo", z=-half_b, y=-half_h))
         commands.append(ShapeCommand("lineTo", z=-half_b, y=y_bot_inner))
 
         if r > 0.0:
-            # Bottom-left fillet
-            corner_bl_y = y_bot_inner
-            corner_bl_z = z_web_left
-            commands.append(ShapeCommand("lineTo", y=corner_bl_y, z=corner_bl_z - r))
-            commands.extend(
-                ShapePath.quarter_fillet_hv(
-                    corner_y=corner_bl_y,
-                    corner_z=corner_bl_z,
-                    radius=r,
-                    quadrant="bottom-left",
-                    move_to_start=False,
-                    convex=True,
-                )
-            )
-            # Up the left web to top-left fillet start
+            # ---- Bottom-left fillet (convex)
+            commands.append(ShapeCommand("lineTo", y=y_bot_inner, z=z_web_left - r))
+            cy, cz = y_bot_inner + r, z_web_left - r  # center above the corner
+            theta0 = math.pi  # start: -y axis
+            theta1 = math.pi / 2  # end: -z axis
+            commands.extend(ShapePath.arc_center_angles(cy, cz, r, theta0, theta1))
+
             commands.append(ShapeCommand("lineTo", y=y_top_inner - r, z=z_web_left))
-            # Top-left fillet
-            corner_tl_y = y_top_inner
-            corner_tl_z = z_web_left
-            commands.extend(
-                ShapePath.quarter_fillet_hv(
-                    corner_y=corner_tl_y,
-                    corner_z=corner_tl_z,
-                    radius=r,
-                    quadrant="top-left",
-                    move_to_start=False,
-                )
-            )
-            # Finish top inner flange
+
+            # ---- Top-left fillet (concave)
+            cy, cz = y_top_inner - r, z_web_left - r  # center below the corner
+            theta0 = math.pi / 2.0  # start: -z axis
+            theta1 = 0  # end: +y axis
+            commands.extend(ShapePath.arc_center_angles(cy, cz, r, theta0, theta1))
+
             commands.append(ShapeCommand("lineTo", y=y_top_inner, z=-half_b))
         else:
-            # Sharp inner at left
             commands.append(ShapeCommand("lineTo", z=z_web_left, y=y_bot_inner))
             commands.append(ShapeCommand("lineTo", z=z_web_left, y=y_top_inner))
             commands.append(ShapeCommand("lineTo", z=-half_b, y=y_top_inner))
@@ -314,81 +145,53 @@ class ShapePath:
         return commands
 
     @staticmethod
-    def create_u_profile(h: float, b: float, t: float, r: float) -> List[ShapeCommand]:
+    def create_u_profile(h: float, b: float, t_f: float, t_w: float, r: float) -> List[ShapeCommand]:
         """
         Channel (U) outline with optional inner root fillets r at web↔flange corners.
         Coordinates: z is horizontal, y is vertical. Centered on origin.
         Open side is on the right (positive z). Web is on the left.
-
-        Inputs:
-            h: overall section height
-            b: overall section width (left outer web face to right flange tip)
-            t: uniform thickness for web and flanges
-            r: inner fillet radius at web↔flange corners (0 for sharp)
-
-        Returns:
-            List[ShapeCommand] forming a single closed path of the U-section outline.
         """
         commands: List[ShapeCommand] = []
 
         half_width = b / 2.0
         half_height = h / 2.0
 
-        # Inner faces (for the channel interior)
-        inner_top_y = half_height - t - r
-        inner_bottom_y = -half_height + t + r
-        inner_web_right_z = -half_width + t  # inside face of the web (web is on the left)
+        inner_top_y = half_height - t_f
+        inner_bottom_y = -half_height + t_f
+        inner_web_right_z = -half_width + t_w
 
-        # Outer faces (bounding rectangle)
         outer_left_z = -half_width
         outer_right_z = +half_width
         outer_top_y = +half_height
         outer_bottom_y = -half_height
 
-        radius = r
-
-        # Start at outer top-left corner and go clockwise
         commands.append(ShapeCommand("moveTo", z=outer_left_z, y=outer_top_y))
         commands.append(ShapeCommand("lineTo", z=outer_right_z, y=outer_top_y))
-
-        # Go down the outer right edge to the start of the top flange return
         commands.append(ShapeCommand("lineTo", z=outer_right_z, y=inner_top_y))
 
-        # Top inner flange: go left towards the web inside face
-        if radius > 0.0:
-            # Approach the fillet start along the top inner edge
-            commands.append(ShapeCommand("lineTo", z=inner_web_right_z + radius, y=inner_top_y))
-            # Top-left inner fillet at (inner_top_y, inner_web_right_z)
-            commands.extend(
-                ShapePath.quarter_fillet_hv(
-                    corner_y=inner_top_y,
-                    corner_z=inner_web_right_z,
-                    radius=radius,
-                    quadrant="top-left",
-                    convex=False,
-                )
-            )
-            # Down along the inside face of the web
-            commands.append(ShapeCommand("lineTo", z=inner_web_right_z, y=inner_bottom_y + radius))
-            # Bottom-left inner fillet at (inner_bottom_y, inner_web_right_z)
-            commands.extend(
-                ShapePath.quarter_fillet_hv(
-                    corner_y=inner_bottom_y,
-                    corner_z=inner_web_right_z,
-                    radius=radius,
-                    quadrant="bottom-left",
-                    move_to_start=False,
-                )
-            )
-            # Across the bottom inner flange back to the mouth
+        if r > 0.0:
+            commands.append(ShapeCommand("lineTo", z=inner_web_right_z + r, y=inner_top_y))
+
+            # ---- Top-left inner fillet
+            cy, cz = inner_top_y - r, inner_web_right_z + r
+            theta0 = 0.0
+            theta1 = -math.pi / 2.0
+            commands.extend(ShapePath.arc_center_angles(cy, cz, r, theta0, theta1))
+
+            commands.append(ShapeCommand("lineTo", z=inner_web_right_z, y=inner_bottom_y + r))
+
+            # ---- Bottom-left inner fillet
+            cy, cz = inner_bottom_y + r, inner_web_right_z + r
+            theta0 = -math.pi / 2.0
+            theta1 = -math.pi
+            commands.extend(ShapePath.arc_center_angles(cy, cz, r, theta0, theta1))
+
             commands.append(ShapeCommand("lineTo", z=outer_right_z, y=inner_bottom_y))
         else:
-            # Sharp inner corners
             commands.append(ShapeCommand("lineTo", z=inner_web_right_z, y=inner_top_y))
             commands.append(ShapeCommand("lineTo", z=inner_web_right_z, y=inner_bottom_y))
             commands.append(ShapeCommand("lineTo", z=outer_right_z, y=inner_bottom_y))
 
-        # Finish the outer perimeter: down to outer bottom-right, across bottom, up left side
         commands.append(ShapeCommand("lineTo", z=outer_right_z, y=outer_bottom_y))
         commands.append(ShapeCommand("lineTo", z=outer_left_z, y=outer_bottom_y))
         commands.append(ShapeCommand("lineTo", z=outer_left_z, y=outer_top_y))
@@ -399,71 +202,75 @@ class ShapePath:
     def plot(self, show_nodes: bool = True):
         """
         Plots the shape on the yz plane, with y as the horizontal axis and z as the vertical axis.
-        Parameters:
-        show_nodes (bool): Whether to display node numbers and positions. Default is True.
         """
         y, z = [], []
-        node_coords = []  # To store node coordinates for plotting
-        start_y, start_z = None, None  # To track the starting point for closePath
+        node_coords = []
+        start_y, start_z = None, None
         node_count = 0
 
-        current_y, current_z = None, None  # Current pen position for bezier starts
+        def flush_polyline():
+            if z and y:
+                plt.plot(z, y, "b-")
 
         for command in self.shape_commands:
             if command.command == "moveTo":
                 if z and y:
-                    plt.plot(z, y, "b-")
+                    flush_polyline()
                     z, y = [], []
                 z.append(command.z)
                 y.append(command.y)
                 node_coords.append((command.z, command.y, node_count))
                 start_z, start_y = command.z, command.y
-                current_z, current_y = command.z, command.y
                 node_count += 1
 
             elif command.command == "lineTo":
                 z.append(command.z)
                 y.append(command.y)
                 node_coords.append((command.z, command.y, node_count))
-                current_z, current_y = command.z, command.y
                 node_count += 1
 
-            elif command.command == "cubicTo":
-                # Sample a cubic Bézier from (current_z,current_y) to (command.z,command.y)
-                assert current_z is not None and current_y is not None, "cubicTo without a current point"
-                p0 = np.array([current_z, current_y])
-                p1 = np.array([command.control_z1, command.control_y1])
-                p2 = np.array([command.control_z2, command.control_y2])
-                p3 = np.array([command.z, command.y])
+            elif command.command == "arcTo":
+                assert command.center_y is not None and command.center_z is not None
+                assert command.r is not None and command.theta0 is not None and command.theta1 is not None
 
-                t_vals = np.linspace(0.0, 1.0, 24)
-                curve = (
-                    (1 - t_vals)[:, None] ** 3 * p0
-                    + 3 * (1 - t_vals)[:, None] ** 2 * t_vals[:, None] * p1
-                    + 3 * (1 - t_vals)[:, None] * t_vals[:, None] ** 2 * p2
-                    + t_vals[:, None] ** 3 * p3
-                )
+                cy = float(command.center_y)
+                cz = float(command.center_z)
+                r = float(command.r)
+                t0 = float(command.theta0)
+                t1 = float(command.theta1)
 
-                # Append all *but* the first point (it equals the current point)
-                z.extend(curve[1:, 0].tolist())
-                y.extend(curve[1:, 1].tolist())
+                delta = t1 - t0
+                if abs(delta) < 1e-12 or r <= 0.0:
+                    continue
 
-                # Register only the end point as a node (keep it simple)
-                node_coords.append((p3[0], p3[1], node_count))
-                current_z, current_y = float(p3[0]), float(p3[1])
+                # Choose segment count: ~10 degrees per segment
+                max_dtheta = math.radians(10.0)
+                n_seg = max(1, int(math.ceil(abs(delta) / max_dtheta)))
+
+                t_vals = np.linspace(t0, t1, n_seg + 1)
+                z_arc = cz + r * np.sin(t_vals)
+                y_arc = cy + r * np.cos(t_vals)
+
+                # If arc starts away from current pen, we assume previous command set the start correctly.
+                # Append all but the first (to avoid duplicating current point)
+                z.extend(z_arc[1:].tolist())
+                y.extend(y_arc[1:].tolist())
+
+                # Register the end point as a node
+                node_coords.append((z_arc[-1], y_arc[-1], node_count))
                 node_count += 1
 
             elif command.command == "closePath":
                 if start_z is not None and start_y is not None:
                     z.append(start_z)
                     y.append(start_y)
-                plt.plot(z, y, "b-")
+                flush_polyline()
                 z, y = [], []
 
         if show_nodes:
-            for ny, nz, nnum in node_coords:
-                plt.scatter(ny, nz, color="red")
-                plt.text(ny, nz, str(nnum), color="red", fontsize=10, ha="right")
+            for nz, ny, nnum in node_coords:
+                plt.scatter(nz, ny, color="red")
+                plt.text(nz, ny, str(nnum), color="red", fontsize=10, ha="right")
 
         plt.axvline(0, color="black", linestyle="--")
         plt.axhline(0, color="black", linestyle="--")
@@ -479,30 +286,56 @@ class ShapePath:
         Converts the shape commands into nodes and edges for plotting or extrusion.
 
         Returns:
-        - coords (list of tuple): A list of (y, z) coordinates defining the vertices of the shape.
-        - edges (list of tuple): A list of (start_index, end_index) representing connections between nodes.
+            coords: List[(y, z)]
+            edges:  List[(start_index, end_index)]
         """
-        coords = []  # To store all the (y, z) coordinates
-        edges = []  # To store edges as (start_index, end_index)
-        start_index = None  # To track the starting index for 'closePath'
-        node_index = 0  # Index counter for vertices
+        coords = []
+        edges = []
+        start_index = None
+        node_index = 0
+
+        def add_vertex(yv: float, zv: float):
+            nonlocal node_index
+            coords.append((yv, zv))
+            node_index += 1
+            return node_index - 1
 
         for command in self.shape_commands:
             if command.command == "moveTo":
-                # Record the starting point for closePath
-                start_index = node_index
-                coords.append((command.y, command.z))
-                node_index += 1
+                start_index = add_vertex(command.y, command.z)
 
             elif command.command == "lineTo":
-                # Add a vertex and connect it to the previous node
-                coords.append((command.y, command.z))
-                edges.append((node_index - 1, node_index))
-                node_index += 1
+                prev = node_index - 1
+                curr = add_vertex(command.y, command.z)
+                edges.append((prev, curr))
+
+            elif command.command == "arcTo":
+                cy = float(command.center_y)
+                cz = float(command.center_z)
+                r = float(command.r)
+                t0 = float(command.theta0)
+                t1 = float(command.theta1)
+                delta = t1 - t0
+                if abs(delta) < 1e-12 or r <= 0.0:
+                    continue
+
+                max_dtheta = math.radians(10.0)
+                n_seg = max(1, int(math.ceil(abs(delta) / max_dtheta)))
+                t_vals = np.linspace(t0, t1, n_seg + 1)
+
+                # First sample is expected to coincide with current point,
+                # but for robustness, we will still add it only if this arc starts a new sequence
+                # We always add subsequent samples as new vertices.
+                prev_index = node_index - 1
+                for k in range(1, len(t_vals)):  # skip k=0 (start)
+                    yk = cy + r * math.cos(t_vals[k])
+                    zk = cz + r * math.sin(t_vals[k])
+                    curr_index = add_vertex(yk, zk)
+                    edges.append((prev_index, curr_index))
+                    prev_index = curr_index
 
             elif command.command == "closePath":
-                if start_index is not None:
-                    # Close the loop by connecting the last node to the start node
+                if start_index is not None and node_index > 0:
                     edges.append((node_index - 1, start_index))
 
         return coords, edges

@@ -122,7 +122,8 @@ class Section:
         material: Material,
         h: float,
         b: float,
-        t: float,
+        t_f: float,
+        t_w: float,
         r: float,
     ) -> "Section":
         """
@@ -142,12 +143,12 @@ class Section:
             Section: A Section object representing the U profile.
         """
         # 1) Build the drawable shape path from your own path generator
-        shape_commands = ShapePath.create_u_profile(h=h, b=b, t=t, r=r)
+        shape_commands = ShapePath.create_u_profile(h=h, b=b, t_f=t_f, t_w=t_w, r=r)
         shape_path = ShapePath(name=name, shape_commands=shape_commands)
 
         # 2) Build a matching sectionproperties geometry:
         #    channel_section expects separate flange/web thickness, but this U uses uniform t
-        u_geometry = channel_section(d=h, b=b, t_f=t, t_w=t, r=r, n_r=16).shift_section(
+        u_geometry = channel_section(d=h, b=b, t_f=t_f, t_w=t_w, r=r, n_r=16).shift_section(
             x_offset=-b / 2.0,
             y_offset=-h / 2.0,
         )
