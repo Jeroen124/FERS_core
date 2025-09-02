@@ -688,6 +688,7 @@ class FERS:
         show_nodes=True,
         show_sections=True,
         show_local_axes=False,
+        local_axes_at_midspan: bool = False,
         display_Local_axes_scale=1,
         load_case=None,
         display_load_scale=1,  # Added scale factor for point loads, default = 1
@@ -699,6 +700,7 @@ class FERS:
         - show_nodes (bool): Whether to show node spheres in the plot.
         - show_sections (bool): Whether to extrude sections along members' axes.
         - show_local_axes (bool): Whether to plot the local coordinate system at each member's start node.
+        - local_axes_at_midspan (bool): If True, draw local axes at the midpoint of each member
         - load_case_name (str): Name of the load case to display loads for. If None, no point loads are shown.
         - point_load_scale (float): Scale factor for point loads, default is 1.
         """
@@ -797,9 +799,16 @@ class FERS:
         if show_local_axes:
             for index, member in enumerate(members):
                 start_node = member.start_node
+                end_node = member.end_node
                 local_x, local_y, local_z = member.local_coordinate_system()
 
-                origin = np.array([start_node.X, start_node.Y, start_node.Z])
+                start = np.array([start_node.X, start_node.Y, start_node.Z], dtype=float)
+                if local_axes_at_midspan:
+                    end = np.array([end_node.X, end_node.Y, end_node.Z], dtype=float)
+                    origin = 0.5 * (start + end)
+                else:
+                    origin = start
+
                 scale = display_Local_axes_scale
 
                 if index == 0:
