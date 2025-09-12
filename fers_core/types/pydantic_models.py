@@ -190,10 +190,6 @@ class Settings(BaseModel):
 
 class ShapeCommand(BaseModel):
     command: str
-    control_y1: Optional[float] = None
-    control_y2: Optional[float] = None
-    control_z1: Optional[float] = None
-    control_z2: Optional[float] = None
     r: Optional[float] = None
     y: Optional[float] = None
     z: Optional[float] = None

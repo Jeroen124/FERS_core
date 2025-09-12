@@ -194,13 +194,6 @@ class FERS:
     def translate_member_set(member_set, translation_vector):
         """
         Translates a given member set by the specified vector.
-
-        Args:
-            member_set (MemberSet): The member set to be translated.
-            translation_vector (tuple): The translation vector (dx, dy, dz).
-
-        Returns:
-            MemberSet: A new MemberSet instance with translated members.
         """
         new_members = []
         for member in member_set.members:
@@ -220,11 +213,16 @@ class FERS:
                 start_node=new_start_node,
                 end_node=new_end_node,
                 section=member.section,
-                material=member.section.material,
+                start_hinge=member.start_hinge,
+                end_hinge=member.end_hinge,
                 classification=member.classification,
+                rotation_angle=member.rotation_angle,
+                chi=member.chi,
+                reference_member=member.reference_member,
+                reference_node=member.reference_node,
+                member_type=member.member_type,
             )
             new_members.append(new_member)
-
         return MemberSet(members=new_members, classification=member_set.classification)
 
     def create_combined_model_pattern(original_model, count, spacing_vector):
@@ -318,18 +316,10 @@ class FERS:
     def translate_model(model, translation_vector):
         """
         Creates a copy of the given model with all nodes translated by the specified vector.
-
-        Args:
-            model (FERS): The model to be translated.
-            translation_vector (tuple): A tuple (dx, dy, dz) representing the translation vector.
-
-        Returns:
-            FERS: A new model instance with translated nodes.
         """
-        new_model = FERS()  # Assuming FERS is your model class
-        node_translation_map = {}  # Map original nodes to their translated versions
+        new_model = FERS()
+        node_translation_map = {}
 
-        # Translate all nodes
         for original_node in model.get_all_nodes():
             translated_node = Node(
                 X=original_node.X + translation_vector[0],
@@ -338,7 +328,6 @@ class FERS:
             )
             node_translation_map[original_node.id] = translated_node
 
-        # Reconstruct member sets with translated nodes
         for original_member_set in model.get_all_member_sets():
             new_members = []
             for member in original_member_set.members:
@@ -351,12 +340,17 @@ class FERS:
                     start_hinge=member.start_hinge,
                     end_hinge=member.end_hinge,
                     classification=member.classification,
+                    rotation_angle=member.rotation_angle,
+                    chi=member.chi,
+                    reference_member=member.reference_member,
+                    reference_node=member.reference_node,
+                    member_type=member.member_type,
                 )
                 new_members.append(new_member)
             new_member_set = MemberSet(
                 members=new_members,
                 classification=original_member_set.classification,
-                member_set_id=original_member_set.member_set_id,
+                id=original_member_set.memberset_id,
             )
             new_model.add_member_set(new_member_set)
 
@@ -475,43 +469,34 @@ class FERS:
                 return node
         return None
 
-    def get_unique_materials_from_all_member_sets(self, ids_only=False):
+    def get_unique_materials_from_all_member_sets(self, ids_only: bool = False):
         """
-        Collects and returns unique materials used across all member sets in the model.
-
-        Args:
-            ids_only (bool): If True, return only the unique material IDs. Otherwise, return material objects.
-
-        Returns:
-            list: List of unique materials or material IDs used across all member sets.
+        Collect unique materials used across all member sets. Ignores members without a section.
+        Deduplicates by material.id.
         """
-        unique_materials = set()
+        by_id = {}
         for member_set in self.member_sets:
-            materials = member_set.get_unique_materials(ids_only=ids_only)
-            unique_materials.update(materials)
-        return list(unique_materials)
+            materials = member_set.get_unique_materials(ids_only=False)
+            for material in materials:
+                if material is None:
+                    continue
+                by_id[material.id] = material
+        return list(by_id.keys()) if ids_only else list(by_id.values())
 
-    def get_unique_shape_paths_from_all_member_sets(self, ids_only=False):
+    def get_unique_shape_paths_from_all_member_sets(self, ids_only: bool = False):
         """
-        Collects and returns unique ShapePath instances used across all member sets in the model.
-
-        Args:
-            ids_only (bool): If True, return only the unique ShapePath IDs.
-                            Otherwise, return ShapePath objects.
-
-        Returns:
-            list: List of unique ShapePath instances or their IDs used across all member sets.
+        Collect unique ShapePath instances used across all member sets.
+        Ignores members without a section or without a shape_path.
         """
         unique_shape_paths = {}
-
         for member_set in self.member_sets:
             for member in member_set.members:
-                section = member.section
-                if section.shape_path:
-                    shape_path_id = section.shape_path.id
-                    if shape_path_id not in unique_shape_paths:
-                        unique_shape_paths[shape_path_id] = section.shape_path
-
+                section = getattr(member, "section", None)
+                if section is None or getattr(section, "shape_path", None) is None:
+                    continue
+                sp = section.shape_path
+                if sp.id not in unique_shape_paths:
+                    unique_shape_paths[sp.id] = sp
         return list(unique_shape_paths.keys()) if ids_only else list(unique_shape_paths.values())
 
     def get_unique_nodal_support_from_all_member_sets(self, ids_only=False):
@@ -538,37 +523,33 @@ class FERS:
         # Return only the IDs if ids_only is True
         return list(unique_nodal_supports.keys()) if ids_only else list(unique_nodal_supports.values())
 
-    def get_unique_sections_from_all_member_sets(self, ids_only=False):
+    def get_unique_sections_from_all_member_sets(self, ids_only: bool = False):
         """
-        Collects and returns unique sections used across all member sets in the model.
-
-        Args:
-            ids_only (bool): If True, return only the unique section IDs. Otherwise, return section objects.
-
-        Returns:
-            list: List of unique sections or section IDs used across all member sets.
+        Collect unique sections used across all member sets. Ignores members without a section.
+        Deduplicates by section.id.
         """
-        unique_sections = set()
+        by_id = {}
         for member_set in self.member_sets:
-            sections = member_set.get_unique_sections(ids_only=ids_only)
-            unique_sections.update(sections)
-        return list(unique_sections)
+            sections = member_set.get_unique_sections(ids_only=False)
+            for section in sections:
+                if section is None:
+                    continue
+                by_id[section.id] = section
+        return list(by_id.keys()) if ids_only else list(by_id.values())
 
-    def get_unique_member_hinges_from_all_member_sets(self, ids_only=False):
+    def get_unique_member_hinges_from_all_member_sets(self, ids_only: bool = False):
         """
-        Collects and returns unique member hinges used across all member sets in the model.
-
-        Args:
-            ids_only (bool): If True, return only the unique hinge IDs. Otherwise, return hinge objects.
-
-        Returns:
-            list: List of unique hinges or hinge IDs used across all member sets.
+        Collect unique member hinges used across all member sets.
+        Deduplicates by hinge.id.
         """
-        unique_hinges = set()
+        by_id = {}
         for member_set in self.member_sets:
-            hinges = member_set.get_unique_memberhinges(ids_only=ids_only)
-            unique_hinges.update(hinges)
-        return list(unique_hinges)
+            hinges = member_set.get_unique_memberhinges(ids_only=False)
+            for hinge in hinges:
+                if hinge is None:
+                    continue
+                by_id[hinge.id] = hinge
+        return list(by_id.keys()) if ids_only else list(by_id.values())
 
     def get_unique_situations(self):
         """
@@ -581,19 +562,25 @@ class FERS:
         return unique_situations
 
     def get_unique_material_names(self):
-        """Returns a set of unique material names used in the model."""
+        """Returns a set of unique material names used in the model (skips members without a section)."""
         unique_materials = set()
         for member_set in self.member_sets:
             for member in member_set.members:
-                unique_materials.add(member.section.material.name)
+                section = getattr(member, "section", None)
+                if section is None or getattr(section, "material", None) is None:
+                    continue
+                unique_materials.add(section.material.name)
         return unique_materials
 
     def get_unique_section_names(self):
-        """Returns a set of unique section names used in the model."""
+        """Returns a set of unique section names used in the model (skips members without a section)."""
         unique_sections = set()
         for member_set in self.member_sets:
             for member in member_set.members:
-                unique_sections.add(member.section.name)
+                section = getattr(member, "section", None)
+                if section is None:
+                    continue
+                unique_sections.add(section.name)
         return unique_sections
 
     def get_all_unique_member_hinges(self):
@@ -614,18 +601,16 @@ class FERS:
 
     def get_unique_nodal_support(self):
         """
-        Returns a set of unique sections used in the model, identified by their names.
+        Returns a dict of unique nodal supports keyed by support.id.
         """
-        unique_nodal_supports = {}  # Use a dictionary to avoid duplicates based on material name
-
+        unique_nodal_supports = {}
         for member_set in self.member_sets:
             for member in member_set.members:
-                for node in [member.start_node, member.end_node]:
+                for node in (member.start_node, member.end_node):
                     if node.nodal_support:
-                        if node.nodal_support.id not in unique_nodal_supports:
-                            unique_nodal_supports[node.id] = node.nodal_support
-
-        # Return the materials as a list
+                        sup = node.nodal_support
+                        if sup.id not in unique_nodal_supports:
+                            unique_nodal_supports[sup.id] = sup  # fixed key
         return unique_nodal_supports
 
     def get_unique_nodal_supports(self):
@@ -703,6 +688,7 @@ class FERS:
         show_nodes=True,
         show_sections=True,
         show_local_axes=False,
+        local_axes_at_midspan: bool = False,
         display_Local_axes_scale=1,
         load_case=None,
         display_load_scale=1,  # Added scale factor for point loads, default = 1
@@ -714,6 +700,7 @@ class FERS:
         - show_nodes (bool): Whether to show node spheres in the plot.
         - show_sections (bool): Whether to extrude sections along members' axes.
         - show_local_axes (bool): Whether to plot the local coordinate system at each member's start node.
+        - local_axes_at_midspan (bool): If True, draw local axes at the midpoint of each member
         - load_case_name (str): Name of the load case to display loads for. If None, no point loads are shown.
         - point_load_scale (float): Scale factor for point loads, default is 1.
         """
@@ -769,7 +756,9 @@ class FERS:
             for member in members:
                 start_node = member.start_node
                 end_node = member.end_node
-                section = member.section
+                section = getattr(member, "section", None)
+                if section is None or getattr(section, "shape_path", None) is None:
+                    continue
 
                 if section.shape_path is not None:
                     # Get nodes and edges of the section in the local y-z plane
@@ -810,9 +799,16 @@ class FERS:
         if show_local_axes:
             for index, member in enumerate(members):
                 start_node = member.start_node
+                end_node = member.end_node
                 local_x, local_y, local_z = member.local_coordinate_system()
 
-                origin = np.array([start_node.X, start_node.Y, start_node.Z])
+                start = np.array([start_node.X, start_node.Y, start_node.Z], dtype=float)
+                if local_axes_at_midspan:
+                    end = np.array([end_node.X, end_node.Y, end_node.Z], dtype=float)
+                    origin = 0.5 * (start + end)
+                else:
+                    origin = start
+
                 scale = display_Local_axes_scale
 
                 if index == 0:
@@ -958,8 +954,9 @@ class FERS:
 
         def plot_section(member, d_start_vec, r_start_vec, d_end_vec, r_end_vec):
             # build the section polydata once
-            section = member.section
-            if section.shape_path is None:
+            section = getattr(member, "section", None)
+
+            if section is None or getattr(section, "shape_path", None) is None:
                 return
 
             coords_2d, edges = section.shape_path.get_shape_geometry()
@@ -1104,7 +1101,7 @@ class FERS:
     def get_model_summary(self):
         """Returns a summary of the model's components: MemberSets, LoadCases, and LoadCombinations."""
         summary = {
-            "MemberSets": [member_set.id for member_set in self.member_sets],
+            "MemberSets": [member_set.memberset_id for member_set in self.member_sets],  # fixed
             "LoadCases": [load_case.name for load_case in self.load_cases],
             "LoadCombinations": [load_combination.name for load_combination in self.load_combinations],
         }

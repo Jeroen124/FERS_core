@@ -99,7 +99,7 @@ end_position = 0.7 * L  # 3.5 m
 
 # The maximum moment at the fixed end is:
 #   M_max = w * L^2 / 2
-M_max_analytical = w * (end_position - start_position) * (start_position + end_position) / 2
+M_max_analytical = -w * (end_position - start_position) * (start_position + end_position) / 2
 
 print("\nComparison of results:")
 
