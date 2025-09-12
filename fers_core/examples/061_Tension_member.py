@@ -33,7 +33,7 @@ node1 = Node(0.0, 0.0, 0.0)  # support end
 node2 = Node(2.5, 0.0, 0.0)  # node for applying load
 node3 = Node(5.0, 0.0, 0.0)  # free end
 
-# Support at node1 (fixed translations and rotations)
+# Support at node1 and node 3, for stability fix displacement at node 2 (fixed translations and rotations)
 node1.nodal_support = NodalSupport()
 node2.nodal_support = NodalSupport(
     displacement_conditions={
@@ -52,9 +52,8 @@ section = Section(
     name="IPE 180 Beam Section", material=Steel_S235, i_y=0.819e-6, i_z=10.63e-6, j=0.027e-6, area=0.00196
 )
 
-# Rotational spring at the start of the flexible member (around local z)
-# Choose stiffness to target a specific root rotation under the mid force.
-mid_force_newton = 1000000.0  # N
+# Add a force in the middle node
+mid_force_newton = 1  # N
 
 # Members
 rope_1 = Member(start_node=node1, end_node=node2, section=section, member_type="TENSION")
@@ -70,13 +69,13 @@ calculation_1.add_member_set(member_set)
 
 # Step 2: Apply the load
 # ----------------------
-load_case = calculation_1.create_load_case(name="End Load")
+load_case = calculation_1.create_load_case(name="Mid Load")
 
 # 1 kN in the middle of the two ropes
 NodalLoad(
     node=node2,
     load_case=load_case,
-    magnitude=1000.0,
+    magnitude=mid_force_newton,
     direction=(1.0, 0.0, 0.0),
 )
 
@@ -88,22 +87,24 @@ calculation_1.save_to_json(file_path, indent=4)
 # ----------------------------
 print("Running the analysis...")
 calculation_1.run_analysis()
-results = calculation_1.results.loadcases["End Load"]
+results = calculation_1.results.loadcases["Mid Load"]
 
 # Extract FERS results
-deflection_y_tip_fers = results.displacement_nodes["3"].dy
-rotation_tip_fers = results.displacement_nodes["3"].rz
-reaction_moment_support_fers = results.reaction_nodes["1"].nodal_forces.mz
+movement_node2_fers = results.displacement_nodes["2"].dx
+reaction_force_x_1 = results.reaction_nodes["1"].nodal_forces.fx
+reaction_force_x_3 = results.reaction_nodes["3"].nodal_forces.fx
 
 # Step 4: Validate against analytical solution
 # --------------------------------------------
-# For a cantilever of length L with a root rotational spring k_phi:
-#   Root rotation:        φ0 = (F * L) / k_phi
-#   Tip rotation:         φ_tip = (F * L**2) / (2 * E * I) + φ0
-#   Tip deflection:       δ_tip = (F * L**3) / (3 * E * I) + φ0 * L
-#   Reaction moment:      M_support = F * L    (statically determinate)
-#
-# Here, L is the flexible span (node2->node3), not the total node1->node3 distance.
-
 E = Steel_S235.e_mod
-I = section.i_z  # bending about local z for vertical loading
+A = section.area
+L = 2.5  # length of each rope
+F = mid_force_newton
+
+# Analytical solution for horizontal displacement at mid-span of two tension members
+movement_node2_expected = (F * L) / (A * E)  # only one rope is loaded in tension
+reaction_force_x_1_expected = -F  # reaction at the fixed end
+reaction_force_x_3_expected = 0.0  # rope can not push, so no reaction is expected
+
+print(movement_node2_expected)
+print(movement_node2_fers)
