@@ -200,7 +200,7 @@ def test_004_Cantilever_with_Partial_Uniform_Distributed_Load():
     )
 
     assert_close(fers_fy_fixed, expected_resultant, abs_tol=TOL.absolute_force_in_newton)
-    assert_close(abs(fers_mz_fixed), expected_mz_fixed, abs_tol=TOL.absolute_moment_in_newton_meter)
+    assert_close(fers_mz_fixed, expected_mz_fixed, abs_tol=TOL.absolute_moment_in_newton_meter)
 
 
 # 005_Cantilever_with_Triangular_Distributed_Load -----------------------------
@@ -257,8 +257,8 @@ def test_005_Cantilever_with_Triangular_Distributed_Load():
     )
 
     assert_close(fers_dy_L_tri, expected_dy_L_tri, abs_tol=TOL.absolute_displacement_in_meter)
-    assert_close(abs(fers_mz_fixed_tri), expected_mz_fixed_tri, abs_tol=TOL.absolute_moment_in_newton_meter)
-    assert_close(abs(fers_mz_fixed_inv), expected_mz_fixed_inv, abs_tol=TOL.absolute_moment_in_newton_meter)
+    assert_close(fers_mz_fixed_tri, expected_mz_fixed_tri, abs_tol=TOL.absolute_moment_in_newton_meter)
+    assert_close(fers_mz_fixed_inv, expected_mz_fixed_inv, abs_tol=TOL.absolute_moment_in_newton_meter)
 
 
 # 006_Cantilever_with_Partial_Triangular_Distributed_Load ---------------------
@@ -318,8 +318,8 @@ def test_006_Cantilever_with_Partial_Triangular_Distributed_Load():
 
     assert_close(fers_fy_fixed_tri, expected_resultant_tri, abs_tol=TOL.absolute_force_in_newton)
     assert_close(fers_fy_fixed_inv, expected_resultant_inv, abs_tol=TOL.absolute_force_in_newton)
-    assert_close(abs(fers_mz_fixed_tri), expected_mz_tri, abs_tol=TOL.absolute_moment_in_newton_meter)
-    assert_close(abs(fers_mz_fixed_inv), expected_mz_inv, abs_tol=TOL.absolute_moment_in_newton_meter)
+    assert_close(fers_mz_fixed_tri, expected_mz_tri, abs_tol=TOL.absolute_moment_in_newton_meter)
+    assert_close(fers_mz_fixed_inv, expected_mz_inv, abs_tol=TOL.absolute_moment_in_newton_meter)
 
 
 # 007_Cantilever_with_End_Moment ----------------------------------------------

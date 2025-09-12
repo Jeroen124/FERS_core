@@ -105,8 +105,8 @@ E = 210e9  # Elastic modulus (Pascals)
 I = 10.63e-6  # Moment of inertia (m^4)
 
 # The maximum moment at the fixed end is:
-Shear_max_analytical_triangular = w * (1 / 2) * L * (0.6 - 0)
-Shear_max_analytical_inverse = w * (1 / 2) * L * (0.7 - 0.3)
+Shear_max_analytical_triangular = -w * (1 / 2) * L * (0.6 - 0)
+Shear_max_analytical_inverse = -w * (1 / 2) * L * (0.7 - 0.3)
 
 M_max_analytical_triangular = Shear_max_analytical_triangular * ((0 + 0.6) * L * (1 / 3))
 M_max_analytical_inverse = Shear_max_analytical_inverse * ((0.3 + (2 / 3) * (0.7 - 0.3)) * L)
@@ -118,6 +118,8 @@ if abs(Fy_fers_triangular - Shear_max_analytical_triangular) < 1e-3:
     print("Reaction force matches the analytical solution ✅")
 else:
     print("Reaction force does NOT match the analytical solution ❌")
+
+print()
 
 
 print(f"Reaction force at fixed end (FERS): {Fy_fers_triangular_inverse:.6f} Nm")
@@ -136,6 +138,7 @@ if abs(Mz_fers_triangular - M_max_analytical_triangular) < 1e-3:
 else:
     print("Reaction moment does NOT match the analytical solution ❌")
 
+print()
 
 print(f"Reaction moment at fixed end (FERS): {Mz_fers_triangular_inverse:.6f} Nm")
 print(f"Reaction moment at fixed end (Analytical): {M_max_analytical_inverse:.6f} Nm")
