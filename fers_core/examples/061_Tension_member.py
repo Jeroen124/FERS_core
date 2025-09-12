@@ -90,21 +90,71 @@ calculation_1.run_analysis()
 results = calculation_1.results.loadcases["Mid Load"]
 
 # Extract FERS results
-movement_node2_fers = results.displacement_nodes["2"].dx
-reaction_force_x_1 = results.reaction_nodes["1"].nodal_forces.fx
-reaction_force_x_3 = results.reaction_nodes["3"].nodal_forces.fx
+displacement_node2_dx_fers = results.displacement_nodes["2"].dx
+reaction_node1_fx_fers = results.reaction_nodes["1"].nodal_forces.fx
+reaction_node3_fx_fers = results.reaction_nodes["3"].nodal_forces.fx
 
-# Step 4: Validate against analytical solution
+# Step 4: Validate Against Analytical Solution
 # --------------------------------------------
-E = Steel_S235.e_mod
-A = section.area
-L = 2.5  # length of each rope
-F = mid_force_newton
+elastic_modulus = Steel_S235.e_mod
+cross_section_area = section.area
+member_length = 2.5  # meters (each tension member length)
+applied_force = mid_force_newton  # Newtons
 
-# Analytical solution for horizontal displacement at mid-span of two tension members
-movement_node2_expected = (F * L) / (A * E)  # only one rope is loaded in tension
-reaction_force_x_1_expected = -F  # reaction at the fixed end
-reaction_force_x_3_expected = 0.0  # rope can not push, so no reaction is expected
+# Analytical expectations:
+# - Displacement at node 2 along global X: u = F * L / (A * E)
+# - Reaction at node 1 in Fx: -F
+# - Reaction at node 3 in Fx: 0 (tension-only member cannot carry compression)
+displacement_node2_dx_expected = (applied_force * member_length) / (cross_section_area * elastic_modulus)
+reaction_node1_fx_expected = -applied_force
+reaction_node3_fx_expected = 0.0
 
-print(movement_node2_expected)
-print(movement_node2_fers)
+
+def relative_error(expected_value: float, actual_value: float) -> float:
+    denominator = max(abs(expected_value), 1.0)
+    return abs(actual_value - expected_value) / denominator
+
+
+# Tolerances (adjust if your solver accuracy is different)
+absolute_tolerance_displacement = 1e-9
+absolute_tolerance_reaction = 1e-6
+relative_tolerance = 1e-6
+
+print("\nComparison of results:")
+print(f"Displacement at node 2 in X (FERS):       {displacement_node2_dx_fers:.9e} m")
+print(f"Displacement at node 2 in X (Analytical):  {displacement_node2_dx_expected:.9e} m")
+if (
+    abs(displacement_node2_dx_fers - displacement_node2_dx_expected) < absolute_tolerance_displacement
+    or relative_error(displacement_node2_dx_expected, displacement_node2_dx_fers) < relative_tolerance
+):
+    print("Displacement at node 2 matches the analytical solution ✅")
+else:
+    print("Displacement at node 2 does NOT match the analytical solution ❌")
+
+print(f"\nReaction force at node 1, Fx (FERS):       {reaction_node1_fx_fers:.6f} N")
+print(f"Reaction force at node 1, Fx (Analytical):  {reaction_node1_fx_expected:.6f} N")
+if (
+    abs(reaction_node1_fx_fers - reaction_node1_fx_expected) < absolute_tolerance_reaction
+    or relative_error(reaction_node1_fx_expected, reaction_node1_fx_fers) < relative_tolerance
+):
+    print("Reaction at node 1 matches the analytical solution ✅")
+else:
+    print("Reaction at node 1 does NOT match the analytical solution ❌")
+
+print(f"\nReaction force at node 3, Fx (FERS):       {reaction_node3_fx_fers:.6f} N")
+print(f"Reaction force at node 3, Fx (Analytical):  {reaction_node3_fx_expected:.6f} N")
+if (
+    abs(reaction_node3_fx_fers - reaction_node3_fx_expected) < absolute_tolerance_reaction
+    or relative_error(reaction_node3_fx_expected, reaction_node3_fx_fers) < relative_tolerance
+):
+    print("Reaction at node 3 matches the analytical expectation (tension-only member cannot push) ✅")
+else:
+    print("Reaction at node 3 does NOT match the analytical expectation ❌")
+
+# =============================================================================
+# Notes for User
+# =============================================================================
+# - This example models two colinear tension-only members with a load at the middle node,
+#   which should place only one member in tension under a positive global X load.
+# - Ensure comments and units match your applied load direction and magnitude.
+#   (This script applies the load along global X using 'mid_force_newton'.)
