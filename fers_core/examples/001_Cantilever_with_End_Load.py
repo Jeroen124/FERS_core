@@ -44,6 +44,9 @@ end_load_case = calculation_1.create_load_case(name="End Load")
 # Apply a 1 kN downward force (global y-axis) at the free end (node2)
 nodal_load = NodalLoad(node=node2, load_case=end_load_case, magnitude=-1000, direction=(0, 1, 0))
 
+# Ensure the output folder exists
+os.makedirs("json_input_solver", exist_ok=True)
+
 # Save the model to a file for FERS calculations
 file_path = os.path.join("json_input_solver", "001_Cantilever_with_End_Load.json")
 calculation_1.save_to_json(file_path, indent=4)
@@ -74,7 +77,7 @@ x = L  # Distance to the free end for max deflection and slope
 
 # Calculate analytical solutions for deflection and moment
 delta_analytical = (-F * x**2 / (6 * E * I)) * (3 * L - x)  # Max deflection
-M_max_analytical = F * L  # Max moment at the fixed end
+M_max_analytical = -F * L  # Max moment at the fixed end
 
 # Compare FERS results with analytical solutions
 print("\nComparison of results:")
