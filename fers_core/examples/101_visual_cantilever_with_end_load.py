@@ -77,7 +77,7 @@ x = L  # Distance to the free end for max deflection and slope
 
 # Calculate analytical solutions for deflection and moment
 delta_analytical = (-F * x**2 / (6 * E * I)) * (3 * L - x)  # Max deflection
-M_max_analytical = F * L  # Max moment at the fixed end
+M_max_analytical = - F * L  # Max moment at the fixed end
 
 # Compare FERS results with analytical solutions
 print("\nComparison of results:")
