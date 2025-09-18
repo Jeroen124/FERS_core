@@ -1,7 +1,7 @@
 from typing import Optional
 from ..members.material import Material
 from ..members.shapepath import ShapePath
-from sectionproperties.pre.library.steel_sections import i_section, channel_section
+from sectionproperties.pre.library.steel_sections import i_section, channel_section, circular_hollow_section
 from sectionproperties.analysis.section import Section as SP_section
 
 import matplotlib.pyplot as plt
@@ -156,6 +156,123 @@ class Section:
         # 3) Mesh and analyze (mesh size similar to your IPE; tweak as you like)
         u_geometry.create_mesh(mesh_sizes=[b / 1000.0])
         analysis_section = SP_section(u_geometry, time_info=False)
+        analysis_section.calculate_geometric_properties()
+        analysis_section.calculate_warping_properties()
+
+        return Section(
+            name=name,
+            material=material,
+            i_y=float(analysis_section.section_props.iyy_c),
+            i_z=float(analysis_section.section_props.ixx_c),
+            j=float(analysis_section.get_j()),
+            area=float(analysis_section.section_props.area),
+            h=h,
+            b=b,
+            shape_path=shape_path,
+        )
+
+    @staticmethod
+    def create_chs(
+        name: str,
+        material: Material,
+        diameter: float,
+        thickness: float,
+        n: int = 64,
+    ) -> "Section":
+        """
+        Static method to create a Circular Hollow Section (CHS).
+
+        Parameters:
+            name (str): Name of the section (e.g., "CHS 168/5/H").
+            material (Material): Material used for the section.
+            diameter (float): Outside diameter of the CHS (same units you use elsewhere).
+            thickness (float): Wall thickness of the CHS (same units).
+            n (int): Number of points used to discretize the circle (for drawing & meshing).
+
+        Returns:
+            Section: A Section object representing the CHS profile.
+        """
+        # Optional shape path (if you have a matching helper; otherwise we fall back to None)
+        shape_path = None
+        try:
+            shape_commands = ShapePath.create_chs_profile(d=diameter, t=thickness, n=n)
+            shape_path = ShapePath(name=name, shape_commands=shape_commands)
+        except AttributeError:
+            shape_path = None
+
+        # sectionproperties geometry
+        chs_geometry = circular_hollow_section(d=diameter, t=thickness, n=n).shift_section(
+            x_offset=-diameter / 2.0,
+            y_offset=-diameter / 2.0,
+        )
+        chs_geometry.create_mesh(mesh_sizes=[diameter / 1000.0])
+
+        analysis_section = SP_section(chs_geometry, time_info=False)
+        analysis_section.calculate_geometric_properties()
+        analysis_section.calculate_warping_properties()
+
+        return Section(
+            name=name,
+            material=material,
+            i_y=float(analysis_section.section_props.iyy_c),
+            i_z=float(analysis_section.section_props.ixx_c),
+            j=float(analysis_section.get_j()),
+            area=float(analysis_section.section_props.area),
+            h=float(diameter),
+            b=float(diameter),
+            shape_path=shape_path,
+        )
+
+    @staticmethod
+    def create_he(
+        name: str,
+        material: Material,
+        h: float,
+        b: float,
+        t_f: float,
+        t_w: float,
+        r: float,
+    ) -> "Section":
+        """
+        Static method to create an HE (wide-flange H) section.
+        Geometry is an I/H shape with given dimensions. For series like HEA/HEB/HEM,
+        pass the actual dimensions for height (h), flange width (b), flange thickness (t_f),
+        web thickness (t_w) and root radius (r).
+
+        Parameters:
+            name (str): Name of the section (e.g., "HE 160 B").
+            material (Material): Material used for the section.
+            h (float): Total section height.
+            b (float): Flange width.
+            t_f (float): Flange thickness.
+            t_w (float): Web thickness.
+            r (float): Root fillet radius.
+
+        Returns:
+            Section: A Section object representing the HE profile.
+        """
+        # For drawing: an HE looks like your IPE path, so reuse if available; otherwise skip.
+        shape_path = None
+        try:
+            shape_commands = ShapePath.create_he_profile(h=h, b=b, t_f=t_f, t_w=t_w, r=r)
+        except AttributeError:
+            try:
+                # Fallback to IPE path generator (identical topology):
+                shape_commands = ShapePath.create_ipe_profile(h=h, b=b, t_f=t_f, t_w=t_w, r=r)
+            except AttributeError:
+                shape_commands = None
+
+        if shape_commands is not None:
+            shape_path = ShapePath(name=name, shape_commands=shape_commands)
+
+        # sectionproperties geometry (i_section is a generic I/H generator)
+        he_geometry = i_section(d=h, b=b, t_f=t_f, t_w=t_w, r=r, n_r=16).shift_section(
+            x_offset=-b / 2.0,
+            y_offset=-h / 2.0,
+        )
+        he_geometry.create_mesh(mesh_sizes=[b / 1000.0])
+
+        analysis_section = SP_section(he_geometry, time_info=False)
         analysis_section.calculate_geometric_properties()
         analysis_section.calculate_warping_properties()
 
