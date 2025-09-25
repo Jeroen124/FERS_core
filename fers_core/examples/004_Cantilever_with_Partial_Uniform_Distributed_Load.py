@@ -63,6 +63,7 @@ distributed_load = DistributedLoad(
 
 # Save the model to a file for FERS calculations
 file_path = os.path.join("json_input_solver", "004_Cantilever_with_Partial_Uniform_Distributed_Load.json")
+os.makedirs(os.path.dirname(file_path), exist_ok=True)
 calculation_1.save_to_json(file_path, indent=4)
 
 # Step 3: Run FERS calculation
@@ -99,7 +100,7 @@ end_position = 0.7 * L  # 3.5 m
 
 # The maximum moment at the fixed end is:
 #   M_max = w * L^2 / 2
-M_max_analytical = -w * (end_position - start_position) * (start_position + end_position) / 2
+M_max_analytical = w * (end_position - start_position) * (start_position + end_position) / 2
 
 print("\nComparison of results:")
 

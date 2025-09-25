@@ -59,7 +59,8 @@ end_load_case = calculation_1.create_load_case(name="End Load")
 # Apply end load at node2 1 kN downward force (global y-axis) to the loadcase
 nodal_load = NodalLoad(node=node3, load_case=end_load_case, magnitude=150000, direction=(0, -1, 0))
 
-file_path = os.path.join("examples", "json_input_solver", "22_two_bar_truss_with_visualization.json")
+file_path = os.path.join("json_input_solver", "22_two_bar_truss_with_visualization.json")
+os.makedirs(os.path.dirname(file_path), exist_ok=True)
 calculation_1.save_to_json(file_path, indent=4)
 
 

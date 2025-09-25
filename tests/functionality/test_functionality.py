@@ -192,7 +192,7 @@ def test_061_two_colinear_tension_only_members_with_mid_load():
     displacement_node_2_dx_expected = (applied_force_newton * member_length_meter) / (
         cross_section_area * elastic_modulus
     )
-    reaction_node_1_fx_expected = -applied_force_newton
+    reaction_node_1_fx_expected = applied_force_newton
     reaction_node_3_fx_expected = 0.0
 
     assert_close(

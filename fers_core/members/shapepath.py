@@ -199,6 +199,71 @@ class ShapePath:
         commands.append(ShapeCommand("closePath"))
         return commands
 
+    @staticmethod
+    def create_chs_profile(d: float, t: float, n: int = 64) -> List[ShapeCommand]:
+        """
+        Circular Hollow Section (CHS) as two concentric circular paths:
+        - Outer contour traced counter-clockwise
+        - Inner contour (the hole) traced clockwise
+
+        Angles follow arc_center_angles convention:
+            z(theta) = center_z + radius * sin(theta)
+            y(theta) = center_y + radius * cos(theta)
+
+        Parameters:
+            d (float): Outside diameter
+            t (float): Wall thickness
+            n (int):  Angular segmentation target for plotting (the arcTo command
+                      itself is analytic; n only affects plot sampling in your plot() method)
+        """
+        assert d > 0.0 and t > 0.0 and t < d / 2.0, "CHS requires 0 < t < d/2 and d > 0"
+
+        commands: List[ShapeCommand] = []
+
+        center_y = 0.0
+        center_z = 0.0
+        radius_outer = d / 2.0
+        radius_inner = radius_outer - t
+
+        # ---- Outer circle (CCW): start at theta=0 (top), go to 2π
+        start_y_outer = center_y + radius_outer * math.cos(0.0)
+        start_z_outer = center_z + radius_outer * math.sin(0.0)
+        commands.append(ShapeCommand("moveTo", y=start_y_outer, z=start_z_outer))
+        commands.extend(
+            ShapePath.arc_center_angles(
+                center_y=center_y,
+                center_z=center_z,
+                radius=radius_outer,
+                theta0=0.0,
+                theta1=2.0 * math.pi,
+            )
+        )
+
+        # ---- Inner circle (hole) (CW): start at theta=0 (top), go to -2π
+        start_y_inner = center_y + radius_inner * math.cos(0.0)
+        start_z_inner = center_z + radius_inner * math.sin(0.0)
+        commands.append(ShapeCommand("moveTo", y=start_y_inner, z=start_z_inner))
+        commands.extend(
+            ShapePath.arc_center_angles(
+                center_y=center_y,
+                center_z=center_z,
+                radius=radius_inner,
+                theta0=0.0,
+                theta1=-2.0 * math.pi,
+            )
+        )
+
+        return commands
+
+    @staticmethod
+    def create_he_profile(h: float, b: float, t_f: float, t_w: float, r: float) -> List[ShapeCommand]:
+        """
+        HE (wide-flange H) outline with optional root fillets r at web↔flange corners.
+        Geometry/topology is identical to the IPE routine, but HE dimensions differ.
+        This delegates to create_ipe_profile to keep one robust implementation.
+        """
+        return ShapePath.create_ipe_profile(h=h, b=b, t_f=t_f, t_w=t_w, r=r)
+
     def plot(self, show_nodes: bool = True):
         """
         Plots the shape on the yz plane, with y as the horizontal axis and z as the vertical axis.

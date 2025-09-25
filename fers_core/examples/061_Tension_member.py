@@ -81,6 +81,7 @@ NodalLoad(
 
 # Save the model (useful for reproducibility or external solver runs)
 file_path = os.path.join("json_input_solver", "061_Tension_member.json")
+os.makedirs(os.path.dirname(file_path), exist_ok=True)
 calculation_1.save_to_json(file_path, indent=4)
 
 # Step 3: Run FERS calculation
@@ -106,7 +107,7 @@ applied_force = mid_force_newton  # Newtons
 # - Reaction at node 1 in Fx: -F
 # - Reaction at node 3 in Fx: 0 (tension-only member cannot carry compression)
 displacement_node2_dx_expected = (applied_force * member_length) / (cross_section_area * elastic_modulus)
-reaction_node1_fx_expected = -applied_force
+reaction_node1_fx_expected = applied_force
 reaction_node3_fx_expected = 0.0
 
 
@@ -141,7 +142,7 @@ if (
 else:
     print("Reaction at node 1 does NOT match the analytical solution ❌")
 
-print(f"\nReaction force at node 3, Fx (FERS):       {reaction_node3_fx_fers:.6f} N")
+print(f"\nReaction force at node 3, Fx (FERS): {reaction_node3_fx_fers:.6f} N")
 print(f"Reaction force at node 3, Fx (Analytical):  {reaction_node3_fx_expected:.6f} N")
 if (
     abs(reaction_node3_fx_fers - reaction_node3_fx_expected) < absolute_tolerance_reaction

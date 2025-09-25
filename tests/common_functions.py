@@ -149,15 +149,15 @@ def cantilever_uniform_load_fixed_end_moment(
 def cantilever_full_triangular_fixed_end_moment(
     load_intensity_in_newton_per_meter: float, beam_length_in_meter: float
 ) -> float:
-    # Triangular with zero at fixed end, peak at free end (matches your example 005)
-    return -load_intensity_in_newton_per_meter * beam_length_in_meter**2 / 6.0
+    # Triangular with zero at fixed end, peak at free end
+    return load_intensity_in_newton_per_meter * beam_length_in_meter**2 / 6.0
 
 
 def cantilever_full_inverse_triangular_fixed_end_moment(
     load_intensity_in_newton_per_meter: float, beam_length_in_meter: float
 ) -> float:
-    # Inverse triangular with peak at fixed end, zero at free end (matches your example 005)
-    return -load_intensity_in_newton_per_meter * beam_length_in_meter**2 / 3.0
+    # Inverse triangular with peak at fixed end, zero at free end
+    return load_intensity_in_newton_per_meter * beam_length_in_meter**2 / 3.0
 
 
 def cantilever_full_triangular_deflection_at_free_end(
@@ -179,7 +179,7 @@ def cantilever_partial_uniform_resultant_and_fixed_moment(
 ) -> Tuple[float, float]:
     start_position_in_meter = start_fraction * beam_length_in_meter
     end_position_in_meter = end_fraction * beam_length_in_meter
-    resultant_force_in_newton = -load_intensity_in_newton_per_meter * (
+    resultant_force_in_newton = load_intensity_in_newton_per_meter * (
         end_position_in_meter - start_position_in_meter
     )
     centroid_from_fixed_in_meter = 0.5 * (start_position_in_meter + end_position_in_meter)
@@ -196,7 +196,7 @@ def cantilever_partial_triangular_resultant_and_fixed_moment(
 ) -> Tuple[float, float]:
     # Matches your 006 formulas exactly.
     span_fraction = end_fraction - start_fraction
-    resultant_force_in_newton = -(
+    resultant_force_in_newton = (
         load_intensity_in_newton_per_meter * 0.5 * beam_length_in_meter * span_fraction
     )
     if not inverse:

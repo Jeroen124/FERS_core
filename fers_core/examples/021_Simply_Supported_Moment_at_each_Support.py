@@ -60,18 +60,26 @@ calculation_1.add_member_set(membergroup1)
 # Step 2: Apply the load
 # ----------------------
 # Create a load case for the analysis
-start_moment_load_case = calculation_1.create_load_case(name="Start moment")
+end_moment_load_case = calculation_1.create_load_case(name="End moments")
 
 # Apply a uniform distributed load (e.g., w = 1000 N/m) downward along the entire beam
 applied_moment = NodalMoment(
     node=node1,
-    load_case=start_moment_load_case,
+    load_case=end_moment_load_case,
     magnitude=1000.0,  # 1000 NNm (example moment)
     direction=(0, 0, -1),  # Negative rotation about the global Z-axis
 )
+applied_moment = NodalMoment(
+    node=node3,
+    load_case=end_moment_load_case,
+    magnitude=1000.0,  # 1000 NNm (example moment)
+    direction=(0, 0, 1),  # Positive rotation about the global Z-axis
+)
+
 
 # Save the model to a file for FERS calculations
-file_path = os.path.join("json_input_solver", "022_Simply_Supported_Moment_at_start_Support.json")
+file_path = os.path.join("json_input_solver", "021_Simply_Supported_Moment_at_each_Support.json")
+os.makedirs(os.path.dirname(file_path), exist_ok=True)
 calculation_1.save_to_json(file_path, indent=4)
 
 # Step 3: Run FERS calculation
@@ -79,11 +87,11 @@ calculation_1.save_to_json(file_path, indent=4)
 # Perform the analysis using the saved JSON model file
 print("Running the analysis...")
 calculation_1.run_analysis()
-result_loadcase = calculation_1.results.loadcases["Start moment"]
+result_loadcase = calculation_1.results.loadcases["End moments"]
 
 # Extract results from the analysis
 dy_fers = result_loadcase.displacement_nodes["2"].dy
-Mz_fers_begin_end = result_loadcase.member_results["1"].start_node_forces.mz
+Mz_fers_begin_end = result_loadcase.reaction_nodes["1"].nodal_forces.mz
 Mz_fers_intermediate = result_loadcase.member_results["1"].end_node_forces.mz
 
 # Step 4: Validate Results Against Analytical Solution
@@ -97,9 +105,9 @@ x = L / 2  # Distance to the free end for max deflection and slope
 M0 = 1000  # Nm
 
 # Calculate analytical solutions for deflection and moment
-delta_analytical = -(M0 * L**2) / (9 * 3 ** (1 / 2) * E * I)  # Max deflection
-M_intermediate_node = M0 * (x / L)  # Max moment at intermediate node
-Mz_begin_end = 1000  # Max moment at the fixed end
+delta_analytical = -(M0 * L**2) / (8 * E * I)  # Max deflection
+M_max_analytical = M0  # Max moment at intermediate node
+Mz_begin_end = 0  # Max moment at the fixed end
 
 # Compare FERS results with analytical solutions
 print("\nComparison of results:")
@@ -113,8 +121,8 @@ else:
 print()
 
 print(f"Bending moment at middle node (FERS): {Mz_fers_intermediate:.6f} Nm")
-print(f"Bending moment at middle node (Analytical): {M_intermediate_node:.6f} Nm")
-if abs(Mz_fers_intermediate - M_intermediate_node) < 1e-6:
+print(f"Bending moment at middle node (Analytical): {M_max_analytical:.6f} Nm")
+if abs(Mz_fers_intermediate - M_max_analytical) < 1e-6:
     print("Bending moment matches the analytical solution ✅")
 else:
     print("Bending moment does NOT match the analytical solution ❌")

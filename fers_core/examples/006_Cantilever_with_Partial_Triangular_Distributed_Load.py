@@ -76,6 +76,7 @@ distributed_load = DistributedLoad(
 
 # Save the model to a file for FERS calculations
 file_path = os.path.join("json_input_solver", "006_Cantilever_with_Triangular_Distributed_Load.json")
+os.makedirs(os.path.dirname(file_path), exist_ok=True)
 calculation_1.save_to_json(file_path, indent=4)
 
 # Step 3: Run FERS calculation
@@ -105,8 +106,8 @@ E = 210e9  # Elastic modulus (Pascals)
 I = 10.63e-6  # Moment of inertia (m^4)
 
 # The maximum moment at the fixed end is:
-Shear_max_analytical_triangular = -w * (1 / 2) * L * (0.6 - 0)
-Shear_max_analytical_inverse = -w * (1 / 2) * L * (0.7 - 0.3)
+Shear_max_analytical_triangular = w * (1 / 2) * L * (0.6 - 0)
+Shear_max_analytical_inverse = w * (1 / 2) * L * (0.7 - 0.3)
 
 M_max_analytical_triangular = Shear_max_analytical_triangular * ((0 + 0.6) * L * (1 / 3))
 M_max_analytical_inverse = Shear_max_analytical_inverse * ((0.3 + (2 / 3) * (0.7 - 0.3)) * L)

@@ -52,6 +52,7 @@ nodal_load = NodalLoad(node=node2, load_case=end_load_case, magnitude=-1000, dir
 
 # Save the model to a file for FERS calculations
 file_path = os.path.join("json_input_solver", "101_cantilever_with_end_load.json")
+os.makedirs(os.path.dirname(file_path), exist_ok=True)
 calculation_1.save_to_json(file_path, indent=4)
 
 # Step 3: Run FERS calculation
