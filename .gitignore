@@ -34,3 +34,5 @@ __pycache__
 # Virtual environment
 venv/
 .env
+launch.json
+settings.json
