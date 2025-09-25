@@ -50,7 +50,8 @@ end_load_case = calculation_1.create_load_case(name="End Load")
 nodal_load = NodalLoad(node=node3, load_case=end_load_case, magnitude=-1000, direction=(1, 0, 0))
 
 
-file_path = os.path.join("examples", "json_input_solver", "11_double_cantilever.json")
+file_path = os.path.join("json_input_solver", "11_double_cantilever.json")
+os.makedirs(os.path.dirname(file_path), exist_ok=True)
 calculation_1.save_to_json(file_path, indent=4)
 
 

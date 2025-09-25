@@ -46,6 +46,7 @@ nodal_load = NodalLoad(node=node2, load_case=end_load_case, magnitude=-1000, dir
 
 # Save the model to a file for FERS calculations
 file_path = os.path.join("json_input_solver", "001_Cantilever_with_End_Load.json")
+os.makedirs(os.path.dirname(file_path), exist_ok=True)
 calculation_1.save_to_json(file_path, indent=4)
 
 # Step 3: Run FERS calculation
@@ -60,7 +61,8 @@ results = calculation_1.results.loadcases["End Load"]
 # Extract results from the analysis
 # Displacement at the free end in the y-direction
 dy_fers = results.displacement_nodes["2"].dy
-# Reaction moment at the fixed end
+# Reaction force at the fixed end
+Vy_fers = results.reaction_nodes["1"].nodal_forces.fy
 Mz_fers = results.reaction_nodes["1"].nodal_forces.mz
 
 # Step 4: Validate Results Against Analytical Solution
@@ -74,6 +76,7 @@ x = L  # Distance to the free end for max deflection and slope
 
 # Calculate analytical solutions for deflection and moment
 delta_analytical = (-F * x**2 / (6 * E * I)) * (3 * L - x)  # Max deflection
+V_shear_analytical = F
 M_max_analytical = F * L  # Max moment at the fixed end
 
 # Compare FERS results with analytical solutions
@@ -84,6 +87,17 @@ if abs(dy_fers - delta_analytical) < 1e-6:
     print("Deflection matches the analytical solution ✅")
 else:
     print("Deflection does NOT match the analytical solution ❌")
+
+print()
+
+print(f"Shear force at free end (FERS): {Vy_fers:.6f} N")
+print(f"Shear force at free end (Analytical): {V_shear_analytical:.6f} N")
+if abs(Vy_fers - V_shear_analytical) < 1e-6:
+    print("Shear force matches the analytical solution ✅")
+else:
+    print("Shear force does NOT match the analytical solution ❌")
+
+print()
 
 print(f"Reaction moment at fixed end (FERS): {Mz_fers:.6f} Nm")
 print(f"Reaction moment at fixed end (Analytical): {M_max_analytical:.6f} Nm")

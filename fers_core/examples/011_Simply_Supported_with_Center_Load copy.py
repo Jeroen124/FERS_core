@@ -67,6 +67,7 @@ nodal_load = NodalLoad(node=node2, load_case=intermediate_load_case, magnitude=-
 
 # Save the model to a file for FERS calculations
 file_path = os.path.join("json_input_solver", "011_Simply_Supported_with_Center_Load.json")
+os.makedirs(os.path.dirname(file_path), exist_ok=True)
 calculation_1.save_to_json(file_path, indent=4)
 
 # Step 3: Run FERS calculation

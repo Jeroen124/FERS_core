@@ -72,6 +72,7 @@ distributed_load = DistributedLoad(
 
 # Save the model to a file for FERS calculations
 file_path = os.path.join("json_input_solver", "005_Cantilever_with_Triangular_Distributed_Load.json")
+os.makedirs(os.path.dirname(file_path), exist_ok=True)
 calculation_1.save_to_json(file_path, indent=4)
 
 # Step 3: Run FERS calculation
@@ -112,6 +113,8 @@ if abs(dy_fers_triangular - delta_analytical_triangular) < 1e-6:
     print("Deflection matches the analytical solution ✅")
 else:
     print("Deflection does NOT match the analytical solution ❌")
+
+print()
 
 print(f"Reaction moment at fixed end (FERS): {Mz_fers_triangular:.6f} Nm")
 print(f"Reaction moment at fixed end (Analytical): {M_max_analytical_triangular:.6f} Nm")

@@ -151,130 +151,170 @@
                     "y": 0.0885,
                     "z": -0.0455,
                     "r": null,
-                    "control_y1": null,
-                    "control_z1": null,
-                    "control_y2": null,
-                    "control_z2": null
+                    "center_y": null,
+                    "center_z": null,
+                    "theta0": null,
+                    "theta1": null
                 },
                 {
                     "command": "lineTo",
                     "y": 0.0885,
                     "z": 0.0455,
                     "r": null,
-                    "control_y1": null,
-                    "control_z1": null,
-                    "control_y2": null,
-                    "control_z2": null
+                    "center_y": null,
+                    "center_z": null,
+                    "theta0": null,
+                    "theta1": null
                 },
                 {
                     "command": "lineTo",
                     "y": 0.08199999999999999,
                     "z": 0.0455,
                     "r": null,
-                    "control_y1": null,
-                    "control_z1": null,
-                    "control_y2": null,
-                    "control_z2": null
+                    "center_y": null,
+                    "center_z": null,
+                    "theta0": null,
+                    "theta1": null
                 },
                 {
                     "command": "lineTo",
                     "y": 0.08199999999999999,
-                    "z": 0.00215,
+                    "z": 0.01115,
                     "r": null,
-                    "control_y1": null,
-                    "control_z1": null,
-                    "control_y2": null,
-                    "control_z2": null
+                    "center_y": null,
+                    "center_z": null,
+                    "theta0": null,
+                    "theta1": null
+                },
+                {
+                    "command": "arcTo",
+                    "y": null,
+                    "z": null,
+                    "r": 0.009,
+                    "center_y": 0.073,
+                    "center_z": 0.01115,
+                    "theta0": 0.0,
+                    "theta1": -1.5707963267948966
                 },
                 {
                     "command": "lineTo",
-                    "y": -0.08199999999999999,
+                    "y": -0.073,
                     "z": 0.00215,
                     "r": null,
-                    "control_y1": null,
-                    "control_z1": null,
-                    "control_y2": null,
-                    "control_z2": null
+                    "center_y": null,
+                    "center_z": null,
+                    "theta0": null,
+                    "theta1": null
+                },
+                {
+                    "command": "arcTo",
+                    "y": null,
+                    "z": null,
+                    "r": 0.009,
+                    "center_y": -0.073,
+                    "center_z": 0.01115,
+                    "theta0": -1.5707963267948966,
+                    "theta1": -3.141592653589793
                 },
                 {
                     "command": "lineTo",
                     "y": -0.08199999999999999,
                     "z": 0.0455,
                     "r": null,
-                    "control_y1": null,
-                    "control_z1": null,
-                    "control_y2": null,
-                    "control_z2": null
+                    "center_y": null,
+                    "center_z": null,
+                    "theta0": null,
+                    "theta1": null
                 },
                 {
                     "command": "lineTo",
                     "y": -0.0885,
                     "z": 0.0455,
                     "r": null,
-                    "control_y1": null,
-                    "control_z1": null,
-                    "control_y2": null,
-                    "control_z2": null
+                    "center_y": null,
+                    "center_z": null,
+                    "theta0": null,
+                    "theta1": null
                 },
                 {
                     "command": "lineTo",
                     "y": -0.0885,
                     "z": -0.0455,
                     "r": null,
-                    "control_y1": null,
-                    "control_z1": null,
-                    "control_y2": null,
-                    "control_z2": null
+                    "center_y": null,
+                    "center_z": null,
+                    "theta0": null,
+                    "theta1": null
                 },
                 {
                     "command": "lineTo",
                     "y": -0.08199999999999999,
                     "z": -0.0455,
                     "r": null,
-                    "control_y1": null,
-                    "control_z1": null,
-                    "control_y2": null,
-                    "control_z2": null
+                    "center_y": null,
+                    "center_z": null,
+                    "theta0": null,
+                    "theta1": null
                 },
                 {
                     "command": "lineTo",
                     "y": -0.08199999999999999,
-                    "z": -0.00215,
+                    "z": -0.01115,
                     "r": null,
-                    "control_y1": null,
-                    "control_z1": null,
-                    "control_y2": null,
-                    "control_z2": null
+                    "center_y": null,
+                    "center_z": null,
+                    "theta0": null,
+                    "theta1": null
+                },
+                {
+                    "command": "arcTo",
+                    "y": null,
+                    "z": null,
+                    "r": 0.009,
+                    "center_y": -0.073,
+                    "center_z": -0.01115,
+                    "theta0": 3.141592653589793,
+                    "theta1": 1.5707963267948966
                 },
                 {
                     "command": "lineTo",
-                    "y": 0.08199999999999999,
+                    "y": 0.073,
                     "z": -0.00215,
                     "r": null,
-                    "control_y1": null,
-                    "control_z1": null,
-                    "control_y2": null,
-                    "control_z2": null
+                    "center_y": null,
+                    "center_z": null,
+                    "theta0": null,
+                    "theta1": null
+                },
+                {
+                    "command": "arcTo",
+                    "y": null,
+                    "z": null,
+                    "r": 0.009,
+                    "center_y": 0.073,
+                    "center_z": -0.01115,
+                    "theta0": 1.5707963267948966,
+                    "theta1": 0
                 },
                 {
                     "command": "lineTo",
                     "y": 0.08199999999999999,
                     "z": -0.0455,
                     "r": null,
-                    "control_y1": null,
-                    "control_z1": null,
-                    "control_y2": null,
-                    "control_z2": null
+                    "center_y": null,
+                    "center_z": null,
+                    "theta0": null,
+                    "theta1": null
                 },
                 {
                     "command": "closePath",
                     "y": null,
                     "z": null,
                     "r": null,
-                    "control_y1": null,
-                    "control_z1": null,
-                    "control_y2": null,
-                    "control_z2": null
+                    "center_y": null,
+                    "center_z": null,
+                    "theta0": null,
+                    "theta1": null
                 }
             ]
         }

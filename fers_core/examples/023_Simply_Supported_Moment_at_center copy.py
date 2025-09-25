@@ -74,6 +74,7 @@ applied_moment = NodalMoment(
 
 # Save the model to a file for FERS calculations
 file_path = os.path.join("json_input_solver", "023_Simply_Supported_Moment_at_center.json")
+os.makedirs(os.path.dirname(file_path), exist_ok=True)
 calculation_1.save_to_json(file_path, indent=4)
 
 # Step 3: Run FERS calculation

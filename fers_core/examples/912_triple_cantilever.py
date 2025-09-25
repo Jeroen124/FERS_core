@@ -54,6 +54,7 @@ nodal_load = NodalLoad(node=node4, load_case=end_load_case, magnitude=-1000, dir
 
 
 file_path = os.path.join("json_input_solver", "12_triple_cantilever.json")
+os.makedirs(os.path.dirname(file_path), exist_ok=True)
 calculation_1.save_to_json(file_path, indent=4)
 
 

@@ -68,6 +68,7 @@ NodalLoad(
 
 # Save the model (useful for reproducibility or external solver runs)
 file_path = os.path.join("json_input_solver", "051_Member_hinge_at_half.json")
+os.makedirs(os.path.dirname(file_path), exist_ok=True)
 calculation_1.save_to_json(file_path, indent=4)
 
 # Step 3: Run FERS calculation

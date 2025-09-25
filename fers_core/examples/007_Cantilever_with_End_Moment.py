@@ -47,11 +47,12 @@ end_moment = NodalMoment(
     node=node2,
     load_case=end_load_case,
     magnitude=500.0,
-    direction=(0, 0, 1),
+    direction=(0, 0, -1),
 )
 
 # Save the model to a file for FERS calculations
 file_path = os.path.join("json_input_solver", "007_Cantilever_with_End_Moment.json")
+os.makedirs(os.path.dirname(file_path), exist_ok=True)
 calculation_1.save_to_json(file_path, indent=4)
 
 # Step 3: Run FERS calculation
@@ -75,8 +76,8 @@ I = 10.63e-6  # Moment of inertia in m^4
 x = L  # Distance to the free end for max deflection and slope
 
 # Calculate analytical solutions for deflection and moment
-delta_analytical = M * x**2 / (2 * E * I)  # Max deflection
-M_max_analytical = -M  # Max moment at the fixed end
+delta_analytical = -M * x**2 / (2 * E * I)  # Max deflection
+M_max_analytical = M  # Max moment at the fixed end
 
 # Compare FERS results with analytical solutions
 print("\nComparison of results:")
@@ -86,6 +87,8 @@ if abs(dy_fers - delta_analytical) < 1e-6:
     print("Deflection matches the analytical solution ✅")
 else:
     print("Deflection does NOT match the analytical solution ❌")
+
+print()
 
 print(f"Reaction moment at fixed end (FERS): {Mz_fers:.6f} Nm")
 print(f"Reaction moment at fixed end (Analytical): {M_max_analytical:.6f} Nm")
