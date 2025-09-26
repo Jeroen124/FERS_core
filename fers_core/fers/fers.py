@@ -8,9 +8,8 @@ import matplotlib.pyplot as plt
 import pyvista as pv
 
 from fers_core.fers.deformation_utils import (
+    centerline_path_points,
     extrude_along_path,
-    interpolate_beam_local,
-    transform_dofs_global_to_local,
 )
 from fers_core.supports.support_utils import (
     format_support_label,
@@ -857,14 +856,13 @@ class FERS:
         displacement: bool = True,
         displacement_scale: float = 100.0,
         num_points: int = 20,
-        # NEW:
         show_supports: bool = True,
         show_support_labels: bool = True,
         support_size_fraction: float = 0.05,
     ):
         """
-        Visualize a load case or combination in 3D using PyVista, with optional
-        supports overlay.
+        Visualize a load case or combination in 3D using PyVista, with optional supports overlay.
+        The deformed centerline and the deformed extrusion use the same spline points.
         """
         if self.results is None:
             raise ValueError("No analysis results available.")
@@ -907,64 +905,11 @@ class FERS:
         displacement_nodes = chosen.displacement_nodes
 
         # -----------------------------
-        # Helpers
-        # -----------------------------
-
-        def get_local_transform(member):
-            lx, ly, lz = member.local_coordinate_system()
-            return np.column_stack([lx, ly, lz])
-
-        def interpolate_member(member, d_start, r_start, d_end, r_end):
-            L = member.length()
-            local_deflections = interpolate_beam_local(0.0, L, d_start, d_end, r_start, r_end, num_points)
-            return local_deflections * displacement_scale
-
-        def plot_section(member, d_start_vec, r_start_vec, d_end_vec, r_end_vec, plotter_ref):
-            section = getattr(member, "section", None)
-            if section is None or getattr(section, "shape_path", None) is None:
-                return
-
-            coords_2d, edges = section.shape_path.get_shape_geometry()
-            coords_local = np.array([[0.0, y, z] for y, z in coords_2d], dtype=np.float32)
-            R = get_local_transform(member)
-            start = member.start_node
-            end = member.end_node
-            origin = np.array([start.X, start.Y, start.Z])
-            coords_global = (coords_local @ R.T + origin).astype(np.float32)
-
-            pd = pv.PolyData(coords_global)
-            line_array = []
-            for a, b in edges:
-                line_array.extend((2, a, b))
-            pd.lines = np.array(line_array, dtype=np.int32)
-
-            direction = np.array([end.X, end.Y, end.Z]) - origin
-            orig_extruded = pd.extrude(direction, capping=True)
-            plotter_ref.add_mesh(orig_extruded, color="steelblue", label=f"Section {section.name}")
-
-            if displacement:
-                dls, rls = transform_dofs_global_to_local(d_start_vec, r_start_vec, R)
-                dle, rle = transform_dofs_global_to_local(d_end_vec, r_end_vec, R)
-                local_def = interpolate_member(member, dls, rls, dle, rle)
-                t_vals = np.linspace(0, 1, num_points)
-                curve_pts = []
-                for i, t in enumerate(t_vals):
-                    orig_pt = origin + t * direction
-                    defl_local = local_def[i]
-                    defl_global = R @ defl_local
-                    curve_pts.append(orig_pt + defl_global)
-                curve_pts = np.array(curve_pts)
-                spline = pv.Spline(curve_pts, num_points * 2)
-                deformed = extrude_along_path(section.shape_path, spline.points)
-                plotter_ref.add_mesh(deformed, color="red", label=f"Deformed Section {section.name}")
-
-        # -----------------------------
-        # Start drawing
+        # Plotter + scales
         # -----------------------------
         plotter = pv.Plotter()
         plotter.add_axes()
 
-        # scale for support glyphs
         min_coords, max_coords = self.get_structure_bounds()
         if min_coords and max_coords:
             structure_size = np.linalg.norm(np.array(max_coords) - np.array(min_coords))
@@ -972,43 +917,116 @@ class FERS:
             structure_size = 1.0
         support_arrow_scale = max(1e-6, structure_size * support_size_fraction)
 
-        # precompute nodal positions and displacements
-        node_pos: Dict[int, np.ndarray] = {}
+        # -----------------------------
+        # Gather nodal displacements (global)
+        # -----------------------------
         node_disp: Dict[int, Tuple[np.ndarray, np.ndarray]] = {}
         for nid_str, nodisp in displacement_nodes.items():
             nid = int(nid_str)
             node = self.get_node_by_pk(nid)
             if node is None:
                 continue
-            p = np.array([node.X, node.Y, node.Z])
-            node_pos[nid] = p
             if displacement and nodisp:
-                dgl = np.array([nodisp.dx, nodisp.dy, nodisp.dz])
-                rgl = np.array([nodisp.rx, nodisp.ry, nodisp.rz])
+                dgl = np.array([nodisp.dx, nodisp.dy, nodisp.dz], dtype=float)
+                rgl = np.array([nodisp.rx, nodisp.ry, nodisp.rz], dtype=float)
             else:
-                dgl = np.zeros(3)
-                rgl = np.zeros(3)
+                dgl = np.zeros(3, dtype=float)
+                rgl = np.zeros(3, dtype=float)
             node_disp[nid] = (dgl, rgl)
 
-        # sections
-        if show_sections:
-            for m in self.get_all_members():
-                ds, rs = node_disp[m.start_node.id]
-                de, re = node_disp[m.end_node.id]
-                plot_section(m, ds, rs, de, re, plotter)
+        # -----------------------------
+        # Draw members: centerlines + extrusions
+        # -----------------------------
+        centerline_samples = num_points
+        extrusion_samples = max(num_points * 2, 2 * num_points + 1)
 
-        # nodes (original and deformed)
+        labeled_lines = False
+        labeled_def_section = False
+        labeled_org_section = False
+
+        for m in self.get_all_members():
+            d0_gl, r0_gl = node_disp.get(m.start_node.id, (np.zeros(3), np.zeros(3)))
+            d1_gl, r1_gl = node_disp.get(m.end_node.id, (np.zeros(3), np.zeros(3)))
+
+            # 1) Build centerlines once (original + deformed)
+            orig_curve, def_curve = centerline_path_points(
+                m, d0_gl, r0_gl, d1_gl, r1_gl, centerline_samples, displacement_scale
+            )
+
+            # 2) Use the extrusion spline points as the canonical deformed path
+            def_path_pts = np.ascontiguousarray(pv.Spline(def_curve, extrusion_samples).points, dtype=float)
+            # Keep exact ends to avoid tiny spline overshoot
+            def_path_pts[0] = def_curve[0]
+            def_path_pts[-1] = def_curve[-1]
+
+            # 3) Draw lines using the SAME points you'll extrude along for the red shape
+            plotter.add_mesh(
+                pv.lines_from_points(orig_curve),
+                color="blue",
+                line_width=2,
+                label=None if labeled_lines else "Original Shape",
+            )
+            plotter.add_mesh(
+                pv.lines_from_points(def_path_pts),
+                color="red",
+                line_width=2,
+                label=None if labeled_lines else "Deformed Shape",
+            )
+            labeled_lines = True
+
+            # 4) Extrude sections along exactly the same path
+            if show_sections:
+                section = getattr(m, "section", None)
+                if section is not None and getattr(section, "shape_path", None) is not None:
+                    # Deformed (red) — exact same points as the red line
+                    if displacement:
+                        deformed_mesh = extrude_along_path(section.shape_path, def_path_pts)
+                        plotter.add_mesh(
+                            deformed_mesh,
+                            color="red",
+                            label=None if labeled_def_section else "Deformed Section",
+                        )
+                        labeled_def_section = True
+
+                    # Original (steelblue) — straight extrusion along the undeformed member axis
+                    s = m.start_node
+                    e = m.end_node
+                    coords_2d, edges = section.shape_path.get_shape_geometry()
+                    coords_local = np.array([[0.0, y, z] for y, z in coords_2d], dtype=np.float32)
+                    R = np.column_stack(m.local_coordinate_system())
+                    origin = np.array([s.X, s.Y, s.Z], dtype=float)
+                    coords_global = (coords_local @ R.T + origin).astype(np.float32)
+
+                    pd = pv.PolyData(coords_global)
+                    line_array = []
+                    for a, b in edges:
+                        line_array.extend((2, a, b))
+                    pd.lines = np.array(line_array, dtype=np.int32)
+
+                    direction = np.array([e.X, e.Y, e.Z], dtype=float) - origin
+                    orig_mesh = pd.extrude(direction, capping=True)
+                    plotter.add_mesh(
+                        orig_mesh,
+                        color="steelblue",
+                        label=None if labeled_org_section else "Original Section",
+                    )
+                    labeled_org_section = True
+
+        # -----------------------------
+        # Nodes (original + deformed)
+        # -----------------------------
         if show_nodes:
             originals = []
             deformed = []
             for node in self.get_all_nodes():
                 pid = node.id
-                orig = np.array([node.X, node.Y, node.Z])
+                orig = np.array([node.X, node.Y, node.Z], dtype=float)
+                dgl, _ = node_disp.get(pid, (np.zeros(3), np.zeros(3)))
                 originals.append(orig)
-                dgl, _ = node_disp.get(pid, (np.zeros(3), None))
                 deformed.append(orig + dgl * displacement_scale)
-            originals = np.array(originals)
-            deformed = np.array(deformed)
+
+            originals = np.array(originals, dtype=float)
+            deformed = np.array(deformed, dtype=float)
 
             plotter.add_mesh(
                 pv.PolyData(originals).glyph(scale=False, geom=pv.Sphere(radius=0.05)),
@@ -1021,35 +1039,9 @@ class FERS:
                 label="Deformed Nodes",
             )
 
-        # member center-lines
-        for m in self.get_all_members():
-            sid = m.start_node.id
-            eid = m.end_node.id
-            p0 = node_pos[sid]
-            p1 = node_pos[eid]
-            d0, r0 = node_disp[sid]
-            d1, r1 = node_disp[eid]
-
-            R = get_local_transform(m)
-            local_def = (
-                interpolate_beam_local(
-                    0.0,
-                    m.length(),
-                    *transform_dofs_global_to_local(d0, r0, R),
-                    *transform_dofs_global_to_local(d1, r1, R),
-                    num_points,
-                )
-                * displacement_scale
-            )
-
-            t_vals = np.linspace(0, 1, num_points)
-            orig_curve = np.array([p0 + t * (p1 - p0) for t in t_vals])
-            def_curve = np.array([orig_curve[i] + (R @ local_def[i]) for i in range(num_points)])
-
-            plotter.add_lines(orig_curve, color="blue", width=2, label="Original Shape")
-            plotter.add_lines(def_curve, color="red", width=2, label="Deformed Shape")
-
-        # supports
+        # -----------------------------
+        # Supports overlay
+        # -----------------------------
         if show_supports:
             legend_added_for_type: set[str] = set()
             axis_unit_vectors = {
@@ -1092,6 +1084,9 @@ class FERS:
                         always_visible=True,
                     )
 
+        # -----------------------------
+        # Finish
+        # -----------------------------
         plotter.add_legend()
         plotter.show_grid(color="gray")
         plotter.show(title=f'3D Results: "{chosen.name}"')

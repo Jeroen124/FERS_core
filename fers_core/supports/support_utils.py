@@ -137,7 +137,7 @@ def color_for_condition_type(condition_type: str) -> str:
 
 
 def format_support_label(nodal_support) -> str:
-    mapping = {"fixed": "Fx", "free": "Fr", "spring": "k", "positive-only": "+", "negative-only": "-"}
+    mapping = {"fixed": "F", "free": "R", "spring": "S", "positive-only": "+", "negative-only": "-"}
 
     def trio(conds: dict) -> list[str]:
         out = []
