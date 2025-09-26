@@ -7,12 +7,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pyvista as pv
 
-
-from ..fers.deformation_utils import (
+from fers_core.fers.deformation_utils import (
+    extrude_along_path,
     interpolate_beam_local,
     transform_dofs_global_to_local,
-    extrude_along_path,
 )
+
 from ..imperfections.imperfectioncase import ImperfectionCase
 from ..loads.loadcase import LoadCase
 from ..loads.loadcombination import LoadCombination
@@ -26,7 +26,7 @@ from ..members.shapepath import ShapePath
 from ..nodes.node import Node
 from ..supports.nodalsupport import NodalSupport
 from ..settings.settings import Settings
-from ..types.pydantic_models import Results, ResultsBundle
+from ..types.pydantic_models import ResultsBundle
 
 
 class FERS:
@@ -685,35 +685,119 @@ class FERS:
 
     def plot_model_3d(
         self,
-        show_nodes=True,
-        show_sections=True,
-        show_local_axes=False,
+        show_nodes: bool = True,
+        show_sections: bool = True,
+        show_local_axes: bool = False,
         local_axes_at_midspan: bool = False,
-        display_Local_axes_scale=1,
-        load_case=None,
-        display_load_scale=1,  # Added scale factor for point loads, default = 1
-        show_load_labels=True,
+        display_Local_axes_scale: float = 1.0,
+        load_case: Optional[str] = None,
+        display_load_scale: float = 1.0,
+        show_load_labels: bool = True,
+        show_supports: bool = True,
+        show_support_labels: bool = True,
+        support_size_fraction: float = 0.05,
+        # NEW: draw a square plate for all-fixed supports
+        show_support_base_for_fixed: bool = True,
     ):
         """
-        Creates an interactive 3D PyVista plot of the entire model, aligning sections to the member's axis.
+        Creates an interactive 3D PyVista plot of the entire model, aligning
+        sections to each member's axis.
+
         Parameters:
-        - show_nodes (bool): Whether to show node spheres in the plot.
-        - show_sections (bool): Whether to extrude sections along members' axes.
-        - show_local_axes (bool): Whether to plot the local coordinate system at each member's start node.
-        - local_axes_at_midspan (bool): If True, draw local axes at the midpoint of each member
-        - load_case_name (str): Name of the load case to display loads for. If None, no point loads are shown.
-        - point_load_scale (float): Scale factor for point loads, default is 1.
+        - show_nodes: Whether to show node spheres.
+        - show_sections: Whether to extrude sections along members' axes.
+        - show_local_axes: Whether to plot local axes at each member.
+        - local_axes_at_midspan: Draw local axes at midspan instead of start node.
+        - display_Local_axes_scale: Scale for local axes arrows.
+        - load_case: Name of load case to display loads.
+        - display_load_scale: Scale factor for point loads.
+        - show_load_labels: Show load magnitudes next to arrows.
+        - show_supports: Draw nodal supports visualization.
+        - show_support_labels: Add compact text label per support (U[...] R[...]).
+        - support_size_fraction: Size of support arrows vs model bounding size.
+        - show_support_base_for_fixed: If True, draw a flat square (plate) for
+        all-fixed translational supports.
         """
 
-        # Create a PyVista plotter
+        # -----------------------------
+        # Helpers for supports
+        # -----------------------------
+        def get_condition_type(support_condition) -> str:
+            """
+            Return a lowercase condition type
+            ('fixed', 'free', 'spring', 'positive-only', 'negative-only').
+            Uses .to_dict()['type'] or .type; falls back to parsing str(condition).
+            """
+            if support_condition is None:
+                return "fixed"
+            try:
+                if hasattr(support_condition, "to_dict"):
+                    d = support_condition.to_dict()
+                    if isinstance(d, dict) and "type" in d:
+                        return str(d["type"]).strip().lower()
+            except Exception:
+                pass
+            if hasattr(support_condition, "type"):
+                try:
+                    return str(getattr(support_condition, "type")).strip().lower()
+                except Exception:
+                    pass
+            s = str(support_condition).strip().lower()
+            m = re.search(r"type\s*=\s*([a-z\-]+)", s)
+            if m:
+                return m.group(1)
+            return s
+
+        def translational_summary(nodal_support) -> str:
+            """
+            Classify translations as one of:
+            'all_fixed', 'all_free', 'any_spring', or 'mixed'.
+            """
+            types = []
+            for axis in ("X", "Y", "Z"):
+                c = nodal_support.displacement_conditions.get(axis)
+                types.append(get_condition_type(c))
+            if all(t == "fixed" for t in types):
+                return "all_fixed"
+            if all(t == "free" for t in types):
+                return "all_free"
+            if any(t == "spring" for t in types):
+                return "any_spring"
+            return "mixed"
+
+        def format_support_label(nodal_support) -> str:
+            mapping = {"fixed": "Fx", "free": "Fr", "spring": "k", "positive-only": "+", "negative-only": "-"}
+
+            def trio(conds: dict) -> list[str]:
+                out = []
+                for axis in ("X", "Y", "Z"):
+                    c = conds.get(axis) or conds.get(axis.upper()) or conds.get(axis.lower())
+                    out.append(mapping.get(get_condition_type(c), "??"))
+                return out
+
+            return (
+                f"U[{','.join(trio(nodal_support.displacement_conditions))}] "
+                f"R[{','.join(trio(nodal_support.rotation_conditions))}]"
+            )
+
+        def color_for_condition_type(condition_type: str) -> str:
+            return {
+                "fixed": "crimson",
+                "spring": "orange",
+                "free": "lightgray",
+                "positive-only": "green",
+                "negative-only": "purple",
+            }.get(condition_type, "black")
+
+        # -----------------------------
+        # Build plot
+        # -----------------------------
         plotter = pv.Plotter()
 
-        # Store all members and lines
         all_points = []
         all_lines = []
-        point_offset = 0
+        offset = 0
 
-        # Retrieve all members
         members = self.get_all_members()
 
         min_coords, max_coords = self.get_structure_bounds()
@@ -722,149 +806,155 @@ class FERS:
         else:
             structure_size = 1.0
 
-        arrow_scale_factor = structure_size * 0.5
+        arrow_scale_for_loads = structure_size * 0.5
+        support_arrow_scale = max(1e-6, structure_size * support_size_fraction)
 
-        # Process all members to create 3D edges
-        for member in members:
-            start_node = member.start_node
-            end_node = member.end_node
+        for m in members:
+            s = m.start_node
+            e = m.end_node
+            all_points.append((s.X, s.Y, s.Z))
+            all_points.append((e.X, e.Y, e.Z))
+            all_lines.extend([2, offset, offset + 1])
+            offset += 2
 
-            # Collect start and end coordinates
-            start_xyz = (start_node.X, start_node.Y, start_node.Z)
-            end_xyz = (end_node.X, end_node.Y, end_node.Z)
-
-            # Add points to the points list
-            all_points.append(start_xyz)
-            all_points.append(end_xyz)
-
-            # Define a line connecting these two points
-            all_lines.append(2)
-            all_lines.append(point_offset)
-            all_lines.append(point_offset + 1)
-
-            point_offset += 2
-
-        # Convert points and lines to PyVista PolyData
         all_points = np.array(all_points, dtype=np.float32)
-        poly_data = pv.PolyData(all_points)
-        poly_data.lines = np.array(all_lines, dtype=np.int32)
-
-        # Add lines to the plot
-        plotter.add_mesh(poly_data, color="blue", line_width=2, label="Members")
+        poly = pv.PolyData(all_points)
+        poly.lines = np.array(all_lines, dtype=np.int32)
+        plotter.add_mesh(poly, color="blue", line_width=2, label="Members")
 
         if show_sections:
-            for member in members:
-                start_node = member.start_node
-                end_node = member.end_node
-                section = getattr(member, "section", None)
-                if section is None or getattr(section, "shape_path", None) is None:
+            for m in members:
+                s = m.start_node
+                e = m.end_node
+                sec = getattr(m, "section", None)
+                if sec is None or getattr(sec, "shape_path", None) is None:
                     continue
-
-                if section.shape_path is not None:
-                    # Get nodes and edges of the section in the local y-z plane
-                    coords_2d, edges = section.shape_path.get_shape_geometry()
-
-                    # Convert to a 3D format, keeping points in the local y-z plane
-                    coords_local = np.array([[0.0, y, z] for y, z in coords_2d], dtype=np.float32)
-
-                    # Get the local coordinate system
-                    local_x, local_y, local_z = member.local_coordinate_system()
-
-                    # Build the transformation matrix
-                    transform_matrix = np.column_stack((local_x, local_y, local_z))
-
-                    # Transform the local y-z points into the global coordinate system
-                    transformed_coords = coords_local @ transform_matrix.T
-
-                    # Translate the transformed coordinates to the start node position
-                    transformed_coords += np.array([start_node.X, start_node.Y, start_node.Z])
-
-                    # Create a PyVista PolyData for the section
-                    section_polydata = pv.PolyData(transformed_coords)
-                    lines = []
-                    for edge in edges:
-                        lines.append(2)
-                        lines.extend(edge)
-                    section_polydata.lines = np.array(lines, dtype=np.int32)
-
-                    # Extrude the section along the member's local x-axis
-                    dx = end_node.X - start_node.X
-                    dy = end_node.Y - start_node.Y
-                    dz = end_node.Z - start_node.Z
-                    extruded_section = section_polydata.extrude([dx, dy, dz], capping=True)
-
-                    # Add extruded section to the plot
-                    plotter.add_mesh(extruded_section, color="steelblue", label=f"Section {section.name}")
+                coords_2d, edges = sec.shape_path.get_shape_geometry()
+                coords_local = np.array([[0.0, y, z] for y, z in coords_2d], dtype=np.float32)
+                lx, ly, lz = m.local_coordinate_system()
+                T = np.column_stack((lx, ly, lz))
+                coords_g = coords_local @ T.T + np.array([s.X, s.Y, s.Z])
+                pd = pv.PolyData(coords_g)
+                line_arr = []
+                for a, b in edges:
+                    line_arr.extend((2, a, b))
+                pd.lines = np.array(line_arr, dtype=np.int32)
+                dx, dy, dz = e.X - s.X, e.Y - s.Y, e.Z - s.Z
+                extr = pd.extrude([dx, dy, dz], capping=True)
+                plotter.add_mesh(extr, color="steelblue", label=f"Section {sec.name}")
 
         if show_local_axes:
-            for index, member in enumerate(members):
-                start_node = member.start_node
-                end_node = member.end_node
-                local_x, local_y, local_z = member.local_coordinate_system()
-
-                start = np.array([start_node.X, start_node.Y, start_node.Z], dtype=float)
-                if local_axes_at_midspan:
-                    end = np.array([end_node.X, end_node.Y, end_node.Z], dtype=float)
-                    origin = 0.5 * (start + end)
+            for idx, m in enumerate(members):
+                s = m.start_node
+                e = m.end_node
+                lx, ly, lz = m.local_coordinate_system()
+                p0 = np.array([s.X, s.Y, s.Z], dtype=float)
+                origin = 0.5 * (p0 + np.array([e.X, e.Y, e.Z], dtype=float)) if local_axes_at_midspan else p0
+                sc = display_Local_axes_scale
+                if idx == 0:
+                    plotter.add_arrows(origin, lx * sc, color="red", label="Local X")
+                    plotter.add_arrows(origin, ly * sc, color="green", label="Local Y")
+                    plotter.add_arrows(origin, lz * sc, color="blue", label="Local Z")
                 else:
-                    origin = start
-
-                scale = display_Local_axes_scale
-
-                if index == 0:
-                    plotter.add_arrows(origin, local_x * scale, color="red", label="Local X")
-                    plotter.add_arrows(origin, local_y * scale, color="green", label="Local Y")
-                    plotter.add_arrows(origin, local_z * scale, color="blue", label="Local Z")
-                else:
-                    plotter.add_arrows(origin, local_x * scale, color="red")
-                    plotter.add_arrows(origin, local_y * scale, color="green")
-                    plotter.add_arrows(origin, local_z * scale, color="blue")
+                    plotter.add_arrows(origin, lx * sc, color="red")
+                    plotter.add_arrows(origin, ly * sc, color="green")
+                    plotter.add_arrows(origin, lz * sc, color="blue")
 
         if load_case:
-            load_case = self.get_load_case_by_name(load_case)
-            if load_case:
-                for nodal_load in load_case.nodal_loads:
-                    node = nodal_load.node
-                    # Compute the force vector components
-                    load_vector = np.array(nodal_load.direction) * nodal_load.magnitude * display_load_scale
-                    magnitude = np.linalg.norm(load_vector)
-                    if magnitude > 0:
-                        direction = load_vector / magnitude
+            lc = self.get_load_case_by_name(load_case)
+            if lc:
+                for nl in lc.nodal_loads:
+                    node = nl.node
+                    vec = np.array(nl.direction) * nl.magnitude * display_load_scale
+                    mag = np.linalg.norm(vec)
+                    if mag > 0:
+                        direction = vec / mag
+                        p = np.array([node.X, node.Y, node.Z])
                         plotter.add_arrows(
-                            np.array([node.X, node.Y, node.Z]),
-                            direction * arrow_scale_factor,  # Scale arrows
-                            color="#FFA500",  # Orange
-                            label="Point Load",
+                            p, direction * arrow_scale_for_loads, color="#FFA500", label="Point Load"
                         )
-                        # Calculate the midpoint for the label position
-                        midpoint = np.array([node.X, node.Y, node.Z]) + (direction * (arrow_scale_factor / 2))
-                        # Display the magnitude next to the midpoint of the arrow
+                        mid = p + direction * (arrow_scale_for_loads / 2.0)
                         plotter.add_point_labels(
-                            midpoint,
-                            [f"{magnitude:.2f}"],  # Format magnitude to 2 decimal places
-                            font_size=20 * arrow_scale_factor,
+                            mid,
+                            [f"{mag:.2f}"],
+                            font_size=14,
                             text_color="#FFA500",
                             always_visible=show_load_labels,
                         )
 
         if show_nodes:
-            # Plot spheres at each unique node location
-            unique_nodes = self.get_all_nodes()
-            node_points = np.array([(node.X, node.Y, node.Z) for node in unique_nodes], dtype=np.float32)
-            point_cloud = pv.PolyData(node_points)
-            glyph = point_cloud.glyph(geom=pv.Sphere(radius=0.1), scale=False, orient=False)
+            nodes = self.get_all_nodes()
+            pts = np.array([(n.X, n.Y, n.Z) for n in nodes], dtype=np.float32)
+            cloud = pv.PolyData(pts)
+            glyph = cloud.glyph(
+                geom=pv.Sphere(radius=max(1e-6, structure_size * 0.01)), scale=False, orient=False
+            )
             plotter.add_mesh(glyph, color="red", label="Nodes")
 
-        # Add a legend and grid
+        # ---------------------------------------------
+        # Supports: arrows + optional square plate for all-fixed translations
+        # ---------------------------------------------
+        if show_supports:
+            legend_types: set[str] = set()
+            plate_legend_added = False
+            axis_dirs = {
+                "X": np.array([1.0, 0.0, 0.0]),
+                "Y": np.array([0.0, 1.0, 0.0]),
+                "Z": np.array([0.0, 0.0, 1.0]),
+            }
+
+            for node in self.get_all_nodes():
+                sup = getattr(node, "nodal_support", None)
+                if not sup:
+                    continue
+
+                pos = np.array([node.X, node.Y, node.Z], dtype=float)
+
+                # Colored arrows by translational condition per axis
+                for axis_name, axis_vec in axis_dirs.items():
+                    ctype = get_condition_type(sup.displacement_conditions.get(axis_name))
+                    color_val = color_for_condition_type(ctype)
+                    label = None
+                    # One legend item per condition type
+                    if ctype not in legend_types:
+                        label = f"Support {axis_name} – {ctype.title()}"
+                        legend_types.add(ctype)
+                    plotter.add_arrows(pos, axis_vec * support_arrow_scale, color=color_val, label=label)
+
+                # Flat square plate if all three translations are fixed
+                if show_support_base_for_fixed and translational_summary(sup) == "all_fixed":
+                    plate_size = support_arrow_scale * 1.2  # edge length in X and Y
+                    plate_thickness = support_arrow_scale * 0.15  # thin in Z to read as a square "plate"
+                    # Square in the global XY plane (thin along Z)
+                    plate = pv.Cube(
+                        center=pos, x_length=plate_size, y_length=plate_size, z_length=plate_thickness
+                    )
+                    plotter.add_mesh(
+                        plate,
+                        color="black",
+                        opacity=0.8,
+                        label=None if plate_legend_added else "Fixed support (plate)",
+                    )
+                    plate_legend_added = True
+
+                if show_support_labels:
+                    text = format_support_label(sup)
+                    label_pos = pos + np.array([1.0, 1.0, 1.0]) * (support_arrow_scale * 0.6)
+                    plotter.add_point_labels(
+                        label_pos, [text], font_size=12, text_color="black", always_visible=True
+                    )
+
         plotter.add_legend()
+
         min_coords, max_coords = self.get_structure_bounds()
         if min_coords and max_coords:
-            margin = 0.5  # meters, adjust to taste
+            margin = 0.5
             x_min, y_min, z_min = (c - margin for c in min_coords)
             x_max, y_max, z_max = (c + margin for c in max_coords)
             plotter.show_grid(bounds=[x_min, x_max, y_min, y_max, z_min, z_max], color="gray")
         else:
             plotter.show_grid(color="gray")
+
         plotter.show(title="FERS 3D Model")
 
     def show_results_3d(
@@ -877,114 +967,132 @@ class FERS:
         displacement: bool = True,
         displacement_scale: float = 100.0,
         num_points: int = 20,
+        # NEW:
+        show_supports: bool = True,
+        show_support_labels: bool = True,
+        support_size_fraction: float = 0.05,
     ):
         """
-        Visualizes any one of the loaded cases or combinations in 3D using PyVista.
-
-        Args:
-            loadcase (int or str, optional): If you want a load‑case, specify either its
-                one‑based index (1, 2, …) or its name ("Dead Load", "End Load", …).
-            loadcombination (int or str, optional): Likewise for load‑combinations.
-            show_sections (bool): Extrude and draw section profiles.
-            show_nodes (bool): Draw the nodes as spheres.
-            displacement (bool): Show the deformed shape as well as the original.
-            displacement_scale (float): How much to scale nodal displacements.
-            num_points (int): Number of points per member for interpolation.
+        Visualize a load case or combination in 3D using PyVista, with optional
+        supports overlay.
         """
-        # pick the right Results object out of the Bundle
-        bundle = self.results  # assume this is a ResultsBundle
-        chosen: Results
+        if self.results is None:
+            raise ValueError("No analysis results available.")
+
         if loadcase is not None and loadcombination is not None:
-            raise ValueError("Please specify either loadcase or loadcombination, not both.")
+            raise ValueError("Specify either loadcase or loadcombination, not both.")
+
+        # Select the Results object
         if loadcase is not None:
-            keys = list(bundle.loadcases.keys())
+            keys = list(self.results.loadcases.keys())
             if isinstance(loadcase, int):
                 try:
                     key = keys[loadcase - 1]
                 except IndexError:
                     raise IndexError(f"Loadcase index {loadcase} is out of range.")
             else:
-                key = loadcase
-                if key not in bundle.loadcases:
+                key = str(loadcase)
+                if key not in self.results.loadcases:
                     raise KeyError(f"Loadcase '{key}' not found.")
-            chosen = bundle.loadcases[key]
+            chosen = self.results.loadcases[key]
         elif loadcombination is not None:
-            keys = list(bundle.loadcombinations.keys())
+            keys = list(self.results.loadcombinations.keys())
             if isinstance(loadcombination, int):
                 try:
                     key = keys[loadcombination - 1]
                 except IndexError:
                     raise IndexError(f"Loadcombination index {loadcombination} is out of range.")
             else:
-                key = loadcombination
-                if key not in bundle.loadcombinations:
+                key = str(loadcombination)
+                if key not in self.results.loadcombinations:
                     raise KeyError(f"Loadcombination '{key}' not found.")
-            chosen = bundle.loadcombinations[key]
+            chosen = self.results.loadcombinations[key]
         else:
-            # neither was given: if there's exactly one loadcase and zero combinations, take it
-            if len(bundle.loadcases) == 1 and not bundle.loadcombinations:
-                chosen = next(iter(bundle.loadcases.values()))
+            # auto-pick if there is exactly one loadcase and zero combinations
+            if len(self.results.loadcases) == 1 and not self.results.loadcombinations:
+                chosen = next(iter(self.results.loadcases.values()))
             else:
-                raise ValueError(
-                    "Multiple results available – please specify " "`loadcase=` or `loadcombination=`."
-                )
+                raise ValueError("Multiple results available – specify loadcase= or loadcombination=.")
 
-        # now 'chosen' is a Results object; pull out exactly what you need
         displacement_nodes = chosen.displacement_nodes
 
-        # ---------------------------------------------------
-        # HELPER FUNCTIONS TO REMOVE DUPLICATION
-        # ---------------------------------------------------
+        # -----------------------------
+        # Helpers
+        # -----------------------------
+        def get_condition_type(support_condition) -> str:
+            if support_condition is None:
+                return "fixed"
+            try:
+                if hasattr(support_condition, "to_dict"):
+                    d = support_condition.to_dict()
+                    if isinstance(d, dict) and "type" in d:
+                        return str(d["type"]).strip().lower()
+            except Exception:
+                pass
+            if hasattr(support_condition, "type"):
+                return str(getattr(support_condition, "type")).strip().lower()
+            return str(support_condition).strip().lower()
+
+        def format_support_label(nodal_support) -> str:
+            mapping = {"fixed": "Fx", "free": "Fr", "spring": "k", "positive-only": "+", "negative-only": "-"}
+
+            def trio(conds: dict) -> list[str]:
+                out = []
+                for axis in ("X", "Y", "Z"):
+                    c = conds.get(axis) or conds.get(axis.upper()) or conds.get(axis.lower())
+                    out.append(mapping.get(get_condition_type(c), "??"))
+                return out
+
+            return (
+                f"U[{','.join(trio(nodal_support.displacement_conditions))}] "
+                f"R[{','.join(trio(nodal_support.rotation_conditions))}]"
+            )
+
+        def color_for_condition_type(condition_type: str) -> str:
+            return {
+                "fixed": "crimson",
+                "spring": "orange",
+                "free": "lightgray",
+                "positive-only": "green",
+                "negative-only": "purple",
+            }.get(condition_type, "black")
+
         def get_local_transform(member):
             lx, ly, lz = member.local_coordinate_system()
             return np.column_stack([lx, ly, lz])
 
         def interpolate_member(member, d_start, r_start, d_end, r_end):
             L = member.length()
-            local_deflections = interpolate_beam_local(
-                0.0,
-                L,
-                d_start,
-                d_end,
-                r_start,
-                r_end,
-                num_points,
-            )
+            local_deflections = interpolate_beam_local(0.0, L, d_start, d_end, r_start, r_end, num_points)
             return local_deflections * displacement_scale
 
-        def plot_section(member, d_start_vec, r_start_vec, d_end_vec, r_end_vec):
-            # build the section polydata once
+        def plot_section(member, d_start_vec, r_start_vec, d_end_vec, r_end_vec, plotter_ref):
             section = getattr(member, "section", None)
-
             if section is None or getattr(section, "shape_path", None) is None:
                 return
 
             coords_2d, edges = section.shape_path.get_shape_geometry()
             coords_local = np.array([[0.0, y, z] for y, z in coords_2d], dtype=np.float32)
             R = get_local_transform(member)
-
-            # original
             start = member.start_node
             end = member.end_node
             origin = np.array([start.X, start.Y, start.Z])
             coords_global = (coords_local @ R.T + origin).astype(np.float32)
+
             pd = pv.PolyData(coords_global)
             line_array = []
             for a, b in edges:
                 line_array.extend((2, a, b))
             pd.lines = np.array(line_array, dtype=np.int32)
+
             direction = np.array([end.X, end.Y, end.Z]) - origin
             orig_extruded = pd.extrude(direction, capping=True)
-            plotter.add_mesh(orig_extruded, color="steelblue", label=f"Section {section.name}")
+            plotter_ref.add_mesh(orig_extruded, color="steelblue", label=f"Section {section.name}")
 
-            # deformed
             if displacement:
-                # transform global → local
                 dls, rls = transform_dofs_global_to_local(d_start_vec, r_start_vec, R)
                 dle, rle = transform_dofs_global_to_local(d_end_vec, r_end_vec, R)
                 local_def = interpolate_member(member, dls, rls, dle, rle)
-
-                # build the deformed path in global coords
                 t_vals = np.linspace(0, 1, num_points)
                 curve_pts = []
                 for i, t in enumerate(t_vals):
@@ -993,20 +1101,25 @@ class FERS:
                     defl_global = R @ defl_local
                     curve_pts.append(orig_pt + defl_global)
                 curve_pts = np.array(curve_pts)
-
                 spline = pv.Spline(curve_pts, num_points * 2)
-                if not isinstance(spline, pv.PolyData):
-                    raise ValueError("Extrusion path invalid.")
                 deformed = extrude_along_path(section.shape_path, spline.points)
-                plotter.add_mesh(deformed, color="red", label=f"Deformed Section {section.name}")
+                plotter_ref.add_mesh(deformed, color="red", label=f"Deformed Section {section.name}")
 
-        # ---------------------------------------------------
-        # START DRAWING
-        # ---------------------------------------------------
+        # -----------------------------
+        # Start drawing
+        # -----------------------------
         plotter = pv.Plotter()
         plotter.add_axes()
 
-        # precompute all nodal positions and displacements
+        # scale for support glyphs
+        min_coords, max_coords = self.get_structure_bounds()
+        if min_coords and max_coords:
+            structure_size = np.linalg.norm(np.array(max_coords) - np.array(min_coords))
+        else:
+            structure_size = 1.0
+        support_arrow_scale = max(1e-6, structure_size * support_size_fraction)
+
+        # precompute nodal positions and displacements
         node_pos: Dict[int, np.ndarray] = {}
         node_disp: Dict[int, Tuple[np.ndarray, np.ndarray]] = {}
         for nid_str, nodisp in displacement_nodes.items():
@@ -1014,8 +1127,8 @@ class FERS:
             node = self.get_node_by_pk(nid)
             if node is None:
                 continue
-            pos = np.array([node.X, node.Y, node.Z])
-            node_pos[nid] = pos
+            p = np.array([node.X, node.Y, node.Z])
+            node_pos[nid] = p
             if displacement and nodisp:
                 dgl = np.array([nodisp.dx, nodisp.dy, nodisp.dz])
                 rgl = np.array([nodisp.rx, nodisp.ry, nodisp.rz])
@@ -1024,12 +1137,14 @@ class FERS:
                 rgl = np.zeros(3)
             node_disp[nid] = (dgl, rgl)
 
+        # sections
         if show_sections:
-            for member in self.get_all_members():
-                ds, rs = node_disp[member.start_node.id]
-                de, re = node_disp[member.end_node.id]
-                plot_section(member, ds, rs, de, re)
+            for m in self.get_all_members():
+                ds, rs = node_disp[m.start_node.id]
+                de, re = node_disp[m.end_node.id]
+                plot_section(m, ds, rs, de, re, plotter)
 
+        # nodes (original and deformed)
         if show_nodes:
             originals = []
             deformed = []
@@ -1053,19 +1168,27 @@ class FERS:
                 label="Deformed Nodes",
             )
 
-        # finally each member’s center‐line
-        for member in self.get_all_members():
-            start_id = member.start_node.id
-            end_id = member.end_node.id
-            p0 = node_pos[start_id]
-            p1 = node_pos[end_id]
-            d0, r0 = node_disp[start_id]
-            d1, r1 = node_disp[end_id]
+        # member center-lines
+        for m in self.get_all_members():
+            sid = m.start_node.id
+            eid = m.end_node.id
+            p0 = node_pos[sid]
+            p1 = node_pos[eid]
+            d0, r0 = node_disp[sid]
+            d1, r1 = node_disp[eid]
 
-            R = get_local_transform(member)
-            local_def = interpolate_member(
-                member, *transform_dofs_global_to_local(d0, r0, R), *transform_dofs_global_to_local(d1, r1, R)
+            R = get_local_transform(m)
+            local_def = (
+                interpolate_beam_local(
+                    0.0,
+                    m.length(),
+                    *transform_dofs_global_to_local(d0, r0, R),
+                    *transform_dofs_global_to_local(d1, r1, R),
+                    num_points,
+                )
+                * displacement_scale
             )
+
             t_vals = np.linspace(0, 1, num_points)
             orig_curve = np.array([p0 + t * (p1 - p0) for t in t_vals])
             def_curve = np.array([orig_curve[i] + (R @ local_def[i]) for i in range(num_points)])
@@ -1073,29 +1196,246 @@ class FERS:
             plotter.add_lines(orig_curve, color="blue", width=2, label="Original Shape")
             plotter.add_lines(def_curve, color="red", width=2, label="Deformed Shape")
 
+        # supports
+        if show_supports:
+            legend_added_for_type: set[str] = set()
+            axis_unit_vectors = {
+                "X": np.array([1.0, 0.0, 0.0]),
+                "Y": np.array([0.0, 1.0, 0.0]),
+                "Z": np.array([0.0, 0.0, 1.0]),
+            }
+
+            for node in self.get_all_nodes():
+                nodal_support = getattr(node, "nodal_support", None)
+                if not nodal_support:
+                    continue
+
+                node_position = np.array([node.X, node.Y, node.Z], dtype=float)
+
+                for axis_name, axis_vector in axis_unit_vectors.items():
+                    condition_type = get_condition_type(nodal_support.displacement_conditions.get(axis_name))
+                    color_value = color_for_condition_type(condition_type)
+
+                    legend_label = None
+                    if condition_type not in legend_added_for_type:
+                        legend_label = f"Support {axis_name} – {condition_type.title()}"
+                        legend_added_for_type.add(condition_type)
+
+                    plotter.add_arrows(
+                        node_position,
+                        axis_vector * support_arrow_scale,
+                        color=color_value,
+                        label=legend_label,
+                    )
+
+                if show_support_labels:
+                    label_text = format_support_label(nodal_support)
+                    label_position = node_position + np.array([1.0, 1.0, 1.0]) * (support_arrow_scale * 0.6)
+                    plotter.add_point_labels(
+                        label_position,
+                        [label_text],
+                        font_size=12,
+                        text_color="black",
+                        always_visible=True,
+                    )
+
         plotter.add_legend()
         plotter.show_grid(color="gray")
-        plotter.show(title=f"3D Results: “{chosen.name}”")
+        plotter.show(title=f'3D Results: "{chosen.name}"')
 
-    def plot_model(self, plane="yz"):
+    def plot_model(
+        self,
+        plane: str = "yz",
+        show_supports: bool = True,
+        annotate_supports: bool = True,
+        support_marker_size: int = 60,
+        support_marker_facecolor: str = "black",
+        support_marker_edgecolor: str = "white",
+        support_annotation_fontsize: int = 8,
+        support_annotation_offset_xy: tuple[int, int] = (6, 6),
+    ):
         """
-        Plot all member sets in the model on the specified plane.
+        Plot all member sets in the model on the specified plane and (optionally)
+        overlay nodal supports.
 
         Parameters:
-        - plane: A string specifying the plot plane, either 'xy', 'xz', or 'yz'.
+        - plane: 'xy', 'xz', or 'yz'
+        - show_supports: draw a glyph at nodes that have a NodalSupport
+        - annotate_supports: print compact text describing support conditions
+        - support_marker_size: Matplotlib scatter marker size
+        - support_marker_facecolor: face color for the support marker
+        - support_marker_edgecolor: edge color for the support marker
+        - support_annotation_fontsize: font size for support text labels
+        - support_annotation_offset_xy: pixel offset for the label relative to the node
         """
-        # Create a single figure and axis for all plots
-        fig, ax = plt.subplots()
 
-        # Loop through all member sets and plot them on the same figure
+        # -------------------------------
+        # Helpers
+        # -------------------------------
+        def project_xyz_to_plane(x: float, y: float, z: float, plane_name: str) -> tuple[float, float]:
+            plane_name = plane_name.lower()
+            if plane_name == "xy":
+                return x, y
+            if plane_name == "xz":
+                return x, z
+            if plane_name == "yz":
+                return y, z
+            raise ValueError("plane must be one of 'xy', 'xz', 'yz'")
+
+        def condition_type_and_stiffness(condition) -> tuple[str, float | None]:
+            """
+            Return a normalized (lowercase) condition type and optional stiffness.
+            Tries .to_dict()['type'] first; falls back to parsing str(condition).
+            """
+            if condition is None:
+                return "fixed", None
+
+            # Preferred: to_dict
+            if hasattr(condition, "to_dict"):
+                try:
+                    d = condition.to_dict()
+                    ctype = d.get("type", None)
+                    stiffness = d.get("stiffness", None)
+                    if ctype is not None:
+                        return str(ctype).strip().lower(), stiffness
+                except Exception:
+                    pass
+
+            # Next: direct attribute
+            if hasattr(condition, "type"):
+                try:
+                    ctype = getattr(condition, "type")
+                    return str(ctype).strip().lower(), getattr(condition, "stiffness", None)
+                except Exception:
+                    pass
+
+            # Fallback: parse the string representation, e.g. "supportcondition(type=fixed, stiffness=none)"
+            s = str(condition).strip().lower()
+            m = re.search(r"type\s*=\s*([a-z\-]+)", s)
+            if m:
+                return m.group(1), None
+
+            # Final fallback
+            return s, None
+
+        def format_support_short(nodal_support) -> str:
+            """
+            Produce a compact label like: U[Fx,Fr,k] R[Fr,Fr,Fx]
+            Keys are all lowercase to match our normalization.
+            """
+            mapping = {
+                "fixed": "Fx",
+                "free": "Fr",
+                "spring": "k",
+                "positive-only": "+",
+                "negative-only": "-",
+            }
+
+            def trio(conditions_dict: dict) -> list[str]:
+                out = []
+                for axis in ("X", "Y", "Z"):
+                    cond = (
+                        conditions_dict.get(axis)
+                        or conditions_dict.get(axis.upper())
+                        or conditions_dict.get(axis.lower())
+                    )
+                    ctype, _ = condition_type_and_stiffness(cond) if cond is not None else ("fixed", None)
+                    out.append(mapping.get(ctype, ctype[:2]))
+                return out
+
+            u = trio(nodal_support.displacement_conditions)
+            r = trio(nodal_support.rotation_conditions)
+            return f"U[{','.join(u)}] R[{','.join(r)}]"
+
+        def choose_marker(nodal_support) -> str:
+            """
+            Choose a marker from the translational constraints (normalized, lowercase):
+            - all fixed  -> square 's'
+            - any spring -> diamond 'D'
+            - all free   -> circle 'o'
+            - mixed      -> star '*'
+            """
+            types: list[str] = []
+            for axis in ("X", "Y", "Z"):
+                cond = nodal_support.displacement_conditions.get(axis)
+                ctype, _ = condition_type_and_stiffness(cond) if cond is not None else ("fixed", None)
+                types.append(ctype)
+
+            if all(t == "fixed" for t in types):
+                return "s"
+            if any(t == "spring" for t in types):
+                return "D"
+            if all(t == "free" for t in types):
+                return "o"
+            return "*"
+
+        # -------------------------------
+        # Main plotting
+        # -------------------------------
+        figure, axes = plt.subplots()
+
+        # Draw all member sets as you already do
         for member_set in self.member_sets:
             member_set.plot(
-                plane=plane, fig=fig, ax=ax, set_aspect=False, show_title=False, show_legend=False
+                plane=plane,
+                fig=figure,
+                ax=axes,
+                set_aspect=False,
+                show_title=False,
+                show_legend=False,
             )
 
-        ax.set_title("Combined Model Plot")
-        # ax.legend()
-        plt.tight_layout()
+        # Overlay nodal supports
+        if show_supports:
+            support_label_added_to_legend = False
+            nodes_with_support = [
+                node for node in self.get_all_nodes() if getattr(node, "nodal_support", None)
+            ]
+
+            # Group nodes by marker so we can call scatter once per marker
+            from collections import defaultdict
+
+            marker_groups: dict[str, list[tuple[float, float, object]]] = defaultdict(list)
+
+            for node in nodes_with_support:
+                x2d, y2d = project_xyz_to_plane(node.X, node.Y, node.Z, plane)
+                marker_symbol = choose_marker(node.nodal_support)
+                marker_groups[marker_symbol].append((x2d, y2d, node))
+
+            for marker_symbol, items in marker_groups.items():
+                xs = [p[0] for p in items]
+                ys = [p[1] for p in items]
+                # Add one legend label only once (for the first marker group)
+                legend_label = "Nodal Supports" if not support_label_added_to_legend else None
+                axes.scatter(
+                    xs,
+                    ys,
+                    s=support_marker_size,
+                    marker=marker_symbol,
+                    facecolors=support_marker_facecolor,
+                    edgecolors=support_marker_edgecolor,
+                    linewidths=0.5,
+                    zorder=5,
+                    label=legend_label,
+                )
+                support_label_added_to_legend = True
+
+                # Optional annotations with exact conditions
+                if annotate_supports:
+                    for x2d, y2d, node in items:
+                        text = format_support_short(node.nodal_support)
+                        axes.annotate(
+                            text,
+                            (x2d, y2d),
+                            textcoords="offset points",
+                            xytext=support_annotation_offset_xy,
+                            fontsize=support_annotation_fontsize,
+                            color="black",
+                            zorder=6,
+                        )
+
+        axes.set_title("Combined Model Plot")
+        figure.tight_layout()
         plt.show()
 
     def get_model_summary(self):
