@@ -12,6 +12,15 @@ from fers_core.fers.deformation_utils import (
     interpolate_beam_local,
     transform_dofs_global_to_local,
 )
+from fers_core.supports.support_utils import (
+    format_support_label,
+    get_condition_type,
+    format_support_short,
+    choose_marker,
+    color_for_condition_type,
+    translational_summary,
+)
+
 
 from ..imperfections.imperfectioncase import ImperfectionCase
 from ..loads.loadcase import LoadCase
@@ -599,53 +608,6 @@ class FERS:
 
         return unique_hinges
 
-    def get_unique_nodal_support(self):
-        """
-        Returns a dict of unique nodal supports keyed by support.id.
-        """
-        unique_nodal_supports = {}
-        for member_set in self.member_sets:
-            for member in member_set.members:
-                for node in (member.start_node, member.end_node):
-                    if node.nodal_support:
-                        sup = node.nodal_support
-                        if sup.id not in unique_nodal_supports:
-                            unique_nodal_supports[sup.id] = sup  # fixed key
-        return unique_nodal_supports
-
-    def get_unique_nodal_supports(self):
-        """
-        Returns a detailed mapping of all unique NodalSupport instances, including the numbers of all nodes
-        that have each nodal support, and their displacement and rotation conditions.
-
-        The return format is a list of dictionaries, each containing:
-        - 'support_no': The unique identifier of the NodalSupport.
-        - 'node_nos': A list of node numbers that share this NodalSupport.
-        - 'displacement_conditions': Displacement conditions of the NodalSupport.
-        - 'rotation_conditions': Rotation conditions of the NodalSupport.
-        """
-        support_details = {}
-
-        for member_set in self.member_sets:
-            for member in member_set.members:
-                for node in [member.start_node, member.end_node]:
-                    if node.nodal_support:
-                        support_no = node.nodal_support.id
-                        if support_no not in support_details:
-                            support_details[support_no] = {
-                                "support_no": support_no,
-                                "node_nos": set(),
-                                "displacement_conditions": node.nodal_support.displacement_conditions,
-                                "rotation_conditions": node.nodal_support.rotation_conditions,
-                            }
-                        # Add the node's number to the list of nodes for this NodalSupport
-                        support_details[support_no]["node_nos"].add(node.id)
-
-        # Convert the details to a list of dictionaries for easier consumption
-        detailed_support_list = list(support_details.values())
-
-        return detailed_support_list
-
     def get_load_case_by_name(self, name):
         """Retrieve a load case by its name."""
         for load_case in self.load_cases:
@@ -696,7 +658,6 @@ class FERS:
         show_supports: bool = True,
         show_support_labels: bool = True,
         support_size_fraction: float = 0.05,
-        # NEW: draw a square plate for all-fixed supports
         show_support_base_for_fixed: bool = True,
     ):
         """
@@ -718,77 +679,6 @@ class FERS:
         - show_support_base_for_fixed: If True, draw a flat square (plate) for
         all-fixed translational supports.
         """
-
-        # -----------------------------
-        # Helpers for supports
-        # -----------------------------
-        def get_condition_type(support_condition) -> str:
-            """
-            Return a lowercase condition type
-            ('fixed', 'free', 'spring', 'positive-only', 'negative-only').
-            Uses .to_dict()['type'] or .type; falls back to parsing str(condition).
-            """
-            if support_condition is None:
-                return "fixed"
-            try:
-                if hasattr(support_condition, "to_dict"):
-                    d = support_condition.to_dict()
-                    if isinstance(d, dict) and "type" in d:
-                        return str(d["type"]).strip().lower()
-            except Exception:
-                pass
-            if hasattr(support_condition, "type"):
-                try:
-                    return str(getattr(support_condition, "type")).strip().lower()
-                except Exception:
-                    pass
-            s = str(support_condition).strip().lower()
-            m = re.search(r"type\s*=\s*([a-z\-]+)", s)
-            if m:
-                return m.group(1)
-            return s
-
-        def translational_summary(nodal_support) -> str:
-            """
-            Classify translations as one of:
-            'all_fixed', 'all_free', 'any_spring', or 'mixed'.
-            """
-            types = []
-            for axis in ("X", "Y", "Z"):
-                c = nodal_support.displacement_conditions.get(axis)
-                types.append(get_condition_type(c))
-            if all(t == "fixed" for t in types):
-                return "all_fixed"
-            if all(t == "free" for t in types):
-                return "all_free"
-            if any(t == "spring" for t in types):
-                return "any_spring"
-            return "mixed"
-
-        def format_support_label(nodal_support) -> str:
-            mapping = {"fixed": "Fx", "free": "Fr", "spring": "k", "positive-only": "+", "negative-only": "-"}
-
-            def trio(conds: dict) -> list[str]:
-                out = []
-                for axis in ("X", "Y", "Z"):
-                    c = conds.get(axis) or conds.get(axis.upper()) or conds.get(axis.lower())
-                    out.append(mapping.get(get_condition_type(c), "??"))
-                return out
-
-            return (
-                f"U[{','.join(trio(nodal_support.displacement_conditions))}] "
-                f"R[{','.join(trio(nodal_support.rotation_conditions))}]"
-            )
-
-        def color_for_condition_type(condition_type: str) -> str:
-            return {
-                "fixed": "crimson",
-                "spring": "orange",
-                "free": "lightgray",
-                "positive-only": "green",
-                "negative-only": "purple",
-            }.get(condition_type, "black")
-
         # -----------------------------
         # Build plot
         # -----------------------------
@@ -1019,43 +909,6 @@ class FERS:
         # -----------------------------
         # Helpers
         # -----------------------------
-        def get_condition_type(support_condition) -> str:
-            if support_condition is None:
-                return "fixed"
-            try:
-                if hasattr(support_condition, "to_dict"):
-                    d = support_condition.to_dict()
-                    if isinstance(d, dict) and "type" in d:
-                        return str(d["type"]).strip().lower()
-            except Exception:
-                pass
-            if hasattr(support_condition, "type"):
-                return str(getattr(support_condition, "type")).strip().lower()
-            return str(support_condition).strip().lower()
-
-        def format_support_label(nodal_support) -> str:
-            mapping = {"fixed": "Fx", "free": "Fr", "spring": "k", "positive-only": "+", "negative-only": "-"}
-
-            def trio(conds: dict) -> list[str]:
-                out = []
-                for axis in ("X", "Y", "Z"):
-                    c = conds.get(axis) or conds.get(axis.upper()) or conds.get(axis.lower())
-                    out.append(mapping.get(get_condition_type(c), "??"))
-                return out
-
-            return (
-                f"U[{','.join(trio(nodal_support.displacement_conditions))}] "
-                f"R[{','.join(trio(nodal_support.rotation_conditions))}]"
-            )
-
-        def color_for_condition_type(condition_type: str) -> str:
-            return {
-                "fixed": "crimson",
-                "spring": "orange",
-                "free": "lightgray",
-                "positive-only": "green",
-                "negative-only": "purple",
-            }.get(condition_type, "black")
 
         def get_local_transform(member):
             lx, ly, lz = member.local_coordinate_system()
@@ -1281,93 +1134,6 @@ class FERS:
             if plane_name == "yz":
                 return y, z
             raise ValueError("plane must be one of 'xy', 'xz', 'yz'")
-
-        def condition_type_and_stiffness(condition) -> tuple[str, float | None]:
-            """
-            Return a normalized (lowercase) condition type and optional stiffness.
-            Tries .to_dict()['type'] first; falls back to parsing str(condition).
-            """
-            if condition is None:
-                return "fixed", None
-
-            # Preferred: to_dict
-            if hasattr(condition, "to_dict"):
-                try:
-                    d = condition.to_dict()
-                    ctype = d.get("type", None)
-                    stiffness = d.get("stiffness", None)
-                    if ctype is not None:
-                        return str(ctype).strip().lower(), stiffness
-                except Exception:
-                    pass
-
-            # Next: direct attribute
-            if hasattr(condition, "type"):
-                try:
-                    ctype = getattr(condition, "type")
-                    return str(ctype).strip().lower(), getattr(condition, "stiffness", None)
-                except Exception:
-                    pass
-
-            # Fallback: parse the string representation, e.g. "supportcondition(type=fixed, stiffness=none)"
-            s = str(condition).strip().lower()
-            m = re.search(r"type\s*=\s*([a-z\-]+)", s)
-            if m:
-                return m.group(1), None
-
-            # Final fallback
-            return s, None
-
-        def format_support_short(nodal_support) -> str:
-            """
-            Produce a compact label like: U[Fx,Fr,k] R[Fr,Fr,Fx]
-            Keys are all lowercase to match our normalization.
-            """
-            mapping = {
-                "fixed": "Fx",
-                "free": "Fr",
-                "spring": "k",
-                "positive-only": "+",
-                "negative-only": "-",
-            }
-
-            def trio(conditions_dict: dict) -> list[str]:
-                out = []
-                for axis in ("X", "Y", "Z"):
-                    cond = (
-                        conditions_dict.get(axis)
-                        or conditions_dict.get(axis.upper())
-                        or conditions_dict.get(axis.lower())
-                    )
-                    ctype, _ = condition_type_and_stiffness(cond) if cond is not None else ("fixed", None)
-                    out.append(mapping.get(ctype, ctype[:2]))
-                return out
-
-            u = trio(nodal_support.displacement_conditions)
-            r = trio(nodal_support.rotation_conditions)
-            return f"U[{','.join(u)}] R[{','.join(r)}]"
-
-        def choose_marker(nodal_support) -> str:
-            """
-            Choose a marker from the translational constraints (normalized, lowercase):
-            - all fixed  -> square 's'
-            - any spring -> diamond 'D'
-            - all free   -> circle 'o'
-            - mixed      -> star '*'
-            """
-            types: list[str] = []
-            for axis in ("X", "Y", "Z"):
-                cond = nodal_support.displacement_conditions.get(axis)
-                ctype, _ = condition_type_and_stiffness(cond) if cond is not None else ("fixed", None)
-                types.append(ctype)
-
-            if all(t == "fixed" for t in types):
-                return "s"
-            if any(t == "spring" for t in types):
-                return "D"
-            if all(t == "free" for t in types):
-                return "o"
-            return "*"
 
         # -------------------------------
         # Main plotting
