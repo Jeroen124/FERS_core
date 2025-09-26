@@ -1,0 +1,391 @@
+{
+    "member_sets": [
+        {
+            "id": 1,
+            "l_y": null,
+            "l_z": null,
+            "classification": null,
+            "members": [
+                {
+                    "id": 1,
+                    "start_node": {
+                        "id": 1,
+                        "classification": "",
+                        "X": 0,
+                        "Y": 0,
+                        "Z": 0,
+                        "nodal_support": 1
+                    },
+                    "end_node": {
+                        "id": 2,
+                        "classification": "",
+                        "X": 5,
+                        "Y": 0,
+                        "Z": 0,
+                        "nodal_support": 2
+                    },
+                    "section": 1,
+                    "rotation_angle": 0.0,
+                    "start_hinge": null,
+                    "end_hinge": null,
+                    "classification": "",
+                    "weight": 76.85918649469454,
+                    "chi": null,
+                    "reference_member": null,
+                    "reference_node": null,
+                    "member_type": "Normal"
+                }
+            ]
+        },
+        {
+            "id": 2,
+            "l_y": null,
+            "l_z": null,
+            "classification": null,
+            "members": [
+                {
+                    "id": 2,
+                    "start_node": {
+                        "id": 2,
+                        "classification": "",
+                        "X": 5,
+                        "Y": 0,
+                        "Z": 0,
+                        "nodal_support": 2
+                    },
+                    "end_node": {
+                        "id": 3,
+                        "classification": "",
+                        "X": 5,
+                        "Y": 5,
+                        "Z": 0,
+                        "nodal_support": 2
+                    },
+                    "section": 1,
+                    "rotation_angle": 1.5707963267948966,
+                    "start_hinge": null,
+                    "end_hinge": null,
+                    "classification": "",
+                    "weight": 76.85918649469454,
+                    "chi": null,
+                    "reference_member": null,
+                    "reference_node": null,
+                    "member_type": "Normal"
+                }
+            ]
+        }
+    ],
+    "load_cases": [
+        {
+            "id": 1,
+            "name": "End Load",
+            "nodal_loads": [
+                {
+                    "id": 1,
+                    "node": 3,
+                    "load_case": 1,
+                    "magnitude": -1000,
+                    "direction": [
+                        1,
+                        0,
+                        0
+                    ],
+                    "load_type": "force"
+                }
+            ],
+            "nodal_moments": [],
+            "distributed_loads": [],
+            "rotation_imperfections": [],
+            "translation_imperfections": []
+        }
+    ],
+    "load_combinations": [],
+    "imperfection_cases": [],
+    "settings": {
+        "id": 1,
+        "analysis_option": {
+            "id": 1,
+            "solve_loadcases": true,
+            "solver": "newton_raphson",
+            "tolerance": 0.01,
+            "max_iterations": 30,
+            "dimensionality": "3D",
+            "order": "Nonlinear"
+        },
+        "general_info": {
+            "project_name": "Unnamed Project",
+            "author": "Unknown",
+            "version": "1.0"
+        }
+    },
+    "results": null,
+    "memberhinges": [],
+    "materials": [
+        {
+            "id": 1,
+            "name": "Steel",
+            "e_mod": 210000000000.0,
+            "g_mod": 80769000000.0,
+            "density": 7850,
+            "yield_stress": 235000000.0
+        }
+    ],
+    "sections": [
+        {
+            "id": 1,
+            "name": "IPE 180 Beam Section",
+            "material": 1,
+            "h": 0.177,
+            "b": 0.091,
+            "i_y": 8.188738735105359e-7,
+            "i_z": 1.0630246163170792e-5,
+            "j": 2.6729472219884107e-8,
+            "area": 0.0019581958342597336,
+            "shape_path": 1
+        }
+    ],
+    "nodal_supports": [
+        {
+            "id": 1,
+            "classification": null,
+            "displacement_conditions": {
+                "X": {
+                    "condition_type": "Fixed",
+                    "stiffness": null
+                },
+                "Y": {
+                    "condition_type": "Fixed",
+                    "stiffness": null
+                },
+                "Z": {
+                    "condition_type": "Fixed",
+                    "stiffness": null
+                }
+            },
+            "rotation_conditions": {
+                "X": {
+                    "condition_type": "Fixed",
+                    "stiffness": null
+                },
+                "Y": {
+                    "condition_type": "Fixed",
+                    "stiffness": null
+                },
+                "Z": {
+                    "condition_type": "Fixed",
+                    "stiffness": null
+                }
+            }
+        },
+        {
+            "id": 2,
+            "classification": null,
+            "displacement_conditions": {
+                "X": {
+                    "condition_type": "Free",
+                    "stiffness": null
+                },
+                "Y": {
+                    "condition_type": "Free",
+                    "stiffness": null
+                },
+                "Z": {
+                    "condition_type": "Fixed",
+                    "stiffness": null
+                }
+            },
+            "rotation_conditions": {
+                "X": {
+                    "condition_type": "Free",
+                    "stiffness": null
+                },
+                "Y": {
+                    "condition_type": "Free",
+                    "stiffness": null
+                },
+                "Z": {
+                    "condition_type": "Free",
+                    "stiffness": null
+                }
+            }
+        }
+    ],
+    "shape_paths": [
+        {
+            "id": 1,
+            "name": "IPE 180 Beam Section",
+            "shape_commands": [
+                {
+                    "command": "moveTo",
+                    "y": 0.0885,
+                    "z": -0.0455,
+                    "r": null,
+                    "center_y": null,
+                    "center_z": null,
+                    "theta0": null,
+                    "theta1": null
+                },
+                {
+                    "command": "lineTo",
+                    "y": 0.0885,
+                    "z": 0.0455,
+                    "r": null,
+                    "center_y": null,
+                    "center_z": null,
+                    "theta0": null,
+                    "theta1": null
+                },
+                {
+                    "command": "lineTo",
+                    "y": 0.08199999999999999,
+                    "z": 0.0455,
+                    "r": null,
+                    "center_y": null,
+                    "center_z": null,
+                    "theta0": null,
+                    "theta1": null
+                },
+                {
+                    "command": "lineTo",
+                    "y": 0.08199999999999999,
+                    "z": 0.01115,
+                    "r": null,
+                    "center_y": null,
+                    "center_z": null,
+                    "theta0": null,
+                    "theta1": null
+                },
+                {
+                    "command": "arcTo",
+                    "y": null,
+                    "z": null,
+                    "r": 0.009,
+                    "center_y": 0.073,
+                    "center_z": 0.01115,
+                    "theta0": 0.0,
+                    "theta1": -1.5707963267948966
+                },
+                {
+                    "command": "lineTo",
+                    "y": -0.073,
+                    "z": 0.00215,
+                    "r": null,
+                    "center_y": null,
+                    "center_z": null,
+                    "theta0": null,
+                    "theta1": null
+                },
+                {
+                    "command": "arcTo",
+                    "y": null,
+                    "z": null,
+                    "r": 0.009,
+                    "center_y": -0.073,
+                    "center_z": 0.01115,
+                    "theta0": -1.5707963267948966,
+                    "theta1": -3.141592653589793
+                },
+                {
+                    "command": "lineTo",
+                    "y": -0.08199999999999999,
+                    "z": 0.0455,
+                    "r": null,
+                    "center_y": null,
+                    "center_z": null,
+                    "theta0": null,
+                    "theta1": null
+                },
+                {
+                    "command": "lineTo",
+                    "y": -0.0885,
+                    "z": 0.0455,
+                    "r": null,
+                    "center_y": null,
+                    "center_z": null,
+                    "theta0": null,
+                    "theta1": null
+                },
+                {
+                    "command": "lineTo",
+                    "y": -0.0885,
+                    "z": -0.0455,
+                    "r": null,
+                    "center_y": null,
+                    "center_z": null,
+                    "theta0": null,
+                    "theta1": null
+                },
+                {
+                    "command": "lineTo",
+                    "y": -0.08199999999999999,
+                    "z": -0.0455,
+                    "r": null,
+                    "center_y": null,
+                    "center_z": null,
+                    "theta0": null,
+                    "theta1": null
+                },
+                {
+                    "command": "lineTo",
+                    "y": -0.08199999999999999,
+                    "z": -0.01115,
+                    "r": null,
+                    "center_y": null,
+                    "center_z": null,
+                    "theta0": null,
+                    "theta1": null
+                },
+                {
+                    "command": "arcTo",
+                    "y": null,
+                    "z": null,
+                    "r": 0.009,
+                    "center_y": -0.073,
+                    "center_z": -0.01115,
+                    "theta0": 3.141592653589793,
+                    "theta1": 1.5707963267948966
+                },
+                {
+                    "command": "lineTo",
+                    "y": 0.073,
+                    "z": -0.00215,
+                    "r": null,
+                    "center_y": null,
+                    "center_z": null,
+                    "theta0": null,
+                    "theta1": null
+                },
+                {
+                    "command": "arcTo",
+                    "y": null,
+                    "z": null,
+                    "r": 0.009,
+                    "center_y": 0.073,
+                    "center_z": -0.01115,
+                    "theta0": 1.5707963267948966,
+                    "theta1": 0
+                },
+                {
+                    "command": "lineTo",
+                    "y": 0.08199999999999999,
+                    "z": -0.0455,
+                    "r": null,
+                    "center_y": null,
+                    "center_z": null,
+                    "theta0": null,
+                    "theta1": null
+                },
+                {
+                    "command": "closePath",
+                    "y": null,
+                    "z": null,
+                    "r": null,
+                    "center_y": null,
+                    "center_z": null,
+                    "theta0": null,
+                    "theta1": null
+                }
+            ]
+        }
+    ]
+}
