@@ -22,7 +22,7 @@
                         "X": 5,
                         "Y": 0,
                         "Z": 0,
-                        "nodal_support": 2
+                        "nodal_support": 1
                     },
                     "section": 1,
                     "rotation_angle": 0.0,
@@ -51,7 +51,7 @@
                         "X": 5,
                         "Y": 0,
                         "Z": 0,
-                        "nodal_support": 2
+                        "nodal_support": 1
                     },
                     "end_node": {
                         "id": 3,
@@ -164,15 +164,15 @@
             },
             "rotation_conditions": {
                 "X": {
-                    "condition_type": "Fixed",
+                    "condition_type": "Free",
                     "stiffness": null
                 },
                 "Y": {
-                    "condition_type": "Fixed",
+                    "condition_type": "Free",
                     "stiffness": null
                 },
                 "Z": {
-                    "condition_type": "Fixed",
+                    "condition_type": "Free",
                     "stiffness": null
                 }
             }

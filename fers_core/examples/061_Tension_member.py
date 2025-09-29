@@ -100,7 +100,7 @@ reaction_node3_fx_fers = results.reaction_nodes["3"].nodal_forces.fx
 elastic_modulus = Steel_S235.e_mod
 cross_section_area = section.area
 member_length = 2.5  # meters (each tension member length)
-applied_force = mid_force_newton  # Newtons
+applied_force = -mid_force_newton  # Newtons
 
 # Analytical expectations:
 # - Displacement at node 2 along global X: u = F * L / (A * E)

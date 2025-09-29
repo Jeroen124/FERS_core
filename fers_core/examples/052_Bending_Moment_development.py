@@ -22,6 +22,8 @@ calculation_1 = FERS()
 node1 = Node(0.0, 0.0, 0.0)  # support end
 node2 = Node(2.5, 0.0, 0.0)  # junction (end of rigid link, start of flexible beam)
 node3 = Node(5.0, 0.0, 0.0)  # free end
+node4 = Node(10, 0.0, 0.0)  # free end
+node5 = Node(20, 0.0, 0.0)  # free end
 
 # Support at node1 (fixed translations and rotations)
 node1.nodal_support = NodalSupport()
@@ -67,7 +69,7 @@ NodalLoad(
 )
 
 # Save the model (useful for reproducibility or external solver runs)
-file_path = os.path.join("json_input_solver", "051_Member_hinge_at_half.json")
+file_path = os.path.join("json_input_solver", "052_Bending_Moment_development.json")
 os.makedirs(os.path.dirname(file_path), exist_ok=True)
 calculation_1.save_to_json(file_path, indent=4)
 

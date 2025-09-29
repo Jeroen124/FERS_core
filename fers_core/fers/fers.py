@@ -14,8 +14,6 @@ from fers_core.fers.deformation_utils import (
 from fers_core.supports.support_utils import (
     format_support_label,
     get_condition_type,
-    format_support_short,
-    choose_marker,
     color_for_condition_type,
     translational_summary,
 )
@@ -1109,7 +1107,7 @@ class FERS:
         Parameters:
         - plane: 'xy', 'xz', or 'yz'
         - show_supports: draw a glyph at nodes that have a NodalSupport
-        - annotate_supports: print compact text describing support conditions
+        - annotate_supports: print compact text describing support conditions (in-plane only)
         - support_marker_size: Matplotlib scatter marker size
         - support_marker_facecolor: face color for the support marker
         - support_marker_edgecolor: edge color for the support marker
@@ -1121,14 +1119,73 @@ class FERS:
         # Helpers
         # -------------------------------
         def project_xyz_to_plane(x: float, y: float, z: float, plane_name: str) -> tuple[float, float]:
-            plane_name = plane_name.lower()
-            if plane_name == "xy":
+            plane_lower = plane_name.lower()
+            if plane_lower == "xy":
                 return x, y
-            if plane_name == "xz":
+            if plane_lower == "xz":
                 return x, z
-            if plane_name == "yz":
+            if plane_lower == "yz":
                 return y, z
             raise ValueError("plane must be one of 'xy', 'xz', 'yz'")
+
+        def in_plane_axes(plane_name: str) -> tuple[str, str]:
+            plane_lower = plane_name.lower()
+            if plane_lower == "xy":
+                # First plotted axis is X (horizontal), second is Y (vertical)
+                return "X", "Y"
+            if plane_lower == "xz":
+                # First plotted axis is X (horizontal), second is Z (vertical)
+                return "X", "Z"
+            if plane_lower == "yz":
+                # First plotted axis is Y (horizontal), second is Z (vertical)
+                return "Y", "Z"
+            raise ValueError("plane must be one of 'xy', 'xz', 'yz'")
+
+        def marker_for_support_on_plane(support: NodalSupport, plane_name: str) -> str:
+            """
+            Return a simple, plane-aware marker describing in-plane translational restraint.
+            Mapping:
+            - both in-plane fixed -> 's'
+            - only first plotted axis fixed -> '|'
+            - only second plotted axis fixed -> '_'
+            - any spring in-plane -> 'D'
+            - otherwise -> 'o'
+            """
+            ax1, ax2 = in_plane_axes(plane_name)
+            c1 = get_condition_type((support.displacement_conditions or {}).get(ax1))
+            c2 = get_condition_type((support.displacement_conditions or {}).get(ax2))
+
+            fixed1 = c1 == "fixed"
+            fixed2 = c2 == "fixed"
+            spring1 = c1 == "spring"
+            spring2 = c2 == "spring"
+
+            if fixed1 and fixed2:
+                return "s"
+            if fixed1 and not fixed2:
+                return "|"  # fixed along the first (horizontal) axis of the plot
+            if fixed2 and not fixed1:
+                return "_"  # fixed along the second (vertical) axis of the plot
+            if spring1 or spring2:
+                return "D"
+            return "o"
+
+        def format_support_short_in_plane(support: NodalSupport, plane_name: str) -> str:
+            """
+            Compact label showing only in-plane displacement conditions.
+            Example for 'xz': U[X:fixed Z:free]
+            """
+            ax1, ax2 = in_plane_axes(plane_name)
+
+            def short_text(axis_name: str) -> str:
+                ctype = get_condition_type((support.displacement_conditions or {}).get(axis_name))
+                if ctype == "fixed":
+                    return "fixed"
+                if ctype == "spring":
+                    return "spring"
+                return "free"
+
+            return f"U[{ax1}:{short_text(ax1)} {ax2}:{short_text(ax2)}]"
 
         # -------------------------------
         # Main plotting
@@ -1146,28 +1203,29 @@ class FERS:
                 show_legend=False,
             )
 
-        # Overlay nodal supports
+        # Overlay nodal supports (plane-aware)
         if show_supports:
-            support_label_added_to_legend = False
             nodes_with_support = [
                 node for node in self.get_all_nodes() if getattr(node, "nodal_support", None)
             ]
 
-            # Group nodes by marker so we can call scatter once per marker
+            # Group by (marker) so we can call scatter once per marker
             from collections import defaultdict
 
-            marker_groups: dict[str, list[tuple[float, float, object]]] = defaultdict(list)
+            grouped_points_by_marker: dict[str, list[tuple[float, float, Node]]] = defaultdict(list)
 
             for node in nodes_with_support:
                 x2d, y2d = project_xyz_to_plane(node.X, node.Y, node.Z, plane)
-                marker_symbol = choose_marker(node.nodal_support)
-                marker_groups[marker_symbol].append((x2d, y2d, node))
+                marker_symbol = marker_for_support_on_plane(node.nodal_support, plane)
+                grouped_points_by_marker[marker_symbol].append((x2d, y2d, node))
 
-            for marker_symbol, items in marker_groups.items():
+            legend_added = False
+            for marker_symbol, items in grouped_points_by_marker.items():
                 xs = [p[0] for p in items]
                 ys = [p[1] for p in items]
-                # Add one legend label only once (for the first marker group)
-                legend_label = "Nodal Supports" if not support_label_added_to_legend else None
+                legend_label = "Nodal Supports (in-plane)" if not legend_added else None
+
+                # Note: '|' and '_' markers are thin; increase size if you need them more visible.
                 axes.scatter(
                     xs,
                     ys,
@@ -1179,14 +1237,14 @@ class FERS:
                     zorder=5,
                     label=legend_label,
                 )
-                support_label_added_to_legend = True
+                legend_added = True
 
-                # Optional annotations with exact conditions
+                # Optional annotations with in-plane conditions only
                 if annotate_supports:
                     for x2d, y2d, node in items:
-                        text = format_support_short(node.nodal_support)
+                        label_text = format_support_short_in_plane(node.nodal_support, plane)
                         axes.annotate(
-                            text,
+                            label_text,
                             (x2d, y2d),
                             textcoords="offset points",
                             xytext=support_annotation_offset_xy,
@@ -1195,7 +1253,7 @@ class FERS:
                             zorder=6,
                         )
 
-        axes.set_title("Combined Model Plot")
+        axes.set_title(f"Combined Model Plot ({plane.upper()} view)")
         figure.tight_layout()
         plt.show()
 
