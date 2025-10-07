@@ -24,16 +24,16 @@
                         "Z": 0.0,
                         "nodal_support": null
                     },
-                    "section": null,
+                    "section": 1,
                     "rotation_angle": 0.0,
                     "start_hinge": null,
                     "end_hinge": null,
                     "classification": "",
-                    "weight": 0.0,
+                    "weight": 38.464999999999996,
                     "chi": null,
                     "reference_member": null,
                     "reference_node": null,
-                    "member_type": "Rigid"
+                    "member_type": "Normal"
                 },
                 {
                     "id": 2,
@@ -79,7 +79,7 @@
                     "magnitude": -1000.0,
                     "direction": [
                         0.0,
-                        1.0,
+                        -1.0,
                         0.0
                     ],
                     "load_type": "force"
@@ -120,7 +120,7 @@
             "translational_release_vz": null,
             "rotational_release_mx": null,
             "rotational_release_my": null,
-            "rotational_release_mz": 25000.0,
+            "rotational_release_mz": 250000.0,
             "max_tension_vx": null,
             "max_tension_vy": null,
             "max_tension_vz": null,

@@ -114,6 +114,7 @@ calculation_1 = FERS()
 node1 = Node(0.0, 0.0, 0.0)  # support end
 node2 = Node(2.5, 0.0, 0.0)  # hinge
 node3 = Node(5.0, 0.0, 0.0)  # node
+node4 = Node(10.0, 0.0, 0.0)  # node
 
 # Support at node1 (fixed translations and rotations)
 node1.nodal_support = NodalSupport()
@@ -137,12 +138,12 @@ start_hinge = MemberHinge(hinge_type="SPRING_Z", rotational_release_mz=k_phi_z)
 
 # Members
 flexible_beam_1 = Member(start_node=node1, end_node=node2, section=section)
-flexible_beam_2 = Member(start_node=node2, end_node=node3, section=section, start_hinge=start_hinge)
-# flexible_beam_2 = Member(start_node=node2, end_node=node3, section=section)
+rigid_beam_2 = Member(start_node=node2, end_node=node3, member_type="RIGID")
+flexible_beam_3 = Member(start_node=node3, end_node=node4, section=section, start_hinge=start_hinge)
 # flexible_beam_4 = Member(start_node=node4, end_node=node5, section=section, start_hinge=start_hinge)
 
 # Add members to the model
-member_set = MemberSet(members=[flexible_beam_1, flexible_beam_2])
+member_set = MemberSet(members=[flexible_beam_1, rigid_beam_2, flexible_beam_3])
 calculation_1.add_member_set(member_set)
 
 # If your serializer requires explicit collection of hinges, uncomment:
@@ -154,14 +155,14 @@ load_case = calculation_1.create_load_case(name="End Load")
 
 # 1 kN downward at the free end
 NodalLoad(
-    node=node3,
+    node=node4,
     load_case=load_case,
     magnitude=-1000.0,  # negative with +Y direction means downward
     direction=(0.0, -1.0, 0.0),
 )
 
 # Save the model (useful for reproducibility or external solver runs)
-file_path = os.path.join("json_input_solver", "052_Bending_Moment_development.json")
+file_path = os.path.join("json_input_solver", "053_Bending_Moment_development_rigid_member.json")
 os.makedirs(os.path.dirname(file_path), exist_ok=True)
 calculation_1.save_to_json(file_path, indent=4)
 
