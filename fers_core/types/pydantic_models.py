@@ -183,7 +183,7 @@ class Section(BaseModel):
 
 
 class Settings(BaseModel):
-    analysis_option: AnalysisOption
+    analysis_options: AnalysisOption
     general_info: GeneralInfo
     id: conint(ge=0)
 

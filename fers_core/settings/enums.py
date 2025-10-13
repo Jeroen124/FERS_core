@@ -2,8 +2,8 @@ from enum import Enum
 
 
 class AnalysisOrder(Enum):
-    LINEAR = "Linear"
-    NONLINEAR = "Nonlinear"
+    LINEAR = "LINEAR"
+    NONLINEAR = "NONLINEAR"
 
 
 class Dimensionality(Enum):

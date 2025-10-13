@@ -8,14 +8,14 @@ class Settings:
 
     def __init__(
         self,
-        analysis_option: Optional[AnalysisOptions] = None,
+        analysis_options: Optional[AnalysisOptions] = None,
         general_info: Optional[GeneralInfo] = None,
         id: Optional[int] = None,
     ):
         self.settings_id = id or Settings._settings_counter
         if id is None:
             Settings._settings_counter += 1
-        self.analysis_option = analysis_option if analysis_option else AnalysisOptions()
+        self.analysis_options = analysis_options if analysis_options else AnalysisOptions()
         self.general_info = general_info if general_info else GeneralInfo()
 
     @classmethod
@@ -25,6 +25,6 @@ class Settings:
     def to_dict(self):
         return {
             "id": self.settings_id,
-            "analysis_option": self.analysis_option.to_dict(),
+            "analysis_options": self.analysis_options.to_dict(),
             "general_info": self.general_info.to_dict(),
         }
