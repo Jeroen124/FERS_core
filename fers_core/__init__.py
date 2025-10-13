@@ -19,7 +19,7 @@ from .supports.supportcondition import SupportCondition
 from .supports.supportcondition import SupportConditionType
 from .settings.anlysis_options import AnalysisOrder, Dimensionality
 from .members.memberhinge import MemberHinge
-
+from .results.resultsbundle import ResultsBundle
 
 __all__ = [
     "AnalysisOrder",
@@ -39,6 +39,7 @@ __all__ = [
     "NodalMoment",
     "NodalSupport",
     "RotationImperfection",
+    "ResultsBundle",
     "Section",
     "ShapePath",
     "SupportCondition",

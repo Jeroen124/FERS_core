@@ -1,5 +1,5 @@
 import re
-from typing import Dict, Optional, Tuple, Union
+from typing import Any, Dict, Optional, Tuple, Union
 import fers_calculations
 import ujson
 
@@ -11,6 +11,7 @@ from fers_core.fers.deformation_utils import (
     centerline_path_points,
     extrude_along_path,
 )
+from fers_core.results.resultsbundle import ResultsBundle
 from fers_core.supports.support_utils import (
     format_support_label,
     get_condition_type,
@@ -48,7 +49,7 @@ class FERS:
         )  # Use provided settings or create default
         self.validation_checks = []
         self.report = None
-        self.results = None
+        self.resultsbundle = None
 
     def run_analysis_from_file(self, file_path: str):
         """
@@ -70,9 +71,9 @@ class FERS:
 
         # Parse and validate the results
         try:
-            results_dict = ujson.loads(result_string)
-            validated_results = ResultsBundleSchema(**results_dict)
-            self.results = validated_results
+            results_dictionary = ujson.loads(result_string)
+            validated = ResultsBundleSchema(**results_dictionary)
+            self.resultsbundle = ResultsBundle.from_pydantic(validated)
         except Exception as e:
             raise ValueError(f"Failed to parse or validate results: {e}")
 
@@ -100,36 +101,34 @@ class FERS:
             raise RuntimeError(f"Failed to run calculation: {e}")
 
         try:
-            results_dict = ujson.loads(result_string)
-            validated_results = ResultsBundleSchema(**results_dict)
-            self.results = validated_results
+            results_dictionary = ujson.loads(result_string)
+            validated = ResultsBundleSchema(**results_dictionary)
+            self.resultsbundle = ResultsBundle.from_pydantic(validated)
         except Exception as e:
             raise ValueError(f"Failed to parse or validate results: {e}")
 
-    def to_dict(self):
-        """Convert the FERS model to a dictionary representation."""
-        return {
+    def to_dict(self, include_results: bool = True) -> Dict[str, Any]:
+        data: Dict[str, Any] = {
             "member_sets": [member_set.to_dict() for member_set in self.member_sets],
             "load_cases": [load_case.to_dict() for load_case in self.load_cases],
             "load_combinations": [load_comb.to_dict() for load_comb in self.load_combinations],
             "imperfection_cases": [imp_case.to_dict() for imp_case in self.imperfection_cases],
             "settings": self.settings.to_dict(),
-            "results": self.results.to_dict() if self.results else None,
             "memberhinges": [
-                memberhinge.to_dict() for memberhinge in self.get_unique_member_hinges_from_all_member_sets()
+                hinge.to_dict() for hinge in self.get_unique_member_hinges_from_all_member_sets()
             ],
             "materials": [
                 material.to_dict() for material in self.get_unique_materials_from_all_member_sets()
             ],
             "sections": [section.to_dict() for section in self.get_unique_sections_from_all_member_sets()],
-            "nodal_supports": [
-                nodal_support.to_dict()
-                for nodal_support in self.get_unique_nodal_support_from_all_member_sets()
-            ],
-            "shape_paths": [
-                shape_path.to_dict() for shape_path in self.get_unique_shape_paths_from_all_member_sets()
-            ],
+            "nodal_supports": [ns.to_dict() for ns in self.get_unique_nodal_support_from_all_member_sets()],
+            "shape_paths": [sp.to_dict() for sp in self.get_unique_shape_paths_from_all_member_sets()],
         }
+        if include_results and self.resultsbundle is not None:
+            data["resultsbundle"] = self.resultsbundle.to_dict()
+        else:
+            data["resultsbundle"] = None
+        return data
 
     def settings_to_dict(self):
         """Convert settings to a dictionary representation with additional information."""
@@ -897,7 +896,7 @@ class FERS:
         import numpy as np
         import matplotlib.pyplot as plt
 
-        if self.results is None:
+        if self.resultsbundle is None:
             raise ValueError("No analysis results available. Run an analysis first.")
 
         if loadcase is not None and loadcombination is not None:
@@ -907,32 +906,32 @@ class FERS:
         # Select which result set to show
         # -----------------------------
         if loadcase is not None:
-            loadcase_keys = list(self.results.loadcases.keys())
+            loadcase_keys = list(self.resultsbundle.loadcases.keys())
             if isinstance(loadcase, int):
                 if loadcase < 1 or loadcase > len(loadcase_keys):
                     raise IndexError(f"Loadcase index {loadcase} is out of range.")
                 selected_key = loadcase_keys[loadcase - 1]
             else:
                 selected_key = str(loadcase)
-                if selected_key not in self.results.loadcases:
+                if selected_key not in self.resultsbundle.loadcases:
                     raise KeyError(f"Loadcase '{selected_key}' not found.")
-            chosen_results = self.results.loadcases[selected_key]
+            chosen_results = self.resultsbundle.loadcases[selected_key]
             chosen_title = chosen_results.name if hasattr(chosen_results, "name") else str(selected_key)
         elif loadcombination is not None:
-            loadcomb_keys = list(self.results.loadcombinations.keys())
+            loadcomb_keys = list(self.resultsbundle.loadcombinations.keys())
             if isinstance(loadcombination, int):
                 if loadcombination < 1 or loadcombination > len(loadcomb_keys):
                     raise IndexError(f"Loadcombination index {loadcombination} is out of range.")
                 selected_key = loadcomb_keys[loadcombination - 1]
             else:
                 selected_key = str(loadcombination)
-                if selected_key not in self.results.loadcombinations:
+                if selected_key not in self.resultsbundle.loadcombinations:
                     raise KeyError(f"Loadcombination '{selected_key}' not found.")
-            chosen_results = self.results.loadcombinations[selected_key]
+            chosen_results = self.resultsbundle.loadcombinations[selected_key]
             chosen_title = chosen_results.name if hasattr(chosen_results, "name") else str(selected_key)
         else:
-            if len(self.results.loadcases) == 1 and not self.results.loadcombinations:
-                chosen_results = next(iter(self.results.loadcases.values()))
+            if len(self.resultsbundle.loadcases) == 1 and not self.resultsbundle.loadcombinations:
+                chosen_results = next(iter(self.resultsbundle.loadcases.values()))
                 chosen_title = chosen_results.name if hasattr(chosen_results, "name") else "Loadcase"
             else:
                 raise ValueError("Multiple results available. Specify 'loadcase' or 'loadcombination'.")
@@ -1424,7 +1423,7 @@ class FERS:
         - moment_style="tube": draw a scaled 3D diagram as tubes, offset along the local axis
         - moment_style="line": draw unscaled centerlines, colored by the moment along the length
         """
-        if self.results is None:
+        if self.resultsbundle is None:
             raise ValueError("No analysis results available.")
         if loadcase is not None and loadcombination is not None:
             raise ValueError("Specify either loadcase or loadcombination, not both.")
@@ -1433,7 +1432,7 @@ class FERS:
         # Pick results
         # -----------------------------
         if loadcase is not None:
-            keys = list(self.results.loadcases.keys())
+            keys = list(self.resultsbundle.loadcases.keys())
             if isinstance(loadcase, int):
                 try:
                     key = keys[loadcase - 1]
@@ -1441,11 +1440,11 @@ class FERS:
                     raise IndexError(f"Loadcase index {loadcase} is out of range.")
             else:
                 key = str(loadcase)
-                if key not in self.results.loadcases:
+                if key not in self.resultsbundle.loadcases:
                     raise KeyError(f"Loadcase '{key}' not found.")
-            chosen = self.results.loadcases[key]
+            chosen = self.resultsbundle.loadcases[key]
         elif loadcombination is not None:
-            keys = list(self.results.loadcombinations.keys())
+            keys = list(self.resultsbundle.loadcombinations.keys())
             if isinstance(loadcombination, int):
                 try:
                     key = keys[loadcombination - 1]
@@ -1453,12 +1452,12 @@ class FERS:
                     raise IndexError(f"Loadcombination index {loadcombination} is out of range.")
             else:
                 key = str(loadcombination)
-                if key not in self.results.loadcombinations:
+                if key not in self.resultsbundle.loadcombinations:
                     raise KeyError(f"Loadcombination '{key}' not found.")
-            chosen = self.results.loadcombinations[key]
+            chosen = self.resultsbundle.loadcombinations[key]
         else:
-            if len(self.results.loadcases) == 1 and not self.results.loadcombinations:
-                chosen = next(iter(self.results.loadcases.values()))
+            if len(self.resultsbundle.loadcases) == 1 and not self.resultsbundle.loadcombinations:
+                chosen = next(iter(self.resultsbundle.loadcases.values()))
             else:
                 raise ValueError("Multiple results available – specify loadcase= or loadcombination=.")
 
