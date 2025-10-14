@@ -55,15 +55,15 @@ class SingleResults:
         elif hasattr(unity_checks_value, "dict"):
             unity_checks_value = unity_checks_value.dict()  # type: ignore[attr-defined]
 
-        return cls(
-            name=str(name_value) if name_value is not None else "",
-            displacement_nodes=displacement_map,
-            reaction_nodes=reaction_map,
-            member_results=member_map,
-            summary=summary_,
-            result_type=result_type_dict,
-            unity_checks=unity_checks_value,
-        )
+        instance = cls()
+        instance.name = name_value if name_value is not None else ""
+        instance.displacement_nodes = displacement_map
+        instance.reaction_nodes = reaction_map
+        instance.member_results = member_map
+        instance.summary = summary_
+        instance.result_type = result_type_dict
+        instance.unity_checks = unity_checks_value
+        return instance
 
     def to_dict(self) -> Dict[str, Any]:
         return {

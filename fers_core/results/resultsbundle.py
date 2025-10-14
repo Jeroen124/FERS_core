@@ -31,11 +31,12 @@ class ResultsBundle:
         elif hasattr(overview_value, "dict"):
             overview_value = overview_value.dict()  # type: ignore[attr-defined]
 
-        return cls(
-            loadcases=lc_map,
-            loadcombinations=comb_map,
-            unity_checks_overview=overview_value,
-        )
+        instance = cls()
+        instance.loadcases = lc_map
+        instance.loadcombinations = comb_map
+        instance.unity_checks_overview = overview_value
+
+        return instance
 
     # Optional factory from already-parsed dicts (e.g., raw JSON)
     @classmethod

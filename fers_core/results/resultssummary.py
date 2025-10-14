@@ -10,11 +10,11 @@ class ResultsSummary:
 
     @classmethod
     def from_pydantic(cls, pyd_object: Any) -> "ResultsSummary":
-        return cls(
-            total_displacements=int(getattr(pyd_object, "total_displacements", 0) or 0),
-            total_member_forces=int(getattr(pyd_object, "total_member_forces", 0) or 0),
-            total_reaction_forces=int(getattr(pyd_object, "total_reaction_forces", 0) or 0),
-        )
+        instance = cls()
+        instance.total_displacements = getattr(pyd_object, "total_displacements", 0)
+        instance.total_member_forces = getattr(pyd_object, "total_member_forces", 0)
+        instance.total_reaction_forces = getattr(pyd_object, "total_reaction_forces", 0)
+        return instance
 
     def to_dict(self) -> Dict[str, int]:
         return {
