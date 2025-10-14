@@ -73,7 +73,8 @@
             "tolerance": 0.01,
             "max_iterations": 30,
             "dimensionality": "3D",
-            "order": "NONLINEAR"
+            "order": "Nonlinear",
+            "rigid_strategy": "Linear_MPC"
         },
         "general_info": {
             "project_name": "Unnamed Project",

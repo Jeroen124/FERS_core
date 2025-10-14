@@ -1,5 +1,5 @@
 from typing import Optional
-from ..settings.enums import AnalysisOrder, Dimensionality
+from ..settings.enums import AnalysisOrder, Dimensionality, RigidStrategy
 
 
 class AnalysisOptions:
@@ -14,6 +14,7 @@ class AnalysisOptions:
         max_iterations: Optional[int] = 30,
         dimensionality: Optional[Dimensionality] = Dimensionality.THREE_DIMENSIONAL,
         order: Optional[AnalysisOrder] = AnalysisOrder.NONLINEAR,
+        rigid_strategy: Optional[RigidStrategy] = RigidStrategy.RIGID_MEMBER,
     ):
         self.analysis_options_id = id or AnalysisOptions._analysis_options_counter
         if id is None:
@@ -24,6 +25,7 @@ class AnalysisOptions:
         self.max_iterations = max_iterations
         self.dimensionality = dimensionality
         self.order = order
+        self.rigid_strategy = rigid_strategy
 
     def to_dict(self):
         return {
@@ -34,4 +36,5 @@ class AnalysisOptions:
             "max_iterations": self.max_iterations,
             "dimensionality": self.dimensionality.value,
             "order": self.order.value,
+            "rigid_strategy": self.rigid_strategy.value,
         }
