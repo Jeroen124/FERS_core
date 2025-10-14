@@ -75,7 +75,7 @@ calculation_1.save_to_json(file_path, indent=4)
 # Perform the analysis using the saved JSON model file
 print("Running the analysis...")
 calculation_1.run_analysis()
-result_loadcase = calculation_1.results.loadcases["End Load"]
+result_loadcase = calculation_1.resultsbundle.loadcases["End Load"]
 
 d_node_2 = result_loadcase.displacement_nodes["2"]
 d_node_3 = result_loadcase.displacement_nodes["3"]

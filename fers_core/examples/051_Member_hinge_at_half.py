@@ -75,7 +75,7 @@ calculation_1.save_to_json(file_path, indent=4)
 # ----------------------------
 print("Running the analysis...")
 calculation_1.run_analysis()
-results = calculation_1.results.loadcases["End Load"]
+results = calculation_1.resultsbundle.loadcases["End Load"]
 
 # Extract FERS results
 deflection_y_tip_fers = results.displacement_nodes["3"].dy

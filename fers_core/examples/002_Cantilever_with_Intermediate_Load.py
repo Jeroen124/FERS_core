@@ -59,7 +59,7 @@ print("Running the analysis...")
 calculation_1.run_analysis()
 
 # Extract results from the analysis
-results = calculation_1.results.loadcases["Intermediate Load"]
+results = calculation_1.resultsbundle.loadcases["Intermediate Load"]
 
 # Extract results from the analysis
 # Displacement at the intermediate point in the y-direction

@@ -169,7 +169,7 @@ calculation_1.save_to_json(file_path, indent=4)
 # ----------------------------
 print("Running the analysis...")
 calculation_1.run_analysis()
-results = calculation_1.results.loadcases["End Load"]
+results = calculation_1.resultsbundle.loadcases["End Load"]
 
 # Extract FERS results
 deflection_y_tip_fers = results.displacement_nodes["3"].dy
@@ -232,7 +232,7 @@ else:
 #    keeping a rigid link from the fixed support to the spring location.
 # 2) The analytical checks use closed-form expressions for a cantilever with a root spring.
 # 3) You can tune k_phi_z to target a desired root rotation under the applied tip load.
-results = calculation_1.results.loadcases["End Load"]
+results = calculation_1.resultsbundle.loadcases["End Load"]
 print_bending_moments_for_loadcase(results)
 print_shear_forces_for_loadcase(results)
 print_displacements_for_loadcase(results)

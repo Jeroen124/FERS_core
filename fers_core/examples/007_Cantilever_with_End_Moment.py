@@ -60,7 +60,7 @@ calculation_1.save_to_json(file_path, indent=4)
 # Perform the analysis using the saved JSON model file
 print("Running the analysis...")
 calculation_1.run_analysis()
-results_end_load = calculation_1.results.loadcases["End Load"]
+results_end_load = calculation_1.resultsbundle.loadcases["End Load"]
 
 # Extract results from the analysis
 dy_fers = results_end_load.displacement_nodes["2"].dy
