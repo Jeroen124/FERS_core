@@ -17,7 +17,7 @@ from .imperfections.translationimperfection import TranslationImperfection
 from .loads.distributionshape import DistributionShape
 from .supports.supportcondition import SupportCondition
 from .supports.supportcondition import SupportConditionType
-from .settings.anlysis_options import AnalysisOrder, Dimensionality
+from .settings.anlysis_options import AnalysisOrder, Dimensionality, RigidStrategy
 from .members.memberhinge import MemberHinge
 from .results.resultsbundle import ResultsBundle
 
@@ -38,6 +38,7 @@ __all__ = [
     "NodalLoad",
     "NodalMoment",
     "NodalSupport",
+    "RigidStrategy",
     "RotationImperfection",
     "ResultsBundle",
     "Section",
