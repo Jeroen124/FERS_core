@@ -97,9 +97,29 @@
             "distributed_loads": [],
             "rotation_imperfections": [],
             "translation_imperfections": []
+        },
+        {
+            "id": 2,
+            "name": "Dead Load",
+            "nodal_loads": [],
+            "nodal_moments": [],
+            "distributed_loads": [],
+            "rotation_imperfections": [],
+            "translation_imperfections": []
         }
     ],
-    "load_combinations": [],
+    "load_combinations": [
+        {
+            "id": 1,
+            "name": "ULS persistent",
+            "load_cases_factors": {
+                "2": 1.35,
+                "1": 1.5
+            },
+            "situation": "ULS",
+            "check": "ALL"
+        }
+    ],
     "imperfection_cases": [],
     "settings": {
         "id": 1,
