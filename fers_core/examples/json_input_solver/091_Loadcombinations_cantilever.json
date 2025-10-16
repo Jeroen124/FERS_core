@@ -117,7 +117,8 @@
                 "1": 1.5
             },
             "situation": "ULS",
-            "check": "ALL"
+            "check": "ALL",
+            "limit_state": null
         }
     ],
     "imperfection_cases": [],

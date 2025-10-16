@@ -22,8 +22,6 @@ class RotationImperfection:
             axis (tuple): The axis of rotation (e.g., (0, 0, 1) for Z-axis).
             point (tuple): The point around which the rotation occurs.
         """
-        self.id = RotationImperfection._rotation_imperfection_counter
-        RotationImperfection._rotation_imperfection_counter += 1
         self.memberset = memberset
         self.magnitude = magnitude
         self.axis = axis
@@ -32,10 +30,7 @@ class RotationImperfection:
 
     def to_dict(self):
         return {
-            "id": self.id,
             "memberset": [ms.id for ms in self.memberset],
             "magnitude": self.magnitude,
-            "axis": self.axis,
-            "axis_only": self.axis_only,
-            "point": self.point,
+            "axis": [self.axis[0], self.axis[1], self.axis[2]],
         }
