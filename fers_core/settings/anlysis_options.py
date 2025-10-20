@@ -15,6 +15,7 @@ class AnalysisOptions:
         dimensionality: Optional[Dimensionality] = Dimensionality.THREE_DIMENSIONAL,
         order: Optional[AnalysisOrder] = AnalysisOrder.NONLINEAR,
         rigid_strategy: Optional[RigidStrategy] = RigidStrategy.RIGID_MEMBER,
+        axial_slack: Optional[float] = 500,
     ):
         self.analysis_options_id = id or AnalysisOptions._analysis_options_counter
         if id is None:
@@ -26,6 +27,7 @@ class AnalysisOptions:
         self.dimensionality = dimensionality
         self.order = order
         self.rigid_strategy = rigid_strategy
+        self.axial_slack = axial_slack
 
     def to_dict(self):
         return {
