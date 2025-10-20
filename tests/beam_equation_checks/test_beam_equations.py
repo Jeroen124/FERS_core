@@ -57,7 +57,7 @@ def test_001_Cantilever_with_End_Load():
     NodalLoad(node=node_free, load_case=load_case, magnitude=force_in_newton, direction=(0.0, -1.0, 0.0))
 
     calculation.run_analysis()
-    results = calculation.results.loadcases["End Load"]
+    results = calculation.resultsbundle.loadcases["End Load"]
 
     fers_dy_free = results.displacement_nodes["2"].dy
     fers_mz_fixed = results.reaction_nodes["1"].nodal_forces.mz
@@ -98,7 +98,7 @@ def test_002_Cantilever_with_Intermediate_Load():
     NodalLoad(node=node_load, load_case=load_case, magnitude=force_in_newton, direction=(0.0, -1.0, 0.0))
 
     calculation.run_analysis()
-    res = calculation.results.loadcases["Intermediate Load"]
+    res = calculation.resultsbundle.loadcases["Intermediate Load"]
 
     fers_dy_at_a = res.displacement_nodes["2"].dy
     fers_dy_at_L = res.displacement_nodes["3"].dy
@@ -144,7 +144,7 @@ def test_003_Cantilever_with_Uniform_Distributed_Load():
     )
 
     calculation.run_analysis()
-    res = calculation.results.loadcases["Uniform Load"]
+    res = calculation.resultsbundle.loadcases["Uniform Load"]
 
     fers_dy_L = res.displacement_nodes["2"].dy
     fers_mz_fixed = res.reaction_nodes["1"].nodal_forces.mz
@@ -190,7 +190,7 @@ def test_004_Cantilever_with_Partial_Uniform_Distributed_Load():
     )
 
     calculation.run_analysis()
-    res = calculation.results.loadcases["Partial Uniform Load"]
+    res = calculation.resultsbundle.loadcases["Partial Uniform Load"]
 
     fers_fy_fixed = res.reaction_nodes["1"].nodal_forces.fy
     fers_mz_fixed = res.reaction_nodes["1"].nodal_forces.mz
@@ -239,8 +239,8 @@ def test_005_Cantilever_with_Triangular_Distributed_Load():
     )
 
     calculation.run_analysis()
-    res_tri = calculation.results.loadcases["Triangular Load"]
-    res_inv = calculation.results.loadcases["Inverse Triangular Load"]
+    res_tri = calculation.resultsbundle.loadcases["Triangular Load"]
+    res_inv = calculation.resultsbundle.loadcases["Inverse Triangular Load"]
 
     fers_dy_L_tri = res_tri.displacement_nodes["2"].dy
     fers_mz_fixed_tri = res_tri.reaction_nodes["1"].nodal_forces.mz
@@ -301,8 +301,8 @@ def test_006_Cantilever_with_Partial_Triangular_Distributed_Load():
     )
 
     calculation.run_analysis()
-    res_tri = calculation.results.loadcases["Triangular Load"]
-    res_inv = calculation.results.loadcases["Inverse Triangular Load"]
+    res_tri = calculation.resultsbundle.loadcases["Triangular Load"]
+    res_inv = calculation.resultsbundle.loadcases["Inverse Triangular Load"]
 
     fers_fy_fixed_tri = res_tri.reaction_nodes["1"].nodal_forces.fy
     fers_fy_fixed_inv = res_inv.reaction_nodes["1"].nodal_forces.fy
@@ -345,7 +345,7 @@ def test_007_Cantilever_with_End_Moment():
     NodalMoment(node=n2, load_case=lc, magnitude=end_moment_in_newton_meter, direction=(0.0, 0.0, 1.0))
 
     calculation.run_analysis()
-    res = calculation.results.loadcases["End Moment"]
+    res = calculation.resultsbundle.loadcases["End Moment"]
 
     fers_dy_L = res.displacement_nodes["2"].dy
     fers_mz_fixed = res.reaction_nodes["1"].nodal_forces.mz
@@ -395,7 +395,7 @@ def test_011_Simply_Supported_with_Center_Load():
     NodalLoad(node=n_mid, load_case=lc, magnitude=force_in_newton, direction=(0.0, -1.0, 0.0))
 
     calculation.run_analysis()
-    res = calculation.results.loadcases["Center Load"]
+    res = calculation.resultsbundle.loadcases["Center Load"]
 
     fers_dy_mid = res.displacement_nodes["2"].dy
     fers_mz_left = res.reaction_nodes["1"].nodal_forces.mz
@@ -447,7 +447,7 @@ def test_012_Simply_Supported_with_Intermediate_Load():
     NodalLoad(node=n_load, load_case=lc, magnitude=force_in_newton, direction=(0.0, -1.0, 0.0))
 
     calculation.run_analysis()
-    res = calculation.results.loadcases["Intermediate Load"]
+    res = calculation.resultsbundle.loadcases["Intermediate Load"]
 
     fers_mz_left = res.reaction_nodes["1"].nodal_forces.mz
     fers_mz_member_at_load = res.member_results["1"].end_node_forces.mz
@@ -502,7 +502,7 @@ def test_013_Simply_Supported_with_Double_symmetric_Load():
     NodalLoad(node=n_b, load_case=lc, magnitude=force_per_point_in_newton, direction=(0.0, -1.0, 0.0))
 
     calculation.run_analysis()
-    res = calculation.results.loadcases["Double symmetric Load"]
+    res = calculation.resultsbundle.loadcases["Double symmetric Load"]
 
     fers_mz_member_mid = res.member_results["1"].end_node_forces.mz  # under the left load toward midspan
     expected_mid_moment = simply_supported_symmetric_double_load_mid_moment(

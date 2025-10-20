@@ -45,7 +45,7 @@ def test_041_rigid_member_end_load():
     NodalLoad(node=node_2, load_case=load_case, magnitude=force_newton, direction=(0.0, -1.0, 0.0))
 
     calculation.run_analysis()
-    results = calculation.results.loadcases["End Load"]
+    results = calculation.resultsbundle.loadcases["End Load"]
 
     dy_2 = results.displacement_nodes["2"].dy
     dy_3 = results.displacement_nodes["3"].dy
@@ -107,7 +107,7 @@ def test_051_member_hinge_root_rotational_spring():
     NodalLoad(node=node_3, load_case=load_case, magnitude=force_newton, direction=(0.0, -1.0, 0.0))
 
     calculation.run_analysis()
-    results = calculation.results.loadcases["End Load"]
+    results = calculation.resultsbundle.loadcases["End Load"]
 
     dy_tip_fers = results.displacement_nodes["3"].dy
     rz_tip_fers = results.displacement_nodes["3"].rz
@@ -179,8 +179,10 @@ def test_061_two_colinear_tension_only_members_with_mid_load():
     load_case = calculation.create_load_case(name="Mid Load")
     NodalLoad(node=node_2, load_case=load_case, magnitude=applied_force_newton, direction=(1.0, 0.0, 0.0))
 
+    calculation.settings.analysis_options.axial_slack = 0.1
+
     calculation.run_analysis()
-    results = calculation.results.loadcases["Mid Load"]
+    results = calculation.resultsbundle.loadcases["Mid Load"]
 
     displacement_node_2_dx_fers = results.displacement_nodes["2"].dx
     reaction_node_1_fx_fers = results.reaction_nodes["1"].nodal_forces.fx
@@ -192,7 +194,7 @@ def test_061_two_colinear_tension_only_members_with_mid_load():
     displacement_node_2_dx_expected = (applied_force_newton * member_length_meter) / (
         cross_section_area * elastic_modulus
     )
-    reaction_node_1_fx_expected = applied_force_newton
+    reaction_node_1_fx_expected = -applied_force_newton
     reaction_node_3_fx_expected = 0.0
 
     assert_close(

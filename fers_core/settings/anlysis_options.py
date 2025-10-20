@@ -39,4 +39,5 @@ class AnalysisOptions:
             "dimensionality": self.dimensionality.value,
             "order": self.order.value,
             "rigid_strategy": self.rigid_strategy.value,
+            "axial_slack": self.axial_slack,
         }
