@@ -1,5 +1,5 @@
 import re
-from typing import Dict, Optional, Tuple, Union
+from typing import Any, Dict, Optional, Tuple, Union
 import fers_calculations
 import ujson
 
@@ -7,12 +7,19 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pyvista as pv
 
-
-from ..fers.deformation_utils import (
-    interpolate_beam_local,
-    transform_dofs_global_to_local,
+from fers_core.fers.deformation_utils import (
+    centerline_path_points,
     extrude_along_path,
 )
+from fers_core.results.resultsbundle import ResultsBundle
+from fers_core.supports.support_utils import (
+    format_support_label,
+    get_condition_type,
+    color_for_condition_type,
+    translational_summary,
+)
+
+
 from ..imperfections.imperfectioncase import ImperfectionCase
 from ..loads.loadcase import LoadCase
 from ..loads.loadcombination import LoadCombination
@@ -26,7 +33,7 @@ from ..members.shapepath import ShapePath
 from ..nodes.node import Node
 from ..supports.nodalsupport import NodalSupport
 from ..settings.settings import Settings
-from ..types.pydantic_models import Results, ResultsBundle
+from ..types.pydantic_models import ResultsBundle as ResultsBundleSchema
 
 
 class FERS:
@@ -42,7 +49,7 @@ class FERS:
         )  # Use provided settings or create default
         self.validation_checks = []
         self.report = None
-        self.results = None
+        self.resultsbundle = None
 
     def run_analysis_from_file(self, file_path: str):
         """
@@ -64,9 +71,9 @@ class FERS:
 
         # Parse and validate the results
         try:
-            results_dict = ujson.loads(result_string)
-            validated_results = ResultsBundle(**results_dict)
-            self.results = validated_results
+            results_dictionary = ujson.loads(result_string)
+            validated = ResultsBundleSchema(**results_dictionary)
+            self.resultsbundle = ResultsBundle.from_pydantic(validated)
         except Exception as e:
             raise ValueError(f"Failed to parse or validate results: {e}")
 
@@ -94,36 +101,34 @@ class FERS:
             raise RuntimeError(f"Failed to run calculation: {e}")
 
         try:
-            results_dict = ujson.loads(result_string)
-            validated_results = ResultsBundle(**results_dict)
-            self.results = validated_results
+            results_dictionary = ujson.loads(result_string)
+            validated = ResultsBundleSchema(**results_dictionary)
+            self.resultsbundle = ResultsBundle.from_pydantic(validated)
         except Exception as e:
             raise ValueError(f"Failed to parse or validate results: {e}")
 
-    def to_dict(self):
-        """Convert the FERS model to a dictionary representation."""
-        return {
+    def to_dict(self, include_results: bool = True) -> Dict[str, Any]:
+        data: Dict[str, Any] = {
             "member_sets": [member_set.to_dict() for member_set in self.member_sets],
             "load_cases": [load_case.to_dict() for load_case in self.load_cases],
             "load_combinations": [load_comb.to_dict() for load_comb in self.load_combinations],
             "imperfection_cases": [imp_case.to_dict() for imp_case in self.imperfection_cases],
             "settings": self.settings.to_dict(),
-            "results": self.results.to_dict() if self.results else None,
             "memberhinges": [
-                memberhinge.to_dict() for memberhinge in self.get_unique_member_hinges_from_all_member_sets()
+                hinge.to_dict() for hinge in self.get_unique_member_hinges_from_all_member_sets()
             ],
             "materials": [
                 material.to_dict() for material in self.get_unique_materials_from_all_member_sets()
             ],
             "sections": [section.to_dict() for section in self.get_unique_sections_from_all_member_sets()],
-            "nodal_supports": [
-                nodal_support.to_dict()
-                for nodal_support in self.get_unique_nodal_support_from_all_member_sets()
-            ],
-            "shape_paths": [
-                shape_path.to_dict() for shape_path in self.get_unique_shape_paths_from_all_member_sets()
-            ],
+            "nodal_supports": [ns.to_dict() for ns in self.get_unique_nodal_support_from_all_member_sets()],
+            "shape_paths": [sp.to_dict() for sp in self.get_unique_shape_paths_from_all_member_sets()],
         }
+        if include_results and self.resultsbundle is not None:
+            data["resultsbundle"] = self.resultsbundle.to_dict()
+        else:
+            data["resultsbundle"] = None
+        return data
 
     def settings_to_dict(self):
         """Convert settings to a dictionary representation with additional information."""
@@ -599,53 +604,6 @@ class FERS:
 
         return unique_hinges
 
-    def get_unique_nodal_support(self):
-        """
-        Returns a dict of unique nodal supports keyed by support.id.
-        """
-        unique_nodal_supports = {}
-        for member_set in self.member_sets:
-            for member in member_set.members:
-                for node in (member.start_node, member.end_node):
-                    if node.nodal_support:
-                        sup = node.nodal_support
-                        if sup.id not in unique_nodal_supports:
-                            unique_nodal_supports[sup.id] = sup  # fixed key
-        return unique_nodal_supports
-
-    def get_unique_nodal_supports(self):
-        """
-        Returns a detailed mapping of all unique NodalSupport instances, including the numbers of all nodes
-        that have each nodal support, and their displacement and rotation conditions.
-
-        The return format is a list of dictionaries, each containing:
-        - 'support_no': The unique identifier of the NodalSupport.
-        - 'node_nos': A list of node numbers that share this NodalSupport.
-        - 'displacement_conditions': Displacement conditions of the NodalSupport.
-        - 'rotation_conditions': Rotation conditions of the NodalSupport.
-        """
-        support_details = {}
-
-        for member_set in self.member_sets:
-            for member in member_set.members:
-                for node in [member.start_node, member.end_node]:
-                    if node.nodal_support:
-                        support_no = node.nodal_support.id
-                        if support_no not in support_details:
-                            support_details[support_no] = {
-                                "support_no": support_no,
-                                "node_nos": set(),
-                                "displacement_conditions": node.nodal_support.displacement_conditions,
-                                "rotation_conditions": node.nodal_support.rotation_conditions,
-                            }
-                        # Add the node's number to the list of nodes for this NodalSupport
-                        support_details[support_no]["node_nos"].add(node.id)
-
-        # Convert the details to a list of dictionaries for easier consumption
-        detailed_support_list = list(support_details.values())
-
-        return detailed_support_list
-
     def get_load_case_by_name(self, name):
         """Retrieve a load case by its name."""
         for load_case in self.load_cases:
@@ -685,35 +643,47 @@ class FERS:
 
     def plot_model_3d(
         self,
-        show_nodes=True,
-        show_sections=True,
-        show_local_axes=False,
+        show_nodes: bool = True,
+        show_sections: bool = True,
+        show_local_axes: bool = False,
         local_axes_at_midspan: bool = False,
-        display_Local_axes_scale=1,
-        load_case=None,
-        display_load_scale=1,  # Added scale factor for point loads, default = 1
-        show_load_labels=True,
+        display_Local_axes_scale: float = 1.0,
+        load_case: Optional[str] = None,
+        display_load_scale: float = 1.0,
+        show_load_labels: bool = True,
+        show_supports: bool = True,
+        show_support_labels: bool = True,
+        support_size_fraction: float = 0.05,
+        show_support_base_for_fixed: bool = True,
     ):
         """
-        Creates an interactive 3D PyVista plot of the entire model, aligning sections to the member's axis.
-        Parameters:
-        - show_nodes (bool): Whether to show node spheres in the plot.
-        - show_sections (bool): Whether to extrude sections along members' axes.
-        - show_local_axes (bool): Whether to plot the local coordinate system at each member's start node.
-        - local_axes_at_midspan (bool): If True, draw local axes at the midpoint of each member
-        - load_case_name (str): Name of the load case to display loads for. If None, no point loads are shown.
-        - point_load_scale (float): Scale factor for point loads, default is 1.
-        """
+        Creates an interactive 3D PyVista plot of the entire model, aligning
+        sections to each member's axis.
 
-        # Create a PyVista plotter
+        Parameters:
+        - show_nodes: Whether to show node spheres.
+        - show_sections: Whether to extrude sections along members' axes.
+        - show_local_axes: Whether to plot local axes at each member.
+        - local_axes_at_midspan: Draw local axes at midspan instead of start node.
+        - display_Local_axes_scale: Scale for local axes arrows.
+        - load_case: Name of load case to display loads.
+        - display_load_scale: Scale factor for point loads.
+        - show_load_labels: Show load magnitudes next to arrows.
+        - show_supports: Draw nodal supports visualization.
+        - show_support_labels: Add compact text label per support (U[...] R[...]).
+        - support_size_fraction: Size of support arrows vs model bounding size.
+        - show_support_base_for_fixed: If True, draw a flat square (plate) for
+        all-fixed translational supports.
+        """
+        # -----------------------------
+        # Build plot
+        # -----------------------------
         plotter = pv.Plotter()
 
-        # Store all members and lines
         all_points = []
         all_lines = []
-        point_offset = 0
+        offset = 0
 
-        # Retrieve all members
         members = self.get_all_members()
 
         min_coords, max_coords = self.get_structure_bounds()
@@ -722,150 +692,706 @@ class FERS:
         else:
             structure_size = 1.0
 
-        arrow_scale_factor = structure_size * 0.5
+        arrow_scale_for_loads = structure_size * 0.5
+        support_arrow_scale = max(1e-6, structure_size * support_size_fraction)
 
-        # Process all members to create 3D edges
-        for member in members:
-            start_node = member.start_node
-            end_node = member.end_node
+        for m in members:
+            s = m.start_node
+            e = m.end_node
+            all_points.append((s.X, s.Y, s.Z))
+            all_points.append((e.X, e.Y, e.Z))
+            all_lines.extend([2, offset, offset + 1])
+            offset += 2
 
-            # Collect start and end coordinates
-            start_xyz = (start_node.X, start_node.Y, start_node.Z)
-            end_xyz = (end_node.X, end_node.Y, end_node.Z)
-
-            # Add points to the points list
-            all_points.append(start_xyz)
-            all_points.append(end_xyz)
-
-            # Define a line connecting these two points
-            all_lines.append(2)
-            all_lines.append(point_offset)
-            all_lines.append(point_offset + 1)
-
-            point_offset += 2
-
-        # Convert points and lines to PyVista PolyData
         all_points = np.array(all_points, dtype=np.float32)
-        poly_data = pv.PolyData(all_points)
-        poly_data.lines = np.array(all_lines, dtype=np.int32)
-
-        # Add lines to the plot
-        plotter.add_mesh(poly_data, color="blue", line_width=2, label="Members")
+        poly = pv.PolyData(all_points)
+        poly.lines = np.array(all_lines, dtype=np.int32)
+        plotter.add_mesh(poly, color="blue", line_width=2, label="Members")
 
         if show_sections:
-            for member in members:
-                start_node = member.start_node
-                end_node = member.end_node
-                section = getattr(member, "section", None)
-                if section is None or getattr(section, "shape_path", None) is None:
+            for m in members:
+                s = m.start_node
+                e = m.end_node
+                sec = getattr(m, "section", None)
+                if sec is None or getattr(sec, "shape_path", None) is None:
                     continue
-
-                if section.shape_path is not None:
-                    # Get nodes and edges of the section in the local y-z plane
-                    coords_2d, edges = section.shape_path.get_shape_geometry()
-
-                    # Convert to a 3D format, keeping points in the local y-z plane
-                    coords_local = np.array([[0.0, y, z] for y, z in coords_2d], dtype=np.float32)
-
-                    # Get the local coordinate system
-                    local_x, local_y, local_z = member.local_coordinate_system()
-
-                    # Build the transformation matrix
-                    transform_matrix = np.column_stack((local_x, local_y, local_z))
-
-                    # Transform the local y-z points into the global coordinate system
-                    transformed_coords = coords_local @ transform_matrix.T
-
-                    # Translate the transformed coordinates to the start node position
-                    transformed_coords += np.array([start_node.X, start_node.Y, start_node.Z])
-
-                    # Create a PyVista PolyData for the section
-                    section_polydata = pv.PolyData(transformed_coords)
-                    lines = []
-                    for edge in edges:
-                        lines.append(2)
-                        lines.extend(edge)
-                    section_polydata.lines = np.array(lines, dtype=np.int32)
-
-                    # Extrude the section along the member's local x-axis
-                    dx = end_node.X - start_node.X
-                    dy = end_node.Y - start_node.Y
-                    dz = end_node.Z - start_node.Z
-                    extruded_section = section_polydata.extrude([dx, dy, dz], capping=True)
-
-                    # Add extruded section to the plot
-                    plotter.add_mesh(extruded_section, color="steelblue", label=f"Section {section.name}")
+                coords_2d, edges = sec.shape_path.get_shape_geometry()
+                coords_local = np.array([[0.0, y, z] for y, z in coords_2d], dtype=np.float32)
+                lx, ly, lz = m.local_coordinate_system()
+                T = np.column_stack((lx, ly, lz))
+                coords_g = coords_local @ T.T + np.array([s.X, s.Y, s.Z])
+                pd = pv.PolyData(coords_g)
+                line_arr = []
+                for a, b in edges:
+                    line_arr.extend((2, a, b))
+                pd.lines = np.array(line_arr, dtype=np.int32)
+                dx, dy, dz = e.X - s.X, e.Y - s.Y, e.Z - s.Z
+                extr = pd.extrude([dx, dy, dz], capping=True)
+                plotter.add_mesh(extr, color="steelblue", label=f"Section {sec.name}")
 
         if show_local_axes:
-            for index, member in enumerate(members):
-                start_node = member.start_node
-                end_node = member.end_node
-                local_x, local_y, local_z = member.local_coordinate_system()
-
-                start = np.array([start_node.X, start_node.Y, start_node.Z], dtype=float)
-                if local_axes_at_midspan:
-                    end = np.array([end_node.X, end_node.Y, end_node.Z], dtype=float)
-                    origin = 0.5 * (start + end)
+            for idx, m in enumerate(members):
+                s = m.start_node
+                e = m.end_node
+                lx, ly, lz = m.local_coordinate_system()
+                p0 = np.array([s.X, s.Y, s.Z], dtype=float)
+                origin = 0.5 * (p0 + np.array([e.X, e.Y, e.Z], dtype=float)) if local_axes_at_midspan else p0
+                sc = display_Local_axes_scale
+                if idx == 0:
+                    plotter.add_arrows(origin, lx * sc, color="red", label="Local X")
+                    plotter.add_arrows(origin, ly * sc, color="green", label="Local Y")
+                    plotter.add_arrows(origin, lz * sc, color="blue", label="Local Z")
                 else:
-                    origin = start
-
-                scale = display_Local_axes_scale
-
-                if index == 0:
-                    plotter.add_arrows(origin, local_x * scale, color="red", label="Local X")
-                    plotter.add_arrows(origin, local_y * scale, color="green", label="Local Y")
-                    plotter.add_arrows(origin, local_z * scale, color="blue", label="Local Z")
-                else:
-                    plotter.add_arrows(origin, local_x * scale, color="red")
-                    plotter.add_arrows(origin, local_y * scale, color="green")
-                    plotter.add_arrows(origin, local_z * scale, color="blue")
+                    plotter.add_arrows(origin, lx * sc, color="red")
+                    plotter.add_arrows(origin, ly * sc, color="green")
+                    plotter.add_arrows(origin, lz * sc, color="blue")
 
         if load_case:
-            load_case = self.get_load_case_by_name(load_case)
-            if load_case:
-                for nodal_load in load_case.nodal_loads:
-                    node = nodal_load.node
-                    # Compute the force vector components
-                    load_vector = np.array(nodal_load.direction) * nodal_load.magnitude * display_load_scale
-                    magnitude = np.linalg.norm(load_vector)
-                    if magnitude > 0:
-                        direction = load_vector / magnitude
+            lc = self.get_load_case_by_name(load_case)
+            if lc:
+                for nl in lc.nodal_loads:
+                    node = nl.node
+                    vec = np.array(nl.direction) * nl.magnitude * display_load_scale
+                    mag = np.linalg.norm(vec)
+                    if mag > 0:
+                        direction = vec / mag
+                        p = np.array([node.X, node.Y, node.Z])
                         plotter.add_arrows(
-                            np.array([node.X, node.Y, node.Z]),
-                            direction * arrow_scale_factor,  # Scale arrows
-                            color="#FFA500",  # Orange
-                            label="Point Load",
+                            p, direction * arrow_scale_for_loads, color="#FFA500", label="Point Load"
                         )
-                        # Calculate the midpoint for the label position
-                        midpoint = np.array([node.X, node.Y, node.Z]) + (direction * (arrow_scale_factor / 2))
-                        # Display the magnitude next to the midpoint of the arrow
+                        mid = p + direction * (arrow_scale_for_loads / 2.0)
                         plotter.add_point_labels(
-                            midpoint,
-                            [f"{magnitude:.2f}"],  # Format magnitude to 2 decimal places
-                            font_size=20 * arrow_scale_factor,
+                            mid,
+                            [f"{mag:.2f}"],
+                            font_size=14,
                             text_color="#FFA500",
                             always_visible=show_load_labels,
                         )
 
         if show_nodes:
-            # Plot spheres at each unique node location
-            unique_nodes = self.get_all_nodes()
-            node_points = np.array([(node.X, node.Y, node.Z) for node in unique_nodes], dtype=np.float32)
-            point_cloud = pv.PolyData(node_points)
-            glyph = point_cloud.glyph(geom=pv.Sphere(radius=0.1), scale=False, orient=False)
+            nodes = self.get_all_nodes()
+            pts = np.array([(n.X, n.Y, n.Z) for n in nodes], dtype=np.float32)
+            cloud = pv.PolyData(pts)
+            glyph = cloud.glyph(
+                geom=pv.Sphere(radius=max(1e-6, structure_size * 0.01)), scale=False, orient=False
+            )
             plotter.add_mesh(glyph, color="red", label="Nodes")
 
-        # Add a legend and grid
+        # ---------------------------------------------
+        # Supports: arrows + optional square plate for all-fixed translations
+        # ---------------------------------------------
+        if show_supports:
+            legend_types: set[str] = set()
+            plate_legend_added = False
+            axis_dirs = {
+                "X": np.array([1.0, 0.0, 0.0]),
+                "Y": np.array([0.0, 1.0, 0.0]),
+                "Z": np.array([0.0, 0.0, 1.0]),
+            }
+
+            for node in self.get_all_nodes():
+                sup = getattr(node, "nodal_support", None)
+                if not sup:
+                    continue
+
+                pos = np.array([node.X, node.Y, node.Z], dtype=float)
+
+                # Colored arrows by translational condition per axis
+                for axis_name, axis_vec in axis_dirs.items():
+                    ctype = get_condition_type(sup.displacement_conditions.get(axis_name))
+                    color_val = color_for_condition_type(ctype)
+                    label = None
+                    # One legend item per condition type
+                    if ctype not in legend_types:
+                        label = f"Support {axis_name} – {ctype.title()}"
+                        legend_types.add(ctype)
+                    plotter.add_arrows(pos, axis_vec * support_arrow_scale, color=color_val, label=label)
+
+                # Flat square plate if all three translations are fixed
+                if show_support_base_for_fixed and translational_summary(sup) == "all_fixed":
+                    plate_size = support_arrow_scale * 1.2  # edge length in X and Y
+                    plate_thickness = support_arrow_scale * 0.15  # thin in Z to read as a square "plate"
+                    # Square in the global XY plane (thin along Z)
+                    plate = pv.Cube(
+                        center=pos, x_length=plate_size, y_length=plate_size, z_length=plate_thickness
+                    )
+                    plotter.add_mesh(
+                        plate,
+                        color="black",
+                        opacity=0.8,
+                        label=None if plate_legend_added else "Fixed support (plate)",
+                    )
+                    plate_legend_added = True
+
+                if show_support_labels:
+                    text = format_support_label(sup)
+                    label_pos = pos + np.array([1.0, 1.0, 1.0]) * (support_arrow_scale * 0.6)
+                    plotter.add_point_labels(
+                        label_pos, [text], font_size=12, text_color="black", always_visible=True
+                    )
+
         plotter.add_legend()
+
         min_coords, max_coords = self.get_structure_bounds()
         if min_coords and max_coords:
-            margin = 0.5  # meters, adjust to taste
+            margin = 0.5
             x_min, y_min, z_min = (c - margin for c in min_coords)
             x_max, y_max, z_max = (c + margin for c in max_coords)
             plotter.show_grid(bounds=[x_min, x_max, y_min, y_max, z_min, z_max], color="gray")
         else:
             plotter.show_grid(color="gray")
+
         plotter.show(title="FERS 3D Model")
+
+    def show_results_2d(
+        self,
+        *,
+        plane: str = "yz",
+        loadcase: Optional[Union[int, str]] = None,
+        loadcombination: Optional[Union[int, str]] = None,
+        # Deformation options (default: only deformations shown)
+        show_deformations: bool = True,
+        deformation_scale: float = 100.0,
+        deformation_num_points: int = 41,
+        show_original_shape: bool = True,
+        original_line_width: float = 1.5,
+        deformed_line_width: float = 2.0,
+        original_color: str = "tab:blue",
+        deformed_color: str = "tab:red",
+        show_nodes: bool = True,
+        node_point_size: int = 10,
+        node_color: str = "black",
+        show_supports: bool = False,  # keep False by default to keep the plot clean
+        annotate_supports: bool = False,
+        support_marker_size: int = 60,
+        support_marker_edgecolor: str = "white",
+        support_annotation_fontsize: int = 8,
+        support_annotation_offset_xy: tuple[int, int] = (6, 6),
+        # Local bending moment options (off by default)
+        plot_local_bending_moment: Optional[str] = None,  # one of: None, "M_x", "M_y", "M_z"
+        moment_num_points: int = 41,
+        moment_scale: Optional[float] = None,  # None = auto scale based on structure size and maxima
+        moment_diagram_style: str = "filled",  # "filled" or "line"
+        moment_face_alpha: float = 0.35,
+        # Axes and layout
+        equal_aspect: bool = True,
+        title: Optional[str] = None,
+    ):
+        """
+        Show 2D results in a global projection plane ("xy", "xz", or "yz").
+
+        Default behavior:
+            - Plots only deformations (projected from 3D to the chosen plane).
+            - Does not plot bending moments unless 'plot_local_bending_moment' is set.
+
+        Notes:
+            - Deformed centerlines are computed using 'centerline_path_points' in 3D,
+            then projected to the chosen plane.
+            - Local bending moments (M_x, M_y, M_z) are read from the results. The
+            diagram is offset within the chosen plane, to the left of the projected
+            member direction for positive values (classic 2D convention).
+            - If a full curve (s vs M) is not available for a member, the method will
+            fall back to a straight line between end moments when possible.
+        """
+        import numpy as np
+        import matplotlib.pyplot as plt
+
+        if self.resultsbundle is None:
+            raise ValueError("No analysis results available. Run an analysis first.")
+
+        if loadcase is not None and loadcombination is not None:
+            raise ValueError("Specify either 'loadcase' OR 'loadcombination', not both.")
+
+        # -----------------------------
+        # Select which result set to show
+        # -----------------------------
+        if loadcase is not None:
+            loadcase_keys = list(self.resultsbundle.loadcases.keys())
+            if isinstance(loadcase, int):
+                if loadcase < 1 or loadcase > len(loadcase_keys):
+                    raise IndexError(f"Loadcase index {loadcase} is out of range.")
+                selected_key = loadcase_keys[loadcase - 1]
+            else:
+                selected_key = str(loadcase)
+                if selected_key not in self.resultsbundle.loadcases:
+                    raise KeyError(f"Loadcase '{selected_key}' not found.")
+            chosen_results = self.resultsbundle.loadcases[selected_key]
+            chosen_title = chosen_results.name if hasattr(chosen_results, "name") else str(selected_key)
+        elif loadcombination is not None:
+            loadcomb_keys = list(self.resultsbundle.loadcombinations.keys())
+            if isinstance(loadcombination, int):
+                if loadcombination < 1 or loadcombination > len(loadcomb_keys):
+                    raise IndexError(f"Loadcombination index {loadcombination} is out of range.")
+                selected_key = loadcomb_keys[loadcombination - 1]
+            else:
+                selected_key = str(loadcombination)
+                if selected_key not in self.resultsbundle.loadcombinations:
+                    raise KeyError(f"Loadcombination '{selected_key}' not found.")
+            chosen_results = self.resultsbundle.loadcombinations[selected_key]
+            chosen_title = chosen_results.name if hasattr(chosen_results, "name") else str(selected_key)
+        else:
+            if len(self.resultsbundle.loadcases) == 1 and not self.resultsbundle.loadcombinations:
+                chosen_results = next(iter(self.resultsbundle.loadcases.values()))
+                chosen_title = chosen_results.name if hasattr(chosen_results, "name") else "Loadcase"
+            else:
+                raise ValueError("Multiple results available. Specify 'loadcase' or 'loadcombination'.")
+
+        # -----------------------------
+        # Plane helpers
+        # -----------------------------
+        def project_xyz_to_plane(
+            x_value: float, y_value: float, z_value: float, plane_name: str
+        ) -> tuple[float, float]:
+            lower = plane_name.lower()
+            if lower == "xy":
+                return x_value, y_value
+            if lower == "xz":
+                return x_value, z_value
+            if lower == "yz":
+                return y_value, z_value
+            raise ValueError("plane must be one of 'xy', 'xz', or 'yz'")
+
+        def axis_labels_for_plane(plane_name: str) -> tuple[str, str]:
+            lower = plane_name.lower()
+            if lower == "xy":
+                return "X", "Y"
+            if lower == "xz":
+                return "X", "Z"
+            if lower == "yz":
+                return "Y", "Z"
+            raise ValueError("plane must be one of 'xy', 'xz', or 'yz'")
+
+        # -----------------------------
+        # Result field helpers (aligns with your 3D method)
+        # -----------------------------
+        def normalize_key(name: str) -> str:
+            return name.lower().replace("_", "")
+
+        def get_component(container_or_object, requested_name: str):
+            if container_or_object is None:
+                return None
+            candidates = [
+                requested_name,
+                requested_name.replace("_", ""),
+                requested_name.lower(),
+                requested_name.upper(),
+                requested_name.capitalize(),
+                requested_name.replace("_", "").lower(),
+            ]
+            for candidate in candidates:
+                if hasattr(container_or_object, candidate):
+                    return getattr(container_or_object, candidate)
+            if isinstance(container_or_object, dict):
+                for candidate in candidates:
+                    if candidate in container_or_object:
+                        return container_or_object[candidate]
+                for key, value in container_or_object.items():
+                    if normalize_key(key) == normalize_key(requested_name):
+                        return value
+            return None
+
+        def fetch_member_curve(
+            member_identifier: int, component_name: str
+        ) -> Optional[tuple[np.ndarray, np.ndarray]]:
+            # Preferred containers that hold s and M arrays
+            for attribute_name in [
+                "internal_forces_by_member",
+                "member_internal_forces",
+                "line_forces_by_member",
+                "member_line_forces",
+                "element_forces_by_member",
+            ]:
+                container = getattr(chosen_results, attribute_name, None)
+                if container and str(member_identifier) in container:
+                    record = container[str(member_identifier)]
+                    if isinstance(record, dict):
+                        s_values = get_component(record, "s")
+                        m_values = get_component(record, component_name)
+                        if s_values is not None and m_values is not None:
+                            s_values = np.asarray(s_values, dtype=float)
+                            m_values = np.asarray(m_values, dtype=float)
+                            if s_values.size > 1 and s_values.size == m_values.size:
+                                return s_values, m_values
+
+            # Nested under members
+            members_map = getattr(chosen_results, "members", None)
+            if members_map and str(member_identifier) in members_map:
+                member_object = members_map[str(member_identifier)]
+                for nested_name in ["internal_forces", "line_forces"]:
+                    nested = getattr(member_object, nested_name, None)
+                    if nested is not None:
+                        s_values = get_component(nested, "s")
+                        m_values = get_component(nested, component_name)
+                        if s_values is not None and m_values is not None:
+                            s_values = np.asarray(s_values, dtype=float)
+                            m_values = np.asarray(m_values, dtype=float)
+                            if s_values.size > 1 and s_values.size == m_values.size:
+                                return s_values, m_values
+            return None
+
+        def fetch_member_end_forces(
+            member_identifier: int, component_name: str
+        ) -> Optional[tuple[np.ndarray, np.ndarray]]:
+            # Your primary layout
+            container = getattr(chosen_results, "member_results", None)
+            if container and str(member_identifier) in container:
+                record = container[str(member_identifier)]
+                start_forces = (
+                    getattr(record, "start_node_forces", None)
+                    or getattr(record, "start", None)
+                    or getattr(record, "i", None)
+                )
+                end_forces = (
+                    getattr(record, "end_node_forces", None)
+                    or getattr(record, "end", None)
+                    or getattr(record, "j", None)
+                )
+                start_value = get_component(start_forces, component_name)
+                end_value = get_component(end_forces, component_name)
+                if start_value is not None and end_value is not None:
+                    return np.array([0.0, 1.0], dtype=float), np.array(
+                        [float(start_value), float(end_value)], dtype=float
+                    )
+
+            # Other fallback containers
+            for attribute_name in [
+                "member_end_forces",
+                "end_forces_by_member",
+                "member_forces",
+                "element_forces",
+                "elements_end_forces",
+            ]:
+                container = getattr(chosen_results, attribute_name, None)
+                if container and str(member_identifier) in container:
+                    record = container[str(member_identifier)]
+                    if isinstance(record, dict):
+                        start = (
+                            record.get("start")
+                            or record.get("i")
+                            or record.get("node_i")
+                            or record.get("end_i")
+                        )
+                        end = (
+                            record.get("end")
+                            or record.get("j")
+                            or record.get("node_j")
+                            or record.get("end_j")
+                        )
+                        start_value = get_component(start, component_name)
+                        end_value = get_component(end, component_name)
+                        if start_value is None:
+                            for key, value in record.items():
+                                if normalize_key(key).startswith(
+                                    normalize_key(component_name)
+                                ) and normalize_key(key).endswith("i"):
+                                    start_value = float(value)
+                                if normalize_key(key).startswith(
+                                    normalize_key(component_name)
+                                ) and normalize_key(key).endswith("j"):
+                                    end_value = float(value)
+                        if start_value is not None and end_value is not None:
+                            return np.array([0.0, 1.0], dtype=float), np.array(
+                                [float(start_value), float(end_value)], dtype=float
+                            )
+            return None
+
+        def resample_to(num_samples: int, s_values: np.ndarray, y_values: np.ndarray) -> np.ndarray:
+            s_target = np.linspace(0.0, 1.0, num=num_samples)
+            return np.interp(s_target, s_values, y_values)
+
+        # -----------------------------
+        # Gather node displacements (for deformed centerlines)
+        # -----------------------------
+        need_displacements = show_deformations or (plot_local_bending_moment is not None)
+        node_displacements: Dict[int, Tuple[np.ndarray, np.ndarray]] = {}
+        if need_displacements:
+            displacement_nodes = getattr(chosen_results, "displacement_nodes", {}) or {}
+            for node_id_string, disp in displacement_nodes.items():
+                node_id = int(node_id_string)
+                node_object = self.get_node_by_pk(node_id)
+                if node_object is None:
+                    continue
+                if disp:
+                    displacement_global = np.array([disp.dx, disp.dy, disp.dz], dtype=float)
+                    rotation_global = np.array([disp.rx, disp.ry, disp.rz], dtype=float)
+                else:
+                    displacement_global = np.zeros(3, dtype=float)
+                    rotation_global = np.zeros(3, dtype=float)
+                node_displacements[node_id] = (displacement_global, rotation_global)
+
+        # -----------------------------
+        # Prepare plotting
+        # -----------------------------
+        figure, axes = plt.subplots()
+        x_label, y_label = axis_labels_for_plane(plane)
+        axes.set_xlabel(x_label)
+        axes.set_ylabel(y_label)
+
+        # Compute structure span in the plotted plane for auto scaling
+        min_coords, max_coords = self.get_structure_bounds()
+        if min_coords is not None and max_coords is not None:
+            if plane.lower() == "xy":
+                span_x = max(1e-9, max_coords[0] - min_coords[0])
+                span_y = max(1e-9, max_coords[1] - min_coords[1])
+            elif plane.lower() == "xz":
+                span_x = max(1e-9, max_coords[0] - min_coords[0])
+                span_y = max(1e-9, max_coords[2] - min_coords[2])
+            else:  # "yz"
+                span_x = max(1e-9, max_coords[1] - min_coords[1])
+                span_y = max(1e-9, max_coords[2] - min_coords[2])
+            structure_span_in_plane = float(np.hypot(span_x, span_y))
+        else:
+            structure_span_in_plane = 1.0
+
+        # -----------------------------
+        # Draw original and deformed centerlines
+        # -----------------------------
+        if show_original_shape or show_deformations:
+            for member in self.get_all_members():
+                start_displacement, start_rotation = node_displacements.get(
+                    member.start_node.id, (np.zeros(3), np.zeros(3))
+                )
+                end_displacement, end_rotation = node_displacements.get(
+                    member.end_node.id, (np.zeros(3), np.zeros(3))
+                )
+
+                # Compute original and deformed 3D polylines along the centerline
+                original_curve_3d, deformed_curve_3d = centerline_path_points(
+                    member,
+                    start_displacement,
+                    start_rotation,
+                    end_displacement,
+                    end_rotation,
+                    max(2, deformation_num_points),
+                    deformation_scale,
+                )
+
+                # Project to the selected plane
+                original_xy = np.array(
+                    [project_xyz_to_plane(p[0], p[1], p[2], plane) for p in original_curve_3d], dtype=float
+                )
+                deformed_xy = np.array(
+                    [project_xyz_to_plane(p[0], p[1], p[2], plane) for p in deformed_curve_3d], dtype=float
+                )
+
+                if show_original_shape:
+                    axes.plot(
+                        original_xy[:, 0],
+                        original_xy[:, 1],
+                        color=original_color,
+                        linewidth=original_line_width,
+                        zorder=1,
+                        label="Original Shape" if member == self.get_all_members()[0] else None,
+                    )
+
+                if show_deformations:
+                    axes.plot(
+                        deformed_xy[:, 0],
+                        deformed_xy[:, 1],
+                        color=deformed_color,
+                        linewidth=deformed_line_width,
+                        zorder=2,
+                        label="Deformed Shape" if member == self.get_all_members()[0] else None,
+                    )
+
+        # -----------------------------
+        # Optional: draw nodes
+        # -----------------------------
+        if show_nodes:
+            node_points_projected = [project_xyz_to_plane(n.X, n.Y, n.Z, plane) for n in self.get_all_nodes()]
+            if node_points_projected:
+                axes.scatter(
+                    [p[0] for p in node_points_projected],
+                    [p[1] for p in node_points_projected],
+                    s=node_point_size,
+                    c=node_color,
+                    zorder=5,
+                    edgecolors="none",
+                    label="Nodes",
+                )
+
+        # -----------------------------
+        # Optional: draw supports in 2D (very compact, plane-aware)
+        # -----------------------------
+        if show_supports:
+            from fers_core.supports.support_utils import (
+                get_condition_type,
+                color_for_condition_type,
+                format_support_short,
+            )
+
+            def in_plane_axes(plane_name: str) -> tuple[str, str]:
+                lower = plane_name.lower()
+                if lower == "xy":
+                    return "X", "Y"
+                if lower == "xz":
+                    return "X", "Z"
+                if lower == "yz":
+                    return "Y", "Z"
+                raise ValueError("plane must be one of 'xy', 'xz', 'yz'")
+
+            def marker_for_support_on_plane(nodal_support, plane_name: str) -> str:
+                axis_one, axis_two = in_plane_axes(plane_name)
+                cond_one = get_condition_type((nodal_support.displacement_conditions or {}).get(axis_one))
+                cond_two = get_condition_type((nodal_support.displacement_conditions or {}).get(axis_two))
+                if cond_one == "fixed" and cond_two == "fixed":
+                    return "s"
+                if cond_one == "fixed" and cond_two != "fixed":
+                    return "|"
+                if cond_two == "fixed" and cond_one != "fixed":
+                    return "_"
+                if cond_one == "spring" or cond_two == "spring":
+                    return "D"
+                return "o"
+
+            plotted_legend = False
+            for node in self.get_all_nodes():
+                support = getattr(node, "nodal_support", None)
+                if not support:
+                    continue
+                px, py = project_xyz_to_plane(node.X, node.Y, node.Z, plane)
+                face_color = color_for_condition_type(
+                    "fixed" if marker_for_support_on_plane(support, plane) in ("s", "|", "_") else "mixed"
+                )
+                axes.scatter(
+                    [px],
+                    [py],
+                    s=support_marker_size,
+                    marker=marker_for_support_on_plane(support, plane),
+                    c=face_color,
+                    edgecolors=support_marker_edgecolor,
+                    linewidths=0.5,
+                    zorder=6,
+                    label="Supports" if not plotted_legend else None,
+                )
+                plotted_legend = True
+                if annotate_supports:
+                    axes.annotate(
+                        format_support_short(support),
+                        (px, py),
+                        textcoords="offset points",
+                        xytext=support_annotation_offset_xy,
+                        fontsize=support_annotation_fontsize,
+                        color="black",
+                        zorder=7,
+                    )
+
+        # -----------------------------
+        # Optional: local bending moment diagrams in the 2D plane
+        # -----------------------------
+        if plot_local_bending_moment is not None:
+            requested_component = str(plot_local_bending_moment)
+            all_moment_arrays_abs_maxima: list[float] = []
+            per_member_plot_items: list[dict] = []
+
+            for member in self.get_all_members():
+                # Try to obtain a curve; otherwise use end forces; otherwise skip
+                curve = fetch_member_curve(member.id, requested_component)
+                if curve is None:
+                    curve = fetch_member_end_forces(member.id, requested_component)
+                if curve is None:
+                    continue
+
+                s_values_raw, moment_values_raw = curve
+                moment_values = resample_to(
+                    moment_num_points, np.asarray(s_values_raw, float), np.asarray(moment_values_raw, float)
+                )
+
+                # Baseline points along the member projected to the plane
+                start_point_projected = project_xyz_to_plane(
+                    member.start_node.X, member.start_node.Y, member.start_node.Z, plane
+                )
+                end_point_projected = project_xyz_to_plane(
+                    member.end_node.X, member.end_node.Y, member.end_node.Z, plane
+                )
+                parameter = np.linspace(0.0, 1.0, moment_num_points)
+                baseline_x = start_point_projected[0] * (1.0 - parameter) + end_point_projected[0] * parameter
+                baseline_y = start_point_projected[1] * (1.0 - parameter) + end_point_projected[1] * parameter
+
+                # In-plane left normal for positive offset
+                delta_x = end_point_projected[0] - start_point_projected[0]
+                delta_y = end_point_projected[1] - start_point_projected[1]
+                member_length_in_plane = float(np.hypot(delta_x, delta_y)) or 1.0
+                tangent_x = delta_x / member_length_in_plane
+                tangent_y = delta_y / member_length_in_plane
+                normal_x = -tangent_y
+                normal_y = tangent_x
+
+                per_member_plot_items.append(
+                    {
+                        "baseline_x": baseline_x,
+                        "baseline_y": baseline_y,
+                        "normal_x": normal_x,
+                        "normal_y": normal_y,
+                        "moment_values": moment_values,
+                    }
+                )
+                all_moment_arrays_abs_maxima.append(
+                    float(np.max(np.abs(moment_values))) if moment_values.size else 0.0
+                )
+
+            if per_member_plot_items:
+                global_abs_max_moment = max(all_moment_arrays_abs_maxima) or 1.0
+                effective_moment_scale = (
+                    moment_scale
+                    if (moment_scale is not None and moment_scale > 0.0)
+                    else (0.08 * structure_span_in_plane / global_abs_max_moment)
+                )
+
+                for item in per_member_plot_items:
+                    baseline_x = item["baseline_x"]
+                    baseline_y = item["baseline_y"]
+                    normal_x = item["normal_x"]
+                    normal_y = item["normal_y"]
+                    moment_values = item["moment_values"]
+
+                    offset_x = baseline_x + effective_moment_scale * moment_values * normal_x
+                    offset_y = baseline_y + effective_moment_scale * moment_values * normal_y
+
+                    if moment_diagram_style.lower() == "filled":
+                        axes.fill_between(
+                            baseline_x,
+                            baseline_y,
+                            offset_y,
+                            alpha=moment_face_alpha,
+                            edgecolor="none",
+                            zorder=4,
+                        )
+                        axes.plot(offset_x, offset_y, linewidth=1.0, color="black", zorder=5)
+                    else:
+                        axes.plot(offset_x, offset_y, linewidth=2.0, color="black", zorder=5)
+
+        # -----------------------------
+        # Final formatting
+        # -----------------------------
+        if min_coords is not None and max_coords is not None:
+            if plane.lower() == "xy":
+                min_x, max_x = min_coords[0], max_coords[0]
+                min_y, max_y = min_coords[1], max_coords[1]
+            elif plane.lower() == "xz":
+                min_x, max_x = min_coords[0], max_coords[0]
+                min_y, max_y = min_coords[2], max_coords[2]
+            else:  # "yz"
+                min_x, max_x = min_coords[1], max_coords[1]
+                min_y, max_y = min_coords[2], max_coords[2]
+            span_x = max(1e-9, max_x - min_x)
+            span_y = max(1e-9, max_y - min_y)
+            margin_x = 0.04 * span_x
+            margin_y = 0.04 * span_y
+            axes.set_xlim(min_x - margin_x, max_x + margin_x)
+            axes.set_ylim(min_y - margin_y, max_y + margin_y)
+
+        if equal_aspect:
+            axes.set_aspect("equal", adjustable="box")
+
+        legend_needed = show_original_shape or show_deformations or show_nodes or show_supports
+        if legend_needed:
+            axes.legend(loc="best")
+
+        final_title = title if title is not None else f"Results 2D – {chosen_title} ({plane.upper()} view)"
+        axes.set_title(final_title)
+        figure.tight_layout()
+        plt.show()
 
     def show_results_3d(
         self,
@@ -877,225 +1403,838 @@ class FERS:
         displacement: bool = True,
         displacement_scale: float = 100.0,
         num_points: int = 20,
+        show_supports: bool = True,
+        show_support_labels: bool = True,
+        support_size_fraction: float = 0.05,
+        plot_bending_moment: Optional[str] = None,  # One of: None, "M_x", "M_y", "M_z"
+        moment_scale: Optional[float] = None,  # If None: auto-scale relative to model size
+        moment_num_points: int = 41,  # Samples along each member for the diagram
+        color_members_by_peak_moment: bool = False,  # Color member centerlines by peak |M|
+        show_moment_colorbar: bool = True,  # Show colorbar for moment diagram
+        diagram_line_width_pixels: int = 6,  # Used for 'line' moment_style
+        diagram_on_deformed_centerline: bool = True,  # Draw diagram offset from deformed centerline
+        moment_style: str = "tube",
     ):
         """
-        Visualizes any one of the loaded cases or combinations in 3D using PyVista.
+        Visualize a load case or combination in 3D using PyVista.
 
-        Args:
-            loadcase (int or str, optional): If you want a load‑case, specify either its
-                one‑based index (1, 2, …) or its name ("Dead Load", "End Load", …).
-            loadcombination (int or str, optional): Likewise for load‑combinations.
-            show_sections (bool): Extrude and draw section profiles.
-            show_nodes (bool): Draw the nodes as spheres.
-            displacement (bool): Show the deformed shape as well as the original.
-            displacement_scale (float): How much to scale nodal displacements.
-            num_points (int): Number of points per member for interpolation.
+        Default (plot_bending_moment=None): original + deformed shapes.
+        If plot_bending_moment in {"M_x","M_y","M_z"}:
+        - moment_style="tube": draw a scaled 3D diagram as tubes, offset along the local axis
+        - moment_style="line": draw unscaled centerlines, colored by the moment along the length
         """
-        # pick the right Results object out of the Bundle
-        bundle = self.results  # assume this is a ResultsBundle
-        chosen: Results
+        if self.resultsbundle is None:
+            raise ValueError("No analysis results available.")
         if loadcase is not None and loadcombination is not None:
-            raise ValueError("Please specify either loadcase or loadcombination, not both.")
+            raise ValueError("Specify either loadcase or loadcombination, not both.")
+
+        # -----------------------------
+        # Pick results
+        # -----------------------------
         if loadcase is not None:
-            keys = list(bundle.loadcases.keys())
+            keys = list(self.resultsbundle.loadcases.keys())
             if isinstance(loadcase, int):
                 try:
                     key = keys[loadcase - 1]
                 except IndexError:
                     raise IndexError(f"Loadcase index {loadcase} is out of range.")
             else:
-                key = loadcase
-                if key not in bundle.loadcases:
+                key = str(loadcase)
+                if key not in self.resultsbundle.loadcases:
                     raise KeyError(f"Loadcase '{key}' not found.")
-            chosen = bundle.loadcases[key]
+            chosen = self.resultsbundle.loadcases[key]
         elif loadcombination is not None:
-            keys = list(bundle.loadcombinations.keys())
+            keys = list(self.resultsbundle.loadcombinations.keys())
             if isinstance(loadcombination, int):
                 try:
                     key = keys[loadcombination - 1]
                 except IndexError:
                     raise IndexError(f"Loadcombination index {loadcombination} is out of range.")
             else:
-                key = loadcombination
-                if key not in bundle.loadcombinations:
+                key = str(loadcombination)
+                if key not in self.resultsbundle.loadcombinations:
                     raise KeyError(f"Loadcombination '{key}' not found.")
-            chosen = bundle.loadcombinations[key]
+            chosen = self.resultsbundle.loadcombinations[key]
         else:
-            # neither was given: if there's exactly one loadcase and zero combinations, take it
-            if len(bundle.loadcases) == 1 and not bundle.loadcombinations:
-                chosen = next(iter(bundle.loadcases.values()))
+            if len(self.resultsbundle.loadcases) == 1 and not self.resultsbundle.loadcombinations:
+                chosen = next(iter(self.resultsbundle.loadcases.values()))
             else:
-                raise ValueError(
-                    "Multiple results available – please specify " "`loadcase=` or `loadcombination=`."
-                )
+                raise ValueError("Multiple results available – specify loadcase= or loadcombination=.")
 
-        # now 'chosen' is a Results object; pull out exactly what you need
-        displacement_nodes = chosen.displacement_nodes
-
-        # ---------------------------------------------------
-        # HELPER FUNCTIONS TO REMOVE DUPLICATION
-        # ---------------------------------------------------
-        def get_local_transform(member):
-            lx, ly, lz = member.local_coordinate_system()
-            return np.column_stack([lx, ly, lz])
-
-        def interpolate_member(member, d_start, r_start, d_end, r_end):
-            L = member.length()
-            local_deflections = interpolate_beam_local(
-                0.0,
-                L,
-                d_start,
-                d_end,
-                r_start,
-                r_end,
-                num_points,
-            )
-            return local_deflections * displacement_scale
-
-        def plot_section(member, d_start_vec, r_start_vec, d_end_vec, r_end_vec):
-            # build the section polydata once
-            section = getattr(member, "section", None)
-
-            if section is None or getattr(section, "shape_path", None) is None:
-                return
-
-            coords_2d, edges = section.shape_path.get_shape_geometry()
-            coords_local = np.array([[0.0, y, z] for y, z in coords_2d], dtype=np.float32)
-            R = get_local_transform(member)
-
-            # original
-            start = member.start_node
-            end = member.end_node
-            origin = np.array([start.X, start.Y, start.Z])
-            coords_global = (coords_local @ R.T + origin).astype(np.float32)
-            pd = pv.PolyData(coords_global)
-            line_array = []
-            for a, b in edges:
-                line_array.extend((2, a, b))
-            pd.lines = np.array(line_array, dtype=np.int32)
-            direction = np.array([end.X, end.Y, end.Z]) - origin
-            orig_extruded = pd.extrude(direction, capping=True)
-            plotter.add_mesh(orig_extruded, color="steelblue", label=f"Section {section.name}")
-
-            # deformed
-            if displacement:
-                # transform global → local
-                dls, rls = transform_dofs_global_to_local(d_start_vec, r_start_vec, R)
-                dle, rle = transform_dofs_global_to_local(d_end_vec, r_end_vec, R)
-                local_def = interpolate_member(member, dls, rls, dle, rle)
-
-                # build the deformed path in global coords
-                t_vals = np.linspace(0, 1, num_points)
-                curve_pts = []
-                for i, t in enumerate(t_vals):
-                    orig_pt = origin + t * direction
-                    defl_local = local_def[i]
-                    defl_global = R @ defl_local
-                    curve_pts.append(orig_pt + defl_global)
-                curve_pts = np.array(curve_pts)
-
-                spline = pv.Spline(curve_pts, num_points * 2)
-                if not isinstance(spline, pv.PolyData):
-                    raise ValueError("Extrusion path invalid.")
-                deformed = extrude_along_path(section.shape_path, spline.points)
-                plotter.add_mesh(deformed, color="red", label=f"Deformed Section {section.name}")
-
-        # ---------------------------------------------------
-        # START DRAWING
-        # ---------------------------------------------------
+        # -----------------------------
+        # Plotter + global scales
+        # -----------------------------
         plotter = pv.Plotter()
         plotter.add_axes()
 
-        # precompute all nodal positions and displacements
-        node_pos: Dict[int, np.ndarray] = {}
-        node_disp: Dict[int, Tuple[np.ndarray, np.ndarray]] = {}
-        for nid_str, nodisp in displacement_nodes.items():
-            nid = int(nid_str)
-            node = self.get_node_by_pk(nid)
-            if node is None:
-                continue
-            pos = np.array([node.X, node.Y, node.Z])
-            node_pos[nid] = pos
-            if displacement and nodisp:
-                dgl = np.array([nodisp.dx, nodisp.dy, nodisp.dz])
-                rgl = np.array([nodisp.rx, nodisp.ry, nodisp.rz])
+        min_coordinates, max_coordinates = self.get_structure_bounds()
+        if min_coordinates and max_coordinates:
+            structure_size = np.linalg.norm(np.array(max_coordinates) - np.array(min_coordinates))
+        else:
+            structure_size = 1.0
+        support_arrow_scale = max(1e-6, structure_size * support_size_fraction)
+
+        # -----------------------------
+        # Displacements (for deformed centerline)
+        # -----------------------------
+        need_displacements = (plot_bending_moment is None and displacement) or (
+            plot_bending_moment is not None and diagram_on_deformed_centerline
+        )
+        node_displacements: Dict[int, Tuple[np.ndarray, np.ndarray]] = {}
+        if need_displacements:
+            displacement_nodes = getattr(chosen, "displacement_nodes", {})
+            for node_id_string, disp in displacement_nodes.items():
+                node_id = int(node_id_string)
+                node = self.get_node_by_pk(node_id)
+                if node is None:
+                    continue
+                if disp:
+                    d_global = np.array([disp.dx, disp.dy, disp.dz], dtype=float)
+                    r_global = np.array([disp.rx, disp.ry, disp.rz], dtype=float)
+                else:
+                    d_global = np.zeros(3, dtype=float)
+                    r_global = np.zeros(3, dtype=float)
+                node_displacements[node_id] = (d_global, r_global)
+
+        # -----------------------------
+        # Helpers for moment plotting
+        # -----------------------------
+        def _normalize_key(s: str) -> str:
+            return str(s).lower().replace("_", "")
+
+        def _get_comp(obj, name: str):
+            """
+            Robustly get a component (attribute or dict item), tolerating 'M_z', 'Mz', 'mz', 'm_z', etc.
+            """
+            if obj is None:
+                return None
+            candidates = [
+                name,
+                name.replace("_", ""),
+                name.lower(),
+                name.upper(),
+                name.capitalize(),
+                name.replace("_", "").lower(),
+            ]
+            # attribute access
+            for c in candidates:
+                if hasattr(obj, c):
+                    return getattr(obj, c)
+            # dict-like
+            if isinstance(obj, dict):
+                for c in candidates:
+                    if c in obj:
+                        return obj[c]
+                # try normalized key match
+                for k, v in obj.items():
+                    if _normalize_key(k) == _normalize_key(name):
+                        return v
+            return None
+
+        def _offset_axis(member: Member, component_name: str) -> np.ndarray:
+            lx, ly, lz = member.local_coordinate_system()
+            lower = component_name.lower()
+            if lower in ("m_y", "my"):
+                return np.asarray(ly, dtype=float)
+            if lower in ("m_z", "mz"):
+                return np.asarray(lz, dtype=float)
+            if lower in ("m_x", "mx"):
+                return np.asarray(lx, dtype=float)
+            raise ValueError("plot_bending_moment must be one of 'M_x', 'M_y', 'M_z'.")
+
+        def _resample(num: int, s: np.ndarray, y: np.ndarray) -> np.ndarray:
+            s_target = np.linspace(0.0, 1.0, num=num)
+            return np.interp(s_target, s, y)
+
+        # Read per-member curve if present (various layouts)
+        def _fetch_member_line_curve(member_id: int) -> Optional[Tuple[np.ndarray, np.ndarray]]:
+            # Known containers with {s: [...], My/Mz/Mx: [...]}
+            for attr_name in [
+                "internal_forces_by_member",
+                "member_internal_forces",
+                "line_forces_by_member",
+                "member_line_forces",
+                "element_forces_by_member",
+            ]:
+                container = getattr(chosen, attr_name, None)
+                if container and str(member_id) in container:
+                    record = container[str(member_id)]
+                    if isinstance(record, dict):
+                        s_vals = _get_comp(record, "s")
+                        m_vals = _get_comp(record, plot_bending_moment)
+                        if s_vals is not None and m_vals is not None:
+                            s_vals = np.asarray(s_vals, dtype=float)
+                            m_vals = np.asarray(m_vals, dtype=float)
+                            if s_vals.size > 1 and s_vals.size == m_vals.size:
+                                return s_vals, m_vals
+
+            # Nested object style: chosen.members["id"].internal_forces.s, .My/.Mz/.Mx
+            members_map = getattr(chosen, "members", None)
+            if members_map and str(member_id) in members_map:
+                member_obj = members_map[str(member_id)]
+                for nested_name in ["internal_forces", "line_forces"]:
+                    nested = getattr(member_obj, nested_name, None)
+                    if nested is not None:
+                        s_vals = _get_comp(nested, "s")
+                        m_vals = _get_comp(nested, plot_bending_moment)
+                        if s_vals is not None and m_vals is not None:
+                            s_vals = np.asarray(s_vals, dtype=float)
+                            m_vals = np.asarray(m_vals, dtype=float)
+                            if s_vals.size > 1 and s_vals.size == m_vals.size:
+                                return s_vals, m_vals
+            return None
+
+        # NEW: read end forces from member_results (your data layout)
+        def _fetch_member_end_forces(member_id: int) -> Optional[Tuple[np.ndarray, np.ndarray]]:
+            """
+            Build a linear diagram from element end forces when only end forces are available.
+            Supports:
+            chosen.member_results[str(id)].start_node_forces.<comp>
+            chosen.member_results[str(id)].end_node_forces.<comp>
+            and similar dictionaries.
+            """
+            container = getattr(chosen, "member_results", None)
+            if container and str(member_id) in container:
+                rec = container[str(member_id)]
+                start_forces = (
+                    getattr(rec, "start_node_forces", None)
+                    or getattr(rec, "start", None)
+                    or getattr(rec, "i", None)
+                )
+                end_forces = (
+                    getattr(rec, "end_node_forces", None)
+                    or getattr(rec, "end", None)
+                    or getattr(rec, "j", None)
+                )
+                start_val = _get_comp(start_forces, plot_bending_moment)
+                end_val = _get_comp(end_forces, plot_bending_moment)
+                if start_val is not None and end_val is not None:
+                    s_vals = np.array([0.0, 1.0], dtype=float)
+                    m_vals = np.array([float(start_val), float(end_val)], dtype=float)
+                    return s_vals, m_vals
+
+            # Other possible containers used by different pipelines
+            for attr_name in [
+                "member_end_forces",
+                "end_forces_by_member",
+                "member_forces",
+                "element_forces",
+                "elements_end_forces",
+            ]:
+                cont = getattr(chosen, attr_name, None)
+                if cont and str(member_id) in cont:
+                    rec = cont[str(member_id)]
+                    # try nested dicts or flat keys Mz_i / Mz_j etc.
+                    start = (
+                        rec.get("start") or rec.get("i") or rec.get("node_i") or rec.get("end_i")
+                        if isinstance(rec, dict)
+                        else None
+                    )
+                    end = (
+                        rec.get("end") or rec.get("j") or rec.get("node_j") or rec.get("end_j")
+                        if isinstance(rec, dict)
+                        else None
+                    )
+                    start_val = _get_comp(start, plot_bending_moment)
+                    end_val = _get_comp(end, plot_bending_moment)
+                    if start_val is None and isinstance(rec, dict):
+                        # flat variants
+                        for k, v in rec.items():
+                            if _normalize_key(k).startswith(
+                                _normalize_key(plot_bending_moment)
+                            ) and _normalize_key(k).endswith("i"):
+                                start_val = float(v)
+                            if _normalize_key(k).startswith(
+                                _normalize_key(plot_bending_moment)
+                            ) and _normalize_key(k).endswith("j"):
+                                end_val = float(v)
+                    if start_val is not None and end_val is not None:
+                        s_vals = np.array([0.0, 1.0], dtype=float)
+                        m_vals = np.array([float(start_val), float(end_val)], dtype=float)
+                        return s_vals, m_vals
+            return None
+
+        # Last-resort single-span cantilever fallback using reactions
+        def _fallback_single_cantilever(member: Member) -> Optional[Tuple[np.ndarray, np.ndarray]]:
+            if len(self.get_all_members()) != 1:
+                return None
+            start_is_supported = getattr(member.start_node, "nodal_support", None) is not None
+            end_is_supported = getattr(member.end_node, "nodal_support", None) is not None
+            if not (start_is_supported ^ end_is_supported):
+                return None
+            reactions = getattr(chosen, "reaction_nodes", {})
+            if not reactions:
+                return None
+            supported_node_id = member.start_node.id if start_is_supported else member.end_node.id
+            rec = reactions.get(str(supported_node_id))
+            if not rec or getattr(rec, "nodal_forces", None) is None:
+                return None
+            val = _get_comp(rec.nodal_forces, plot_bending_moment)
+            if not isinstance(val, (int, float)):
+                return None
+            if start_is_supported:
+                s_vals = np.array([0.0, 1.0], dtype=float)
+                m_vals = np.array([float(val), 0.0], dtype=float)
             else:
-                dgl = np.zeros(3)
-                rgl = np.zeros(3)
-            node_disp[nid] = (dgl, rgl)
+                s_vals = np.array([0.0, 1.0], dtype=float)
+                m_vals = np.array([0.0, float(val)], dtype=float)
+            return s_vals, m_vals
 
-        if show_sections:
+        # ======================================================================
+        # BRANCH A: Deformed/original shapes (no moment diagram)
+        # ======================================================================
+        if plot_bending_moment is None:
+            centerline_samples = num_points
+            extrusion_samples = max(num_points * 2, 2 * num_points + 1)
+
+            labeled_lines = False
+            labeled_def_section = False
+            labeled_org_section = False
+
             for member in self.get_all_members():
-                ds, rs = node_disp[member.start_node.id]
-                de, re = node_disp[member.end_node.id]
-                plot_section(member, ds, rs, de, re)
+                d0_gl, r0_gl = node_displacements.get(member.start_node.id, (np.zeros(3), np.zeros(3)))
+                d1_gl, r1_gl = node_displacements.get(member.end_node.id, (np.zeros(3), np.zeros(3)))
 
-        if show_nodes:
-            originals = []
-            deformed = []
-            for node in self.get_all_nodes():
-                pid = node.id
-                orig = np.array([node.X, node.Y, node.Z])
-                originals.append(orig)
-                dgl, _ = node_disp.get(pid, (np.zeros(3), None))
-                deformed.append(orig + dgl * displacement_scale)
-            originals = np.array(originals)
-            deformed = np.array(deformed)
+                original_curve, deformed_curve = centerline_path_points(
+                    member, d0_gl, r0_gl, d1_gl, r1_gl, centerline_samples, displacement_scale
+                )
 
-            plotter.add_mesh(
-                pv.PolyData(originals).glyph(scale=False, geom=pv.Sphere(radius=0.05)),
-                color="blue",
-                label="Original Nodes",
-            )
-            plotter.add_mesh(
-                pv.PolyData(deformed).glyph(scale=False, geom=pv.Sphere(radius=0.05)),
-                color="red",
-                label="Deformed Nodes",
-            )
+                deformed_path_points = np.ascontiguousarray(
+                    pv.Spline(deformed_curve, extrusion_samples).points, dtype=float
+                )
+                deformed_path_points[0] = deformed_curve[0]
+                deformed_path_points[-1] = deformed_curve[-1]
 
-        # finally each member’s center‐line
+                plotter.add_mesh(
+                    pv.lines_from_points(original_curve),
+                    color="blue",
+                    line_width=2,
+                    label=None if labeled_lines else "Original Shape",
+                )
+                plotter.add_mesh(
+                    pv.lines_from_points(deformed_path_points),
+                    color="red",
+                    line_width=2,
+                    label=None if labeled_lines else "Deformed Shape",
+                )
+                labeled_lines = True
+
+                if show_sections:
+                    section = getattr(member, "section", None)
+                    if section is not None and getattr(section, "shape_path", None) is not None:
+                        if displacement:
+                            deformed_mesh = extrude_along_path(section.shape_path, deformed_path_points)
+                            plotter.add_mesh(
+                                deformed_mesh,
+                                color="red",
+                                label=None if labeled_def_section else "Deformed Section",
+                            )
+                            labeled_def_section = True
+
+                        s_node = member.start_node
+                        e_node = member.end_node
+                        coords_2d, edges = section.shape_path.get_shape_geometry()
+                        coords_local = np.array([[0.0, y, z] for y, z in coords_2d], dtype=np.float32)
+                        rotation_matrix = np.column_stack(member.local_coordinate_system())
+                        origin = np.array([s_node.X, s_node.Y, s_node.Z], dtype=float)
+                        coords_global = (coords_local @ rotation_matrix.T + origin).astype(np.float32)
+
+                        polydata = pv.PolyData(coords_global)
+                        line_array = []
+                        for a_index, b_index in edges:
+                            line_array.extend((2, a_index, b_index))
+                        polydata.lines = np.array(line_array, dtype=np.int32)
+
+                        direction = np.array([e_node.X, e_node.Y, e_node.Z], dtype=float) - origin
+                        original_mesh = polydata.extrude(direction, capping=True)
+                        plotter.add_mesh(
+                            original_mesh,
+                            color="steelblue",
+                            label=None if labeled_org_section else "Original Section",
+                        )
+                        labeled_org_section = True
+
+            if show_nodes:
+                originals = []
+                deformed = []
+                for node in self.get_all_nodes():
+                    nid = node.id
+                    o = np.array([node.X, node.Y, node.Z], dtype=float)
+                    dgl, _ = node_displacements.get(nid, (np.zeros(3), np.zeros(3)))
+                    originals.append(o)
+                    deformed.append(o + dgl * displacement_scale)
+
+                originals = np.array(originals, dtype=float)
+                deformed = np.array(deformed, dtype=float)
+
+                plotter.add_mesh(
+                    pv.PolyData(originals).glyph(scale=False, geom=pv.Sphere(radius=0.05)),
+                    color="blue",
+                    label="Original Nodes",
+                )
+                plotter.add_mesh(
+                    pv.PolyData(deformed).glyph(scale=False, geom=pv.Sphere(radius=0.05)),
+                    color="red",
+                    label="Deformed Nodes",
+                )
+
+            if show_supports:
+                legend_added_for_type: set[str] = set()
+                axis_unit_vectors = {
+                    "X": np.array([1.0, 0.0, 0.0]),
+                    "Y": np.array([0.0, 1.0, 0.0]),
+                    "Z": np.array([0.0, 0.0, 1.0]),
+                }
+                for node in self.get_all_nodes():
+                    nodal_support = getattr(node, "nodal_support", None)
+                    if not nodal_support:
+                        continue
+                    node_position = np.array([node.X, node.Y, node.Z], dtype=float)
+                    for axis_name, axis_vector in axis_unit_vectors.items():
+                        condition_type = get_condition_type(
+                            nodal_support.displacement_conditions.get(axis_name)
+                        )
+                        color_value = color_for_condition_type(condition_type)
+                        label = None
+                        if condition_type not in legend_added_for_type:
+                            label = f"Support {axis_name} – {condition_type.title()}"
+                            legend_added_for_type.add(condition_type)
+                        plotter.add_arrows(
+                            node_position,
+                            axis_vector * support_arrow_scale,
+                            color=color_value,
+                            label=label,
+                        )
+                    if show_support_labels:
+                        label_text = format_support_label(nodal_support)
+                        label_position = node_position + np.array([1.0, 1.0, 1.0]) * (
+                            support_arrow_scale * 0.6
+                        )
+                        plotter.add_point_labels(
+                            label_position,
+                            [label_text],
+                            font_size=12,
+                            text_color="black",
+                            always_visible=True,
+                        )
+
+            plotter.add_legend()
+            plotter.show_grid(color="gray")
+            plotter.view_isometric()
+            plotter.show(title=f'3D Results: "{chosen.name}"')
+            return
+
+        # ======================================================================
+        # BRANCH B: Bending-moment diagram as tubes
+        # ======================================================================
+        diagram_polys: list[pv.PolyData] = []
+        diagram_vals: list[np.ndarray] = []
+        offset_axes: list[np.ndarray] = []
+        peak_abs_by_member: Dict[int, float] = {}
+
         for member in self.get_all_members():
-            start_id = member.start_node.id
-            end_id = member.end_node.id
-            p0 = node_pos[start_id]
-            p1 = node_pos[end_id]
-            d0, r0 = node_disp[start_id]
-            d1, r1 = node_disp[end_id]
+            curve = _fetch_member_line_curve(member.id)
+            if curve is None:
+                curve = _fetch_member_end_forces(member.id)
+            if curve is None:
+                curve = _fallback_single_cantilever(member)
+            if curve is None:
+                continue
 
-            R = get_local_transform(member)
-            local_def = interpolate_member(
-                member, *transform_dofs_global_to_local(d0, r0, R), *transform_dofs_global_to_local(d1, r1, R)
+            s_raw, m_raw = curve
+            m_resampled = _resample(moment_num_points, np.asarray(s_raw, float), np.asarray(m_raw, float))
+
+            # Choose the reference path (deformed or straight)
+            if diagram_on_deformed_centerline:
+                d0_gl, r0_gl = node_displacements.get(member.start_node.id, (np.zeros(3), np.zeros(3)))
+                d1_gl, r1_gl = node_displacements.get(member.end_node.id, (np.zeros(3), np.zeros(3)))
+                _, def_curve = centerline_path_points(
+                    member, d0_gl, r0_gl, d1_gl, r1_gl, moment_num_points, displacement_scale
+                )
+                path_points = np.ascontiguousarray(
+                    pv.Spline(def_curve, moment_num_points).points, dtype=float
+                )
+                path_points[0] = def_curve[0]
+                path_points[-1] = def_curve[-1]
+            else:
+                p0 = np.array([member.start_node.X, member.start_node.Y, member.start_node.Z], dtype=float)
+                p1 = np.array([member.end_node.X, member.end_node.Y, member.end_node.Z], dtype=float)
+                t = np.linspace(0.0, 1.0, moment_num_points)[:, None]
+                path_points = p0[None, :] * (1.0 - t) + p1[None, :] * t
+
+            axis = _offset_axis(member, plot_bending_moment)
+
+            poly = pv.PolyData(path_points.copy())
+            poly.lines = np.hstack(
+                [np.array([moment_num_points], dtype=np.int32), np.arange(moment_num_points, dtype=np.int32)]
             )
-            t_vals = np.linspace(0, 1, num_points)
-            orig_curve = np.array([p0 + t * (p1 - p0) for t in t_vals])
-            def_curve = np.array([orig_curve[i] + (R @ local_def[i]) for i in range(num_points)])
+            diagram_polys.append(poly)
+            diagram_vals.append(m_resampled)
+            offset_axes.append(axis)
+            peak_abs_by_member[member.id] = float(np.max(np.abs(m_resampled)))
 
-            plotter.add_lines(orig_curve, color="blue", width=2, label="Original Shape")
-            plotter.add_lines(def_curve, color="red", width=2, label="Deformed Shape")
+        if not diagram_polys:
+            # Draw members (so the window isn't empty) and return
+            pts = []
+            lines = []
+            idx = 0
+            for m in self.get_all_members():
+                s = m.start_node
+                e = m.end_node
+                pts.extend([(s.X, s.Y, s.Z), (e.X, e.Y, e.Z)])
+                lines.extend([2, idx, idx + 1])
+                idx += 2
+            if pts:
+                pts = np.array(pts, dtype=np.float32)
+                poly = pv.PolyData(pts)
+                poly.lines = np.array(lines, dtype=np.int32)
+                plotter.add_mesh(poly, color="gray", line_width=2.0, label="Members")
+            plotter.add_legend()
+            plotter.show_grid(color="gray")
+            plotter.view_isometric()
+            plotter.show(title=f'Bending Moment Diagram: {plot_bending_moment} – "{chosen.name}"')
+            return
+
+        # Auto-scale
+        global_abs_max = float(np.max([np.max(np.abs(v)) for v in diagram_vals])) or 1.0
+        effective_moment_scale = (
+            moment_scale
+            if (moment_scale is not None and moment_scale > 0.0)
+            else (0.06 * structure_size / global_abs_max)
+        )
+
+        # Apply offsets and draw as tubes (guaranteed visible)
+        # color_limits = (-global_abs_max, global_abs_max)
+
+        if moment_style.lower() == "tube":
+            # Scaled graph as tubes (your existing behavior)
+            # tube_radius = max(1e-6, 0.0075 * structure_size)
+            for polydata, values, offset_axis in zip(diagram_polys, diagram_vals, offset_axes):
+                displaced_points = (
+                    polydata.points + (effective_moment_scale * values[:, None]) * offset_axis[None, :]
+                )
+                polydata.points = displaced_points
+                polydata["moment"] = values.astype(float)
+                # tube = polydata.tube(radius=tube_radius)
+
+        elif moment_style.lower() == "line":
+            # Unscaled centerline colored by moment (no geometric offset)
+            for polydata, values in zip(diagram_polys, diagram_vals):
+                polydata["moment"] = values.astype(float)
+
+        else:
+            raise ValueError("moment_style must be 'tube' or 'line'")
+
+        # Member centerlines (optional coloring by peak |M|)
+        all_points = []
+        all_lines = []
+        member_scalar_values = []
+        point_offset = 0
+        for member in self.get_all_members():
+            s = member.start_node
+            e = member.end_node
+            all_points.append((s.X, s.Y, s.Z))
+            all_points.append((e.X, e.Y, e.Z))
+            all_lines.extend([2, point_offset, point_offset + 1])
+            point_offset += 2
+            if color_members_by_peak_moment:
+                member_scalar_values.extend([peak_abs_by_member.get(member.id, 0.0)] * 2)
+
+        if all_points:
+            all_points = np.array(all_points, dtype=np.float32)
+            lines_poly = pv.PolyData(all_points)
+            lines_poly.lines = np.array(all_lines, dtype=np.int32)
+            if color_members_by_peak_moment and member_scalar_values:
+                lines_poly["peak_abs_moment"] = np.array(member_scalar_values, dtype=float)
+                plotter.add_mesh(lines_poly, scalars="peak_abs_moment", line_width=3.0)
+                plotter.add_scalar_bar(title=f"Peak |{plot_bending_moment}| per member")
+            else:
+                plotter.add_mesh(lines_poly, color="blue", line_width=2.0, label="Members")
+
+        # Nodes
+        if show_nodes:
+            node_positions = np.array([(n.X, n.Y, n.Z) for n in self.get_all_nodes()], dtype=np.float32)
+            cloud = pv.PolyData(node_positions)
+            glyph = cloud.glyph(
+                geom=pv.Sphere(radius=max(1e-6, structure_size * 0.01)), scale=False, orient=False
+            )
+            plotter.add_mesh(glyph, color="black", label="Nodes")
+
+        # Supports
+        if show_supports:
+            legend_added_for_type: set[str] = set()
+            axis_unit_vectors = {
+                "X": np.array([1.0, 0.0, 0.0]),
+                "Y": np.array([0.0, 1.0, 0.0]),
+                "Z": np.array([0.0, 0.0, 1.0]),
+            }
+            for node in self.get_all_nodes():
+                support = getattr(node, "nodal_support", None)
+                if not support:
+                    continue
+                p = np.array([node.X, node.Y, node.Z], dtype=float)
+                for axis_name, axis_vector in axis_unit_vectors.items():
+                    condition_type = get_condition_type(support.displacement_conditions.get(axis_name))
+                    color_value = color_for_condition_type(condition_type)
+                    label = None
+                    if condition_type not in legend_added_for_type:
+                        label = f"Support {axis_name} – {condition_type.title()}"
+                        legend_added_for_type.add(condition_type)
+                    plotter.add_arrows(p, axis_vector * support_arrow_scale, color=color_value, label=label)
+
+                if show_support_labels:
+                    text = format_support_label(support)
+                    label_pos = p + np.array([1.0, 1.0, 1.0]) * (support_arrow_scale * 0.6)
+                    plotter.add_point_labels(
+                        label_pos, [text], font_size=12, text_color="black", always_visible=True
+                    )
 
         plotter.add_legend()
         plotter.show_grid(color="gray")
-        plotter.show(title=f"3D Results: “{chosen.name}”")
+        plotter.view_isometric()
+        plotter.show(title=f'Bending Moment Diagram: {plot_bending_moment} – "{chosen.name}"')
 
-    def plot_model(self, plane="yz"):
+    def plot_model(
+        self,
+        plane: str = "yz",
+        show_supports: bool = True,
+        annotate_supports: bool = True,
+        support_marker_size: int = 60,
+        support_marker_facecolor: str = "black",
+        support_marker_edgecolor: str = "white",
+        support_annotation_fontsize: int = 8,
+        support_annotation_offset_xy: tuple[int, int] = (6, 6),
+        show_nodes_points: bool = True,
+        node_point_size: int = 10,
+        member_line_width: float = 1.5,
+        member_color: str = "tab:blue",
+        node_color: str = "tab:red",
+        equal_aspect: bool = False,
+    ):
         """
-        Plot all member sets in the model on the specified plane.
-
-        Parameters:
-        - plane: A string specifying the plot plane, either 'xy', 'xz', or 'yz'.
+        Plot the model in 2D using GLOBAL coordinates (no normalization or shifts).
+        Members, nodes, and supports are all projected from their raw XYZ positions
+        into the chosen plane.
         """
-        # Create a single figure and axis for all plots
-        fig, ax = plt.subplots()
 
-        # Loop through all member sets and plot them on the same figure
+        from collections import defaultdict
+
+        # bring in your helpers
+        from fers_core.supports.support_utils import (
+            get_condition_type,
+            color_for_condition_type,
+            format_support_short,
+        )
+
+        def project_xyz_to_plane(
+            X_value: float, Y_value: float, Z_value: float, plane_name: str
+        ) -> tuple[float, float]:
+            plane_lower = plane_name.lower()
+            if plane_lower == "xy":
+                return X_value, Y_value
+            if plane_lower == "xz":
+                return X_value, Z_value
+            if plane_lower == "yz":
+                return Y_value, Z_value
+            raise ValueError("plane must be one of 'xy', 'xz', 'yz'")
+
+        def axis_labels_for_plane(plane_name: str) -> tuple[str, str]:
+            plane_lower = plane_name.lower()
+            if plane_lower == "xy":
+                return "X", "Y"
+            if plane_lower == "xz":
+                return "X", "Z"
+            if plane_lower == "yz":
+                return "Y", "Z"
+            raise ValueError("plane must be one of 'xy', 'xz', 'yz'")
+
+        def in_plane_axes(plane_name: str) -> tuple[str, str]:
+            return axis_labels_for_plane(plane_name)
+
+        def marker_for_support_on_plane(support, plane_name: str) -> str:
+            """
+            Plane-aware marker describing in-plane translational restraint.
+            Mapping:
+            - both in-plane fixed            -> 's'
+            - only first plotted axis fixed  -> '|'
+            - only second plotted axis fixed -> '_'
+            - any spring in-plane            -> 'D'
+            - otherwise                      -> 'o'
+            """
+            axis_one, axis_two = in_plane_axes(plane_name)
+            condition_one = get_condition_type((support.displacement_conditions or {}).get(axis_one))
+            condition_two = get_condition_type((support.displacement_conditions or {}).get(axis_two))
+
+            is_fixed_one = condition_one == "fixed"
+            is_fixed_two = condition_two == "fixed"
+            is_spring_one = condition_one == "spring"
+            is_spring_two = condition_two == "spring"
+
+            if is_fixed_one and is_fixed_two:
+                return "s"
+            if is_fixed_one and not is_fixed_two:
+                return "|"
+            if is_fixed_two and not is_fixed_one:
+                return "_"
+            if is_spring_one or is_spring_two:
+                return "D"
+            return "o"
+
+        def in_plane_condition_summary(support, plane_name: str) -> str:
+            """
+            Summarize in-plane displacement to select a color:
+            - 'fixed'  if both plotted axes fixed
+            - 'free'   if both plotted axes free
+            - 'spring' if any plotted axis spring
+            - 'mixed'  otherwise
+            """
+            axis_one, axis_two = in_plane_axes(plane_name)
+            condition_one = get_condition_type((support.displacement_conditions or {}).get(axis_one))
+            condition_two = get_condition_type((support.displacement_conditions or {}).get(axis_two))
+            if condition_one == "fixed" and condition_two == "fixed":
+                return "fixed"
+            if condition_one == "free" and condition_two == "free":
+                return "free"
+            if condition_one == "spring" or condition_two == "spring":
+                return "spring"
+            return "mixed"
+
+        # Collect global-projected geometry
+        member_lines_projected: list[tuple[tuple[float, float], tuple[float, float]]] = []
+        node_points_projected: list[tuple[float, float]] = []
+        nodes_with_support: list[tuple[float, float, object]] = []
+
         for member_set in self.member_sets:
-            member_set.plot(
-                plane=plane, fig=fig, ax=ax, set_aspect=False, show_title=False, show_legend=False
+            for member in member_set.members:
+                start_x, start_y = project_xyz_to_plane(
+                    member.start_node.X, member.start_node.Y, member.start_node.Z, plane
+                )
+                end_x, end_y = project_xyz_to_plane(
+                    member.end_node.X, member.end_node.Y, member.end_node.Z, plane
+                )
+                member_lines_projected.append(((start_x, start_y), (end_x, end_y)))
+
+                node_points_projected.append((start_x, start_y))
+                node_points_projected.append((end_x, end_y))
+
+                if getattr(member.start_node, "nodal_support", None):
+                    nodes_with_support.append((start_x, start_y, member.start_node))
+                if getattr(member.end_node, "nodal_support", None):
+                    nodes_with_support.append((end_x, end_y, member.end_node))
+
+        # Deduplicate nodes
+        node_points_projected = list(dict.fromkeys(node_points_projected))
+
+        # Include any standalone nodes
+        for node in self.get_all_nodes():
+            px, py = project_xyz_to_plane(node.X, node.Y, node.Z, plane)
+            if (px, py) not in node_points_projected:
+                node_points_projected.append((px, py))
+            if getattr(node, "nodal_support", None):
+                nodes_with_support.append((px, py, node))
+
+        # Deduplicate supports by projected point and node identity
+        unique_supports: dict[tuple[float, float, int], tuple[float, float, object]] = {}
+        for px, py, node in nodes_with_support:
+            unique_supports[(px, py, id(node))] = (px, py, node)
+        nodes_with_support = list(unique_supports.values())
+
+        # Plot (global coordinates)
+        figure, axes = plt.subplots()
+
+        # Members
+        for (x0, y0), (x1, y1) in member_lines_projected:
+            axes.plot([x0, x1], [y0, y1], color=member_color, linewidth=member_line_width, zorder=2)
+
+        # Nodes (optional)
+        if show_nodes_points and node_points_projected:
+            node_x_values = [p[0] for p in node_points_projected]
+            node_y_values = [p[1] for p in node_points_projected]
+            axes.scatter(
+                node_x_values,
+                node_y_values,
+                s=node_point_size,
+                c=node_color,
+                marker="o",
+                zorder=3,
+                label="Nodes",
+                edgecolors="none",
             )
 
-        ax.set_title("Combined Model Plot")
-        # ax.legend()
-        plt.tight_layout()
+        # Supports (global coordinates, plane-aware)
+        if show_supports and nodes_with_support:
+            grouped_points_by_marker: dict[str, list[tuple[float, float, object]]] = defaultdict(list)
+            for px, py, node in nodes_with_support:
+                marker_symbol = marker_for_support_on_plane(node.nodal_support, plane)
+                grouped_points_by_marker[marker_symbol].append((px, py, node))
+
+            legend_added = False
+            for marker_symbol, items in grouped_points_by_marker.items():
+                xs = [item[0] for item in items]
+                ys = [item[1] for item in items]
+                face_colors = [
+                    color_for_condition_type(in_plane_condition_summary(node.nodal_support, plane))
+                    for _, _, node in items
+                ]
+                axes.scatter(
+                    xs,
+                    ys,
+                    s=support_marker_size,
+                    marker=marker_symbol,
+                    c=face_colors,
+                    edgecolors=support_marker_edgecolor,
+                    linewidths=0.5,
+                    zorder=5,
+                    label="Nodal Supports (in-plane)" if not legend_added else None,
+                )
+                legend_added = True
+
+                if annotate_supports:
+                    for px, py, node in items:
+                        # Use YOUR short-name formatter (Fx, Fr, k, +, -)
+                        label_text = format_support_short(node.nodal_support)
+                        axes.annotate(
+                            label_text,
+                            (px, py),
+                            textcoords="offset points",
+                            xytext=support_annotation_offset_xy,
+                            fontsize=support_annotation_fontsize,
+                            color="black",
+                            zorder=6,
+                        )
+
+        # Axes labels and limits (global)
+        label_x, label_y = axis_labels_for_plane(plane)
+        axes.set_xlabel(label_x)
+        axes.set_ylabel(label_y)
+
+        min_coords, max_coords = self.get_structure_bounds()
+        if min_coords is not None and max_coords is not None:
+            if plane.lower() == "xy":
+                min_x, max_x = min_coords[0], max_coords[0]
+                min_y, max_y = min_coords[1], max_coords[1]
+            elif plane.lower() == "xz":
+                min_x, max_x = min_coords[0], max_coords[0]
+                min_y, max_y = min_coords[2], max_coords[2]
+            elif plane.lower() == "yz":
+                min_x, max_x = min_coords[1], max_coords[1]
+                min_y, max_y = min_coords[2], max_coords[2]
+            else:
+                raise ValueError("plane must be one of 'xy', 'xz', 'yz'")
+
+            span_x = max(1e-9, max_x - min_x)
+            span_y = max(1e-9, max_y - min_y)
+            margin_x = 0.02 * span_x
+            margin_y = 0.02 * span_y
+            axes.set_xlim(min_x - margin_x, max_x + margin_x)
+            axes.set_ylim(min_y - margin_y, max_y + margin_y)
+
+        if equal_aspect:
+            axes.set_aspect("equal", adjustable="box")
+
+        axes.legend(loc="best")
+        axes.set_title(f"Model Plot in Global Coordinates ({plane.upper()} view)")
+        figure.tight_layout()
         plt.show()
 
     def get_model_summary(self):

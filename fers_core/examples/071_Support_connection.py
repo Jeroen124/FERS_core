@@ -93,7 +93,7 @@ calculation_1.save_to_json(file_path, indent=4)
 # ----------------------------
 print("Running the analysis...")
 calculation_1.run_analysis()
-results = calculation_1.results.loadcases["Top Load"]
+results = calculation_1.resultsbundle.loadcases["Top Load"]
 
 # Extract FERS results
 reaction_node2_fy_fers = results.reaction_nodes["2"].nodal_forces.fy

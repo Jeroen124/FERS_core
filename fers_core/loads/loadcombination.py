@@ -1,3 +1,4 @@
+from fers_core.loads.enums import LimitState
 from .loadcase import LoadCase
 
 
@@ -11,6 +12,7 @@ class LoadCombination:
         load_cases_factors: dict = None,
         situation: str = None,
         check: str = "ALL",
+        limit_state: LimitState | None = None,
     ):
         """
         Initialize a LoadCombination instance with a specified name, factors for load cases, and other.
@@ -27,6 +29,7 @@ class LoadCombination:
         self.load_cases_factors = load_cases_factors or {}
         self.situation = situation
         self.check = check
+        self.limit_state = limit_state
         LoadCombination._all_load_combinations.append(self)
 
     @classmethod
@@ -60,4 +63,5 @@ class LoadCombination:
             "load_cases_factors": {lc.id: factor for lc, factor in self.load_cases_factors.items()},
             "situation": self.situation,
             "check": self.check,
+            "limit_state": self.limit_state,
         }

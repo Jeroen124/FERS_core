@@ -88,7 +88,7 @@ calculation_1.save_to_json(file_path, indent=4)
 # ----------------------------
 print("Running the analysis...")
 calculation_1.run_analysis()
-results = calculation_1.results.loadcases["Mid Load"]
+results = calculation_1.resultsbundle.loadcases["Mid Load"]
 
 # Extract FERS results
 displacement_node2_dx_fers = results.displacement_nodes["2"].dx
@@ -100,7 +100,7 @@ reaction_node3_fx_fers = results.reaction_nodes["3"].nodal_forces.fx
 elastic_modulus = Steel_S235.e_mod
 cross_section_area = section.area
 member_length = 2.5  # meters (each tension member length)
-applied_force = mid_force_newton  # Newtons
+applied_force = -mid_force_newton  # Newtons
 
 # Analytical expectations:
 # - Displacement at node 2 along global X: u = F * L / (A * E)

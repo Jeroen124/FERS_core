@@ -33,7 +33,7 @@ class ImperfectionCase:
                                                                             this ImperfectionCase.
         """
 
-        self.imperfection_case_id = id or ImperfectionCase._imperfection_case_counter
+        self.imperfection_case_id = imperfection_case_id or ImperfectionCase._imperfection_case_counter
         if imperfection_case_id is None:
             ImperfectionCase._imperfection_case_counter += 1
         self.loadcombinations = loadcombinations
@@ -55,7 +55,7 @@ class ImperfectionCase:
     def to_dict(self):
         return {
             "imperfection_case_id": self.imperfection_case_id,
-            "loadcombinations": [lc.id for lc in self.loadcombinations],
-            "rotation_imperfections": [ri.id for ri in self.rotation_imperfections],
-            "translation_imperfections": [ti.id for ti in self.translation_imperfections],
+            "load_combinations": [lc.id for lc in self.loadcombinations],
+            "rotation_imperfections": [ri.to_dict() for ri in self.rotation_imperfections],
+            "translation_imperfections": [ti.to_dict() for ti in self.translation_imperfections],
         }

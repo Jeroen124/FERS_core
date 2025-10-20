@@ -79,8 +79,8 @@ calculation_1.save_to_json(file_path, indent=4)
 # ----------------------------
 print("Running the analysis...")
 calculation_1.run_analysis()
-results_triangular = calculation_1.results.loadcases["Triangular Load"]
-results_inverse = calculation_1.results.loadcases["Inverse Triangular Load"]
+results_triangular = calculation_1.resultsbundle.loadcases["Triangular Load"]
+results_inverse = calculation_1.resultsbundle.loadcases["Inverse Triangular Load"]
 
 # Extract results from the analysis
 # Displacement at the free end in the y-direction

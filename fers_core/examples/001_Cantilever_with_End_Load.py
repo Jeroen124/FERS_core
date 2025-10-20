@@ -56,7 +56,7 @@ print("Running the analysis...")
 calculation_1.run_analysis()
 
 # Extract results from the analysis
-results = calculation_1.results.loadcases["End Load"]
+results = calculation_1.resultsbundle.loadcases["End Load"]
 
 # Extract results from the analysis
 # Displacement at the free end in the y-direction

@@ -17,6 +17,31 @@ def transform_dofs_global_to_local(d_global, r_global, R):
     return d_local, r_local
 
 
+def centerline_path_points(member, d0_gl, r0_gl, d1_gl, r1_gl, n_centerline: int, scale: float):
+    """Return original and deformed centerline points (global) for a member."""
+    lx, ly, lz = member.local_coordinate_system()
+    R = np.column_stack([lx, ly, lz])  # global <- local
+
+    # Global -> local
+    d0_loc, r0_loc = transform_dofs_global_to_local(d0_gl, r0_gl, R)
+    d1_loc, r1_loc = transform_dofs_global_to_local(d1_gl, r1_gl, R)
+
+    # Local deflections (Euler–Bernoulli)
+    L = member.length()
+    local_def = interpolate_beam_local(0.0, L, d0_loc, d1_loc, r0_loc, r1_loc, n_centerline) * scale
+
+    # Straight original line in global
+    p0 = np.array([member.start_node.X, member.start_node.Y, member.start_node.Z], dtype=float)
+    p1 = np.array([member.end_node.X, member.end_node.Y, member.end_node.Z], dtype=float)
+    t = np.linspace(0.0, 1.0, n_centerline)
+    orig_curve = (1.0 - t)[:, None] * p0 + t[:, None] * p1
+
+    # Deformed global = original + rotated local deflection
+    def_global = (R @ local_def.T).T
+    def_curve = orig_curve + def_global
+    return orig_curve, def_curve
+
+
 # Helper: Interpolate in local coords. You can do something more sophisticated
 # with shape functions, but here's a simple approach to show the concept.
 def interpolate_beam_local(

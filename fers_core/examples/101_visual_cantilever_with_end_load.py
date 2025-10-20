@@ -60,7 +60,7 @@ calculation_1.save_to_json(file_path, indent=4)
 # Perform the analysis using the saved JSON model file
 print("Running the analysis...")
 calculation_1.run_analysis()
-result_loadcase = calculation_1.results.loadcases["End Load"]
+result_loadcase = calculation_1.resultsbundle.loadcases["End Load"]
 
 
 # Extract results from the analysis
@@ -78,7 +78,7 @@ x = L  # Distance to the free end for max deflection and slope
 
 # Calculate analytical solutions for deflection and moment
 delta_analytical = (-F * x**2 / (6 * E * I)) * (3 * L - x)  # Max deflection
-M_max_analytical = - F * L  # Max moment at the fixed end
+M_max_analytical = -F * L  # Max moment at the fixed end
 
 # Compare FERS results with analytical solutions
 print("\nComparison of results:")

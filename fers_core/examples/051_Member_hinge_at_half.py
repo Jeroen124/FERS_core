@@ -4,7 +4,7 @@ from fers_core import Node, Member, FERS, Material, MemberHinge, Section, Member
 # =============================================================================
 # Example and Validation: Cantilever With Root Rotational Spring (via MemberHinge)
 # =============================================================================
-# Model: node1 --[RIGID]--> node2 --[NORMAL + spring at start]--> node3
+# Model: node1 --[RIGID]--> node2 s--[NORMAL + spring at start]--> node3
 # Support: full fixity at node1 (translations and rotations)
 # Load: 1 kN downward at the free end (node3)
 #
@@ -75,7 +75,7 @@ calculation_1.save_to_json(file_path, indent=4)
 # ----------------------------
 print("Running the analysis...")
 calculation_1.run_analysis()
-results = calculation_1.results.loadcases["End Load"]
+results = calculation_1.resultsbundle.loadcases["End Load"]
 
 # Extract FERS results
 deflection_y_tip_fers = results.displacement_nodes["3"].dy

@@ -95,14 +95,14 @@
     "imperfection_cases": [],
     "settings": {
         "id": 1,
-        "analysis_option": {
+        "analysis_options": {
             "id": 1,
             "solve_loadcases": true,
             "solver": "newton_raphson",
             "tolerance": 0.01,
             "max_iterations": 30,
             "dimensionality": "3D",
-            "order": "Nonlinear"
+            "order": "NONLINEAR"
         },
         "general_info": {
             "project_name": "Unnamed Project",
@@ -110,7 +110,6 @@
             "version": "1.0"
         }
     },
-    "results": null,
     "memberhinges": [],
     "materials": [
         {
@@ -170,5 +169,6 @@
             }
         }
     ],
-    "shape_paths": []
+    "shape_paths": [],
+    "resultsbundle": null
 }
