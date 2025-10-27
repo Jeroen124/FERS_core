@@ -147,7 +147,9 @@
             "tolerance": 0.01,
             "max_iterations": 30,
             "dimensionality": "3D",
-            "order": "NONLINEAR"
+            "order": "Nonlinear",
+            "rigid_strategy": "Rigid_Member",
+            "axial_slack": 500
         },
         "general_info": {
             "project_name": "Unnamed Project",
@@ -155,7 +157,6 @@
             "version": "1.0"
         }
     },
-    "results": null,
     "memberhinges": [],
     "materials": [
         {
@@ -215,5 +216,6 @@
             }
         }
     ],
-    "shape_paths": []
+    "shape_paths": [],
+    "resultsbundle": null
 }

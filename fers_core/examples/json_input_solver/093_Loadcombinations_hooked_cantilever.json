@@ -22,7 +22,36 @@
                         "X": 5,
                         "Y": 0,
                         "Z": 0,
-                        "nodal_support": 2
+                        "nodal_support": 1
+                    },
+                    "section": 1,
+                    "rotation_angle": 0.0,
+                    "start_hinge": null,
+                    "end_hinge": null,
+                    "classification": "",
+                    "weight": 76.92999999999999,
+                    "chi": null,
+                    "reference_member": null,
+                    "reference_node": null,
+                    "member_type": "Normal"
+                },
+                {
+                    "id": 2,
+                    "start_node": {
+                        "id": 2,
+                        "classification": "",
+                        "X": 5,
+                        "Y": 0,
+                        "Z": 0,
+                        "nodal_support": 1
+                    },
+                    "end_node": {
+                        "id": 3,
+                        "classification": "",
+                        "X": 5,
+                        "Y": 5,
+                        "Z": 0,
+                        "nodal_support": null
                     },
                     "section": 1,
                     "rotation_angle": 0.0,
@@ -44,33 +73,62 @@
             "classification": null,
             "members": [
                 {
-                    "id": 2,
+                    "id": 3,
                     "start_node": {
-                        "id": 2,
-                        "classification": "",
-                        "X": 5,
-                        "Y": 0,
-                        "Z": 0,
-                        "nodal_support": 2
-                    },
-                    "end_node": {
                         "id": 3,
                         "classification": "",
                         "X": 5,
                         "Y": 5,
                         "Z": 0,
-                        "nodal_support": 2
+                        "nodal_support": null
+                    },
+                    "end_node": {
+                        "id": 4,
+                        "classification": "",
+                        "X": 5,
+                        "Y": 0,
+                        "Z": -1,
+                        "nodal_support": 1
                     },
                     "section": 1,
                     "rotation_angle": 0.0,
                     "start_hinge": null,
                     "end_hinge": null,
                     "classification": "",
-                    "weight": 76.92999999999999,
+                    "weight": 78.45351423613857,
                     "chi": null,
                     "reference_member": null,
                     "reference_node": null,
-                    "member_type": "Normal"
+                    "member_type": "Tension"
+                },
+                {
+                    "id": 4,
+                    "start_node": {
+                        "id": 3,
+                        "classification": "",
+                        "X": 5,
+                        "Y": 5,
+                        "Z": 0,
+                        "nodal_support": null
+                    },
+                    "end_node": {
+                        "id": 5,
+                        "classification": "",
+                        "X": 5,
+                        "Y": 0,
+                        "Z": 1,
+                        "nodal_support": 1
+                    },
+                    "section": 1,
+                    "rotation_angle": 0.0,
+                    "start_hinge": null,
+                    "end_hinge": null,
+                    "classification": "",
+                    "weight": 78.45351423613857,
+                    "chi": null,
+                    "reference_member": null,
+                    "reference_node": null,
+                    "member_type": "Tension"
                 }
             ]
         }
@@ -78,7 +136,7 @@
     "load_cases": [
         {
             "id": 1,
-            "name": "End Load 1",
+            "name": "End Load x",
             "nodal_loads": [
                 {
                     "id": 1,
@@ -100,17 +158,39 @@
         },
         {
             "id": 2,
-            "name": "End Load 2",
+            "name": "End Load y",
             "nodal_loads": [
                 {
                     "id": 2,
                     "node": 3,
                     "load_case": 2,
+                    "magnitude": -10000,
+                    "direction": [
+                        0,
+                        1,
+                        0
+                    ],
+                    "load_type": "force"
+                }
+            ],
+            "nodal_moments": [],
+            "distributed_loads": [],
+            "rotation_imperfections": [],
+            "translation_imperfections": []
+        },
+        {
+            "id": 3,
+            "name": "End Load z",
+            "nodal_loads": [
+                {
+                    "id": 3,
+                    "node": 3,
+                    "load_case": 3,
                     "magnitude": -100,
                     "direction": [
-                        1,
                         0,
-                        0
+                        0,
+                        1
                     ],
                     "load_type": "force"
                 }
@@ -127,9 +207,10 @@
             "name": "A simple combination",
             "load_cases_factors": {
                 "1": 1,
-                "2": 2
+                "2": 1,
+                "3": 1
             },
-            "situation": "SLS",
+            "situation": "ULS",
             "check": "ALL",
             "limit_state": null
         }
@@ -190,38 +271,6 @@
                 },
                 "Y": {
                     "condition_type": "Fixed",
-                    "stiffness": null
-                },
-                "Z": {
-                    "condition_type": "Fixed",
-                    "stiffness": null
-                }
-            },
-            "rotation_conditions": {
-                "X": {
-                    "condition_type": "Fixed",
-                    "stiffness": null
-                },
-                "Y": {
-                    "condition_type": "Fixed",
-                    "stiffness": null
-                },
-                "Z": {
-                    "condition_type": "Fixed",
-                    "stiffness": null
-                }
-            }
-        },
-        {
-            "id": 2,
-            "classification": null,
-            "displacement_conditions": {
-                "X": {
-                    "condition_type": "Free",
-                    "stiffness": null
-                },
-                "Y": {
-                    "condition_type": "Free",
                     "stiffness": null
                 },
                 "Z": {
