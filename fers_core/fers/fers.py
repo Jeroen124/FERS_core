@@ -1763,81 +1763,84 @@ class FERS:
             if not reaction_nodes:
                 return
 
-            # Use structure_size (diagonal of bounding box) as geometric reference
-            diag_length = float(structure_size) if structure_size > 0 else 1.0
+            # Reference length from model size
+            diag_length = float(structure_size) if structure_size > 0.0 else 1.0
 
-            # Find maximum reaction magnitude
+            # Base arrow length is a fraction of the model size
+            base_arrow_length = max(1e-6, diag_length * float(reaction_scale_fraction))
+
+            # Clamp range relative to model size (tweak as you like)
+            min_len = 0.1 * base_arrow_length
+            max_len = 1.5 * base_arrow_length
+
+            # Find max reaction magnitude
             max_force_magnitude = 0.0
             for node_id_string, reaction in reaction_nodes.items():
                 forces = reaction.nodal_forces
-                force_vector = np.array([forces.fx, forces.fy, forces.fz], dtype=float)
-                magnitude = float(np.linalg.norm(force_vector))
-                if magnitude > max_force_magnitude:
-                    max_force_magnitude = magnitude
+                fv = np.array([forces.fx, forces.fy, forces.fz], dtype=float)
+                mag = float(np.linalg.norm(fv))
+                if mag > max_force_magnitude:
+                    max_force_magnitude = mag
 
             if max_force_magnitude <= 0.0:
                 return
-
-            # Base arrow length as fraction of model size
-            base_arrow_length = max(1e-9, diag_length * float(reaction_scale_fraction))
 
             added_legend = False
 
             for node_id_string, reaction in reaction_nodes.items():
                 forces = reaction.nodal_forces
-                force_vector = np.array([forces.fx, forces.fy, forces.fz], dtype=float)
-                magnitude = float(np.linalg.norm(force_vector))
-                if magnitude <= 0.0:
+                fv = np.array([forces.fx, forces.fy, forces.fz], dtype=float)
+                mag = float(np.linalg.norm(fv))
+                if mag <= 0.0:
                     continue
 
-                # Prefer actual model node; fall back to stored location
+                # Prefer model node; fallback to stored location
                 try:
-                    node_object = self.get_node_by_pk(int(node_id_string))
+                    node_obj = self.get_node_by_pk(int(node_id_string))
                 except Exception:
-                    node_object = None
+                    node_obj = None
 
-                if node_object is not None:
-                    position = np.array([node_object.X, node_object.Y, node_object.Z], dtype=float)
+                if node_obj is not None:
+                    pos = np.array([node_obj.X, node_obj.Y, node_obj.Z], dtype=float)
                 else:
                     loc = reaction.location
-                    position = np.array([loc.X, loc.Y, loc.Z], dtype=float)
+                    pos = np.array([loc.X, loc.Y, loc.Z], dtype=float)
 
-                # Direction of reaction (global)
-                direction = force_vector / magnitude
+                direction = fv / mag
+                rel = mag / max_force_magnitude  # (0, 1]
 
-                # Relative scaling (smooth, robust for different magnitudes)
-                rel = magnitude / max_force_magnitude  # in (0, 1]
-                # Slightly damp extremes so nothing explodes visually
-                arrow_length = base_arrow_length * (rel**0.5)
+                # Proposed length
+                arrow_length = base_arrow_length * rel
 
-                # Clamp arrow lengths to a sane range
-                min_len = 0.2 * base_arrow_length
-                max_len = 1.5 * base_arrow_length
-                arrow_length = max(min_len, min(arrow_length, max_len))
+                # Clamp
+                if arrow_length < min_len:
+                    arrow_length = min_len
+                elif arrow_length > max_len:
+                    arrow_length = max_len
 
-                # Build a VTK arrow with explicit geometry (no hidden scaling)
-                arrow = pv.Arrow(
-                    start=position,
-                    direction=direction,
-                    scale=arrow_length,
-                    tip_length=0.25,  # fraction of arrow_length
-                    tip_radius=0.06 * arrow_length,
-                    shaft_radius=0.02 * arrow_length,
-                )
+                arrow_vec = direction * arrow_length
 
-                plotter.add_mesh(
-                    arrow,
+                plotter.add_arrows(
+                    pos,
+                    arrow_vec,
                     color="magenta",
                     label="Reaction forces" if not added_legend else None,
                 )
-
+                print(
+                    f"[Reaction arrow] node={node_id_string} "
+                    f"|R|={mag:.3f} "
+                    f"rel={rel:.3f} "
+                    f"base_len={base_arrow_length:.3f} "
+                    f"len={arrow_length:.3f} "
+                    f"vec={arrow_vec}"
+                )
                 if show_reaction_labels:
                     label_text = f"Rx={forces.fx:.2f}, Ry={forces.fy:.2f}, Rz={forces.fz:.2f}"
-                    label_position = position + direction * arrow_length * 0.7
+                    label_pos = pos + arrow_vec * 0.6
                     plotter.add_point_labels(
-                        label_position,
+                        label_pos,
                         [label_text],
-                        font_size=10,
+                        font_size=16,
                         text_color="magenta",
                         always_visible=True,
                     )
@@ -1998,6 +2001,7 @@ class FERS:
                         if condition_type not in legend_added_for_type:
                             label = f"Support {axis_name} – {condition_type.title()}"
                             legend_added_for_type.add(condition_type)
+
                         plotter.add_arrows(
                             node_position,
                             axis_vector * support_arrow_scale,
