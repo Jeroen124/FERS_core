@@ -69,6 +69,32 @@ class Section:
             "shape_path": self.shape_path.id if self.shape_path else None,
         }
 
+    @classmethod
+    def from_dict(
+        cls,
+        data: dict,
+        materials_by_id: dict[int, Material],
+        shapepaths_by_id: dict[int, "ShapePath"],
+    ) -> "Section":
+        material_id = data.get("material")
+        material = materials_by_id[material_id] if material_id is not None else None
+
+        shape_path_id = data.get("shape_path")
+        shape_path = shapepaths_by_id.get(shape_path_id) if shape_path_id is not None else None
+
+        return cls(
+            id=data.get("id"),
+            name=data["name"],
+            material=material,
+            h=data.get("h"),
+            b=data.get("b"),
+            i_y=data["i_y"],
+            i_z=data["i_z"],
+            j=data["j"],
+            area=data["area"],
+            shape_path=shape_path,
+        )
+
     @staticmethod
     def create_ipe_section(
         name: str,

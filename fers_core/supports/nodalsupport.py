@@ -144,6 +144,29 @@ class NodalSupport:
             },
         }
 
+    @classmethod
+    def from_dict(cls, data: dict) -> "NodalSupport":
+        from .supportcondition import SupportCondition  # avoid circulars at top-level if needed
+
+        def decode_conditions(raw: dict) -> dict:
+            if raw is None:
+                return {}
+            decoded = {}
+            for direction, cond_data in raw.items():
+                # cond_data is what SupportCondition.to_dict() produced
+                decoded[direction] = SupportCondition.from_dict(cond_data)
+            return decoded
+
+        displacement_conditions = decode_conditions(data.get("displacement_conditions"))
+        rotation_conditions = decode_conditions(data.get("rotation_conditions"))
+
+        return cls(
+            id=data.get("id"),
+            classification=data.get("classification"),
+            displacement_conditions=displacement_conditions,
+            rotation_conditions=rotation_conditions,
+        )
+
     def __repr__(self) -> str:
         return (
             f"NodalSupport(id={self.id}, classification={self.classification}, "

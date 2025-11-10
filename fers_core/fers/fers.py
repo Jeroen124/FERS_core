@@ -1,5 +1,5 @@
 import re
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Any, Optional, Tuple, Union
 import fers_calculations
 import ujson
 
@@ -18,6 +18,7 @@ from fers_core.supports.support_utils import (
     color_for_condition_type,
     translational_summary,
 )
+from fers_core.utils.list_utils import as_list
 
 
 from ..imperfections.imperfectioncase import ImperfectionCase
@@ -107,8 +108,8 @@ class FERS:
         except Exception as e:
             raise ValueError(f"Failed to parse or validate results: {e}")
 
-    def to_dict(self, include_results: bool = True) -> Dict[str, Any]:
-        data: Dict[str, Any] = {
+    def to_dict(self, include_results: bool = True) -> dict[str, Any]:
+        data: dict[str, Any] = {
             "member_sets": [member_set.to_dict() for member_set in self.member_sets],
             "load_cases": [load_case.to_dict() for load_case in self.load_cases],
             "load_combinations": [load_comb.to_dict() for load_comb in self.load_combinations],
@@ -142,6 +143,98 @@ class FERS:
         """Save the FERS model to a JSON file using ujson."""
         with open(file_path, "w") as json_file:
             ujson.dump(self.to_dict(), json_file, indent=indent)
+
+    @classmethod
+    def from_json(cls, file_path: str) -> "FERS":
+        """
+        Load a FERS model (including optional results) from a JSON file that was
+        created with FERS.to_dict() / FERS.save_to_json().
+        """
+        with open(file_path, "r") as json_file:
+            data = ujson.load(json_file)
+        return cls.from_dict(data)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "FERS":
+        settings = Settings.from_dict(data["settings"])
+        fers = cls(settings=settings, reset_counters=True)
+
+        # lookup tables as you already have...
+        id_to_shape_path = {
+            sp_data["id"]: ShapePath.from_dict(sp_data)
+            for sp_data in as_list(data.get("shape_paths"), "shape_paths")
+        }
+
+        id_to_material = {
+            m_data["id"]: Material.from_dict(m_data) for m_data in as_list(data.get("materials"), "materials")
+        }
+
+        id_to_section = {}
+        for s_data in as_list(data.get("sections"), "sections"):
+            sec = Section.from_dict(s_data, materials_by_id=id_to_material, shapepaths_by_id=id_to_shape_path)
+            id_to_section[sec.id] = sec
+
+        id_to_support = {
+            sup_data["id"]: NodalSupport.from_dict(sup_data)
+            for sup_data in as_list(data.get("nodal_supports"), "nodal_supports")
+        }
+
+        id_to_hinge = {
+            h_data["id"]: MemberHinge.from_dict(h_data)
+            for h_data in as_list(data.get("memberhinges"), "memberhinges")
+        }
+
+        id_to_node: dict[int, Node] = {}
+        id_to_member: dict[int, Member] = {}
+
+        # member sets + members
+        for ms_data in data.get("member_sets", []):
+            members: list[Member] = []
+            for m_data in ms_data.get("members", []):
+                member = Member.from_dict(
+                    m_data,
+                    nodes_by_id=id_to_node,
+                    nodal_supports_by_id=id_to_support,
+                    sections_by_id=id_to_section,
+                    hinges_by_id=id_to_hinge,
+                    members_by_id=id_to_member,
+                )
+                members.append(member)
+
+            ms_id = ms_data.get("id")
+            member_set = MemberSet(
+                members=members,
+                classification=ms_data.get("classification"),
+                l_y=ms_data.get("l_y"),
+                l_z=ms_data.get("l_z"),
+                id=ms_id,
+            )
+            fers.add_member_set(member_set)
+
+        # NO second loop with resolve_member here. Delete that block.
+
+        # load cases
+        for lc_data in as_list(data.get("load_cases"), "load_cases"):
+            lc = LoadCase.from_dict(lc_data, nodes=id_to_node, members=id_to_member)
+            fers.add_load_case(lc)
+
+        # load combinations
+        for comb_data in as_list(data.get("load_combinations"), "load_combinations"):
+            comb = LoadCombination.from_dict(comb_data, load_cases=fers.load_cases)
+            fers.add_load_combination(comb)
+
+        # imperfection cases
+        for imp_data in data.get("imperfection_cases", []):
+            ic = ImperfectionCase.from_dict(imp_data, load_combinations=fers.load_combinations)
+            fers.add_imperfection_case(ic)
+
+        # results
+        res_data = data.get("resultsbundle")
+        if res_data:
+            validated = ResultsBundleSchema(**res_data)
+            fers.resultsbundle = ResultsBundle.from_pydantic(validated)
+
+        return fers
 
     def create_load_case(self, name):
         load_case = LoadCase(name=name)
@@ -355,7 +448,7 @@ class FERS:
             new_member_set = MemberSet(
                 members=new_members,
                 classification=original_member_set.classification,
-                id=original_member_set.memberset_id,
+                id=original_member_set.id,
             )
             new_model.add_member_set(new_member_set)
 
@@ -675,9 +768,7 @@ class FERS:
         - show_support_base_for_fixed: If True, draw a flat square (plate) for
         all-fixed translational supports.
         """
-        # -----------------------------
         # Build plot
-        # -----------------------------
         plotter = pv.Plotter()
 
         all_points = []
@@ -777,9 +868,7 @@ class FERS:
             )
             plotter.add_mesh(glyph, color="red", label="Nodes")
 
-        # ---------------------------------------------
         # Supports: arrows + optional square plate for all-fixed translations
-        # ---------------------------------------------
         if show_supports:
             legend_types: set[str] = set()
             plate_legend_added = False
@@ -902,9 +991,7 @@ class FERS:
         if loadcase is not None and loadcombination is not None:
             raise ValueError("Specify either 'loadcase' OR 'loadcombination', not both.")
 
-        # -----------------------------
         # Select which result set to show
-        # -----------------------------
         if loadcase is not None:
             loadcase_keys = list(self.resultsbundle.loadcases.keys())
             if isinstance(loadcase, int):
@@ -936,9 +1023,7 @@ class FERS:
             else:
                 raise ValueError("Multiple results available. Specify 'loadcase' or 'loadcombination'.")
 
-        # -----------------------------
         # Plane helpers
-        # -----------------------------
         def project_xyz_to_plane(
             x_value: float, y_value: float, z_value: float, plane_name: str
         ) -> tuple[float, float]:
@@ -961,9 +1046,7 @@ class FERS:
                 return "Y", "Z"
             raise ValueError("plane must be one of 'xy', 'xz', or 'yz'")
 
-        # -----------------------------
         # Result field helpers (aligns with your 3D method)
-        # -----------------------------
         def normalize_key(name: str) -> str:
             return name.lower().replace("_", "")
 
@@ -1099,11 +1182,9 @@ class FERS:
             s_target = np.linspace(0.0, 1.0, num=num_samples)
             return np.interp(s_target, s_values, y_values)
 
-        # -----------------------------
         # Gather node displacements (for deformed centerlines)
-        # -----------------------------
         need_displacements = show_deformations or (plot_local_bending_moment is not None)
-        node_displacements: Dict[int, Tuple[np.ndarray, np.ndarray]] = {}
+        node_displacements: dict[int, Tuple[np.ndarray, np.ndarray]] = {}
         if need_displacements:
             displacement_nodes = getattr(chosen_results, "displacement_nodes", {}) or {}
             for node_id_string, disp in displacement_nodes.items():
@@ -1119,9 +1200,8 @@ class FERS:
                     rotation_global = np.zeros(3, dtype=float)
                 node_displacements[node_id] = (displacement_global, rotation_global)
 
-        # -----------------------------
         # Prepare plotting
-        # -----------------------------
+
         figure, axes = plt.subplots()
         x_label, y_label = axis_labels_for_plane(plane)
         axes.set_xlabel(x_label)
@@ -1143,9 +1223,7 @@ class FERS:
         else:
             structure_span_in_plane = 1.0
 
-        # -----------------------------
         # Draw original and deformed centerlines
-        # -----------------------------
         if show_original_shape or show_deformations:
             for member in self.get_all_members():
                 start_displacement, start_rotation = node_displacements.get(
@@ -1194,9 +1272,7 @@ class FERS:
                         label="Deformed Shape" if member == self.get_all_members()[0] else None,
                     )
 
-        # -----------------------------
         # Optional: draw nodes
-        # -----------------------------
         if show_nodes:
             node_points_projected = [project_xyz_to_plane(n.X, n.Y, n.Z, plane) for n in self.get_all_nodes()]
             if node_points_projected:
@@ -1210,9 +1286,7 @@ class FERS:
                     label="Nodes",
                 )
 
-        # -----------------------------
         # Optional: draw supports in 2D (very compact, plane-aware)
-        # -----------------------------
         if show_supports:
             from fers_core.supports.support_utils import (
                 get_condition_type,
@@ -1276,9 +1350,8 @@ class FERS:
                         zorder=7,
                     )
 
-        # -----------------------------
         # Optional: local bending moment diagrams in the 2D plane
-        # -----------------------------
+
         if plot_local_bending_moment is not None:
             requested_component = str(plot_local_bending_moment)
             all_moment_arrays_abs_maxima: list[float] = []
@@ -1361,9 +1434,7 @@ class FERS:
                     else:
                         axes.plot(offset_x, offset_y, linewidth=2.0, color="black", zorder=5)
 
-        # -----------------------------
         # Final formatting
-        # -----------------------------
         if min_coords is not None and max_coords is not None:
             if plane.lower() == "xy":
                 min_x, max_x = min_coords[0], max_coords[0]
@@ -1428,9 +1499,8 @@ class FERS:
         if loadcase is not None and loadcombination is not None:
             raise ValueError("Specify either loadcase or loadcombination, not both.")
 
-        # -----------------------------
         # Pick results
-        # -----------------------------
+
         if loadcase is not None:
             keys = list(self.resultsbundle.loadcases.keys())
             if isinstance(loadcase, int):
@@ -1461,9 +1531,7 @@ class FERS:
             else:
                 raise ValueError("Multiple results available – specify loadcase= or loadcombination=.")
 
-        # -----------------------------
         # Plotter + global scales
-        # -----------------------------
         plotter = pv.Plotter()
         plotter.add_axes()
 
@@ -1474,13 +1542,12 @@ class FERS:
             structure_size = 1.0
         support_arrow_scale = max(1e-6, structure_size * support_size_fraction)
 
-        # -----------------------------
         # Displacements (for deformed centerline)
-        # -----------------------------
+
         need_displacements = (plot_bending_moment is None and displacement) or (
             plot_bending_moment is not None and diagram_on_deformed_centerline
         )
-        node_displacements: Dict[int, Tuple[np.ndarray, np.ndarray]] = {}
+        node_displacements: dict[int, Tuple[np.ndarray, np.ndarray]] = {}
         if need_displacements:
             displacement_nodes = getattr(chosen, "displacement_nodes", {})
             for node_id_string, disp in displacement_nodes.items():
@@ -1496,9 +1563,7 @@ class FERS:
                     r_global = np.zeros(3, dtype=float)
                 node_displacements[node_id] = (d_global, r_global)
 
-        # -----------------------------
         # Helpers for moment plotting
-        # -----------------------------
         def _normalize_key(s: str) -> str:
             return str(s).lower().replace("_", "")
 
@@ -1830,7 +1895,7 @@ class FERS:
         diagram_polys: list[pv.PolyData] = []
         diagram_vals: list[np.ndarray] = []
         offset_axes: list[np.ndarray] = []
-        peak_abs_by_member: Dict[int, float] = {}
+        peak_abs_by_member: dict[int, float] = {}
 
         for member in self.get_all_members():
             curve = _fetch_member_line_curve(member.id)
@@ -2240,7 +2305,7 @@ class FERS:
     def get_model_summary(self):
         """Returns a summary of the model's components: MemberSets, LoadCases, and LoadCombinations."""
         summary = {
-            "MemberSets": [member_set.memberset_id for member_set in self.member_sets],  # fixed
+            "MemberSets": [member_set.id for member_set in self.member_sets],  # fixed
             "LoadCases": [load_case.name for load_case in self.load_cases],
             "LoadCombinations": [load_combination.name for load_combination in self.load_combinations],
         }

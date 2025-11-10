@@ -80,3 +80,22 @@ class MemberHinge:
             "max_moment_my": self.max_moment_my,
             "max_moment_mz": self.max_moment_mz,
         }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "MemberHinge":
+        return cls(
+            id=data.get("id"),
+            hinge_type=data.get("hinge_type", ""),
+            translational_release_vx=data.get("translational_release_vx"),
+            translational_release_vy=data.get("translational_release_vy"),
+            translational_release_vz=data.get("translational_release_vz"),
+            rotational_release_mx=data.get("rotational_release_mx"),
+            rotational_release_my=data.get("rotational_release_my"),
+            rotational_release_mz=data.get("rotational_release_mz"),
+            max_tension_vx=data.get("max_tension_vx"),
+            max_tension_vy=data.get("max_tension_vy"),
+            max_tension_vz=data.get("max_tension_vz"),
+            max_moment_mx=data.get("max_moment_mx"),
+            max_moment_my=data.get("max_moment_my"),
+            max_moment_mz=data.get("max_moment_mz"),
+        )

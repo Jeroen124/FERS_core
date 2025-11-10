@@ -1,6 +1,8 @@
 from typing import Optional, Union, List
 import numpy as np
 
+from fers_core.supports.nodalsupport import NodalSupport
+
 from ..nodes.node import Node
 from ..members.memberhinge import MemberHinge
 from ..members.enums import MemberType, normalize_member_type
@@ -145,6 +147,130 @@ class Member:
             "reference_node": self.reference_node.id if self.reference_node else None,
             "member_type": self.member_type.value,
         }
+
+    @classmethod
+    def from_dict(
+        cls,
+        data: dict,
+        *,
+        nodes_by_id: dict[int, Node],
+        nodal_supports_by_id: dict[int, "NodalSupport"] | None = None,
+        sections_by_id: dict[int, Section] | None = None,
+        hinges_by_id: dict[int, MemberHinge] | None = None,
+        members_by_id: dict[int, "Member"] | None = None,
+    ) -> "Member":
+        """
+        Construct a Member from its dict representation.
+
+        Handles:
+        - start_node / end_node as dict or id
+        - section as dict or id
+        - start_hinge / end_hinge by id
+        - member_type as enum or string
+        - reference_member / reference_node by id
+        Registers itself into members_by_id if provided.
+        """
+
+        members_by_id = members_by_id if members_by_id is not None else {}
+        sections_by_id = sections_by_id if sections_by_id is not None else {}
+        hinges_by_id = hinges_by_id if hinges_by_id is not None else {}
+
+        member_id = data.get("id")
+
+        # --- start node ---
+        start_node_data = data.get("start_node")
+        if isinstance(start_node_data, dict):
+            start_node = Node.get_or_create_from_dict(
+                start_node_data,
+                nodes_by_id=nodes_by_id,
+                nodal_supports_by_id=nodal_supports_by_id,
+            )
+        else:
+            start_node_id = data.get("start_node_id") or start_node_data
+            start_node = nodes_by_id[start_node_id]
+
+        # --- end node ---
+        end_node_data = data.get("end_node")
+        if isinstance(end_node_data, dict):
+            end_node = Node.get_or_create_from_dict(
+                end_node_data,
+                nodes_by_id=nodes_by_id,
+                nodal_supports_by_id=nodal_supports_by_id,
+            )
+        else:
+            end_node_id = data.get("end_node_id") or end_node_data
+            end_node = nodes_by_id[end_node_id]
+
+        # --- section ---
+        section = None
+        section_data = data.get("section")
+        if isinstance(section_data, dict):
+            existing = sections_by_id.get(section_data.get("id"))
+            if existing is None:
+                section = Section.from_dict(section_data)
+                sections_by_id[section.id] = section
+            else:
+                section = existing
+        else:
+            section_id = data.get("section_id") or section_data
+            if section_id is not None:
+                section = sections_by_id.get(section_id)
+
+        # --- hinges ---
+        start_hinge = None
+        end_hinge = None
+
+        start_hinge_id = data.get("start_hinge_id")
+        if start_hinge_id is None and isinstance(data.get("start_hinge"), int):
+            start_hinge_id = data["start_hinge"]
+        if start_hinge_id is not None:
+            start_hinge = hinges_by_id.get(start_hinge_id)
+
+        end_hinge_id = data.get("end_hinge_id")
+        if end_hinge_id is None and isinstance(data.get("end_hinge"), int):
+            end_hinge_id = data["end_hinge"]
+        if end_hinge_id is not None:
+            end_hinge = hinges_by_id.get(end_hinge_id)
+
+        # --- reference member ---
+        reference_member = None
+        ref_member_id = data.get("reference_member")
+        if ref_member_id is not None and members_by_id is not None:
+            reference_member = members_by_id.get(ref_member_id)
+
+        # --- reference node ---
+        reference_node = None
+        ref_node = data.get("reference_node")
+        if isinstance(ref_node, dict):
+            reference_node = Node.get_or_create_from_dict(
+                ref_node,
+                nodes_by_id=nodes_by_id,
+                nodal_supports_by_id=nodal_supports_by_id,
+            )
+        elif ref_node is not None:
+            reference_node = nodes_by_id.get(ref_node)
+
+        # --- build ---
+        member = cls(
+            start_node=start_node,
+            end_node=end_node,
+            section=section,
+            id=member_id,
+            start_hinge=start_hinge,
+            end_hinge=end_hinge,
+            classification=data.get("classification", "") or "",
+            rotation_angle=float(data.get("rotation_angle", 0.0) or 0.0),
+            weight=data.get("weight"),
+            chi=data.get("chi"),
+            reference_member=reference_member,
+            reference_node=reference_node,
+            member_type=data.get("member_type", MemberType.NORMAL),
+        )
+
+        if member_id is not None:
+            members_by_id.setdefault(member_id, member)
+
+        return member
 
     def local_coordinate_system(self):
         """

@@ -103,3 +103,53 @@ class DistributedLoad:
             "end_frac": self.end_frac,
             "end_magnitude": self.end_magnitude,
         }
+
+    @classmethod
+    def from_dict(
+        cls,
+        data: Dict[str, Any],
+        *,
+        members: Dict[int, "Member"],
+        load_case: "LoadCase",
+    ) -> "DistributedLoad":
+        member_id = data.get("member") or data.get("member_id")
+        if member_id is None:
+            raise ValueError("DistributedLoad.from_dict: 'member' (id) is required.")
+        member = members.get(member_id)
+        if member is None:
+            raise KeyError(f"DistributedLoad.from_dict: Member with id={member_id} not found.")
+
+        from ..loads.distributionshape import DistributionShape
+
+        distribution_shape = data.get("distribution_shape", DistributionShape.UNIFORM)
+        magnitude = data.get("magnitude", 0.0)
+        direction = tuple(data.get("direction", (0.0, -1.0, 0.0)))
+        start_frac = data.get("start_frac", 0.0)
+        end_frac = data.get("end_frac", 1.0)
+        end_magnitude = data.get("end_magnitude")
+
+        load_id = data.get("id")
+
+        if isinstance(distribution_shape, str):
+            distribution_shape = (
+                DistributionShape(distribution_shape)
+                if distribution_shape in [e.value for e in DistributionShape]
+                else DistributionShape[distribution_shape]
+            )
+
+        obj = cls(
+            member=member,
+            load_case=load_case,
+            distribution_shape=distribution_shape,
+            magnitude=magnitude,
+            direction=direction,
+            start_frac=start_frac,
+            end_frac=end_frac,
+            end_magnitude=end_magnitude,
+            id=load_id,
+        )
+
+        if load_id is not None and load_id >= cls._distributed_load_counter:
+            cls._distributed_load_counter = load_id + 1
+
+        return obj

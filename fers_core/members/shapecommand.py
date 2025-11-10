@@ -47,3 +47,22 @@ class ShapeCommand:
             "theta0": self.theta0,
             "theta1": self.theta1,
         }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "ShapeCommand":
+        """
+        Inverse of to_dict.
+
+        Accepts exactly what to_dict produces.
+        Extra keys are ignored; missing optional keys default to None.
+        """
+        return cls(
+            command=data["command"],
+            y=data.get("y"),
+            z=data.get("z"),
+            r=data.get("r"),
+            center_y=data.get("center_y"),
+            center_z=data.get("center_z"),
+            theta0=data.get("theta0"),
+            theta1=data.get("theta1"),
+        )

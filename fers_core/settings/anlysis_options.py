@@ -41,3 +41,63 @@ class AnalysisOptions:
             "rigid_strategy": self.rigid_strategy.value,
             "axial_slack": self.axial_slack,
         }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "AnalysisOptions":
+        """
+        Accepts:
+        - dimensionality/order/rigid_strategy as either:
+          - their enum value (as written by to_dict),
+          - their enum name,
+          - or already as enum instances.
+        """
+
+        def parse_enum(enum_type, raw_value, default):
+            if raw_value is None:
+                return default
+            if isinstance(raw_value, enum_type):
+                return raw_value
+
+            # Try by value
+            for member in enum_type:
+                if member.value == raw_value:
+                    return member
+
+            # Try by name (case-insensitive)
+            raw_str = str(raw_value).upper()
+            for member in enum_type:
+                if member.name.upper() == raw_str:
+                    return member
+
+            # Fallback to default if nothing matches
+            return default
+
+        dimensionality = parse_enum(
+            Dimensionality,
+            data.get("dimensionality"),
+            Dimensionality.THREE_DIMENSIONAL,
+        )
+
+        order = parse_enum(
+            AnalysisOrder,
+            data.get("order"),
+            AnalysisOrder.NONLINEAR,
+        )
+
+        rigid_strategy = parse_enum(
+            RigidStrategy,
+            data.get("rigid_strategy"),
+            RigidStrategy.RIGID_MEMBER,
+        )
+
+        return cls(
+            id=data.get("id"),
+            solve_loadcases=data.get("solve_loadcases", True),
+            solver=data.get("solver", "newton_raphson"),
+            tolerance=data.get("tolerance", 0.01),
+            max_iterations=data.get("max_iterations", 30),
+            dimensionality=dimensionality,
+            order=order,
+            rigid_strategy=rigid_strategy,
+            axial_slack=data.get("axial_slack", 500),
+        )

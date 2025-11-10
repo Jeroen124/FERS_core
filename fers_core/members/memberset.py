@@ -16,7 +16,7 @@ class MemberSet:
         l_z: Optional[float] = None,
         id: Optional[int] = None,
     ):
-        self.memberset_id = id or MemberSet._member_set_counter
+        self.id = id or MemberSet._member_set_counter
         if id is None:
             MemberSet._member_set_counter += 1
 
@@ -33,12 +33,42 @@ class MemberSet:
     def to_dict(self):
         # Get unique materials and sections using get_unique methods
         return {
-            "id": self.memberset_id,
+            "id": self.id,
             "l_y": self.l_y,
             "l_z": self.l_z,
             "classification": self.classification,
             "members": [member.to_dict() for member in self.members],
         }
+
+    @classmethod
+    def from_dict(
+        cls,
+        data: dict,
+        *,
+        members_by_id: dict[int, Member],
+    ) -> "MemberSet":
+        # members can be full dicts or just ids; assume FERS already built members_by_id
+        members: list[Member] = []
+        for m in data.get("members", []):
+            if isinstance(m, dict):
+                mid = m.get("id")
+                if mid is None:
+                    raise ValueError("Member dict in MemberSet is missing 'id'.")
+            else:
+                mid = int(m)
+            try:
+                members.append(members_by_id[mid])
+            except KeyError:
+                raise KeyError(f"Member with id={mid} not found when building MemberSet.")
+
+        ms_id = data.get("id")
+        return cls(
+            members=members,
+            classification=data.get("classification"),
+            l_y=data.get("l_y"),
+            l_z=data.get("l_z"),
+            id=ms_id,
+        )
 
     @staticmethod
     def find_member_sets_containing_member(id, all_member_sets):
@@ -102,7 +132,7 @@ class MemberSet:
         if set_aspect:
             ax.set_aspect("equal", adjustable="box")
         if show_title:
-            ax.set_title(f"Member Set: {self.memberset_id}")  # fixed
+            ax.set_title(f"Member Set: {self.id}")  # fixed
         if not show_legend:
             ax.legend_ = None
         else:
@@ -150,7 +180,7 @@ class MemberSet:
 
         ax.set_xlabel(label_axis[0])
         ax.set_ylabel(label_axis[1])
-        ax.set_title(f"Member Set: {self.memberset_id}")  # fixed
+        ax.set_title(f"Member Set: {self.id}")  # fixed
 
         ax.legend(loc="upper left", bbox_to_anchor=(1, 1))
         plt.tight_layout()

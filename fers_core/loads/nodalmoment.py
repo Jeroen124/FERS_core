@@ -1,4 +1,6 @@
 from typing import Dict, Any, Tuple
+
+from fers_core.loads.loadcase import LoadCase
 from ..nodes.node import Node
 
 
@@ -40,6 +42,34 @@ class NodalMoment:
             "direction": self.direction,
             "load_type": self.load_type,
         }
+
+    @classmethod
+    def from_dict(
+        cls,
+        data: Dict[str, Any],
+        *,
+        nodes: Dict[int, "Node"],
+        load_case: "LoadCase",
+    ) -> "NodalMoment":
+        node_id = data.get("node") or data.get("node_id")
+        if node_id is None:
+            raise ValueError("NodalMoment.from_dict: 'node' (id) is required.")
+        node = nodes.get(node_id)
+        if node is None:
+            raise KeyError(f"NodalMoment.from_dict: Node with id={node_id} not found.")
+
+        magnitude = data.get("magnitude", 0.0)
+        direction = tuple(data.get("direction", (0.0, 0.0, 0.0)))  # (Mx,My,Mz)
+
+        obj = cls(node=node, load_case=load_case, magnitude=magnitude, direction=direction)
+
+        moment_id = data.get("id")
+        if moment_id is not None:
+            obj.id = moment_id
+            if moment_id >= cls._nodal_moment_counter:
+                cls._nodal_moment_counter = moment_id + 1
+
+        return obj
 
     def __repr__(self) -> str:
         return (

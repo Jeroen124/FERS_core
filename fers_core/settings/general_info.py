@@ -8,3 +8,13 @@ class GeneralInfo:
             "author": self.general_info["author"],
             "version": self.general_info["version"],
         }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "GeneralInfo":
+        if data is None:
+            return cls()
+        return cls(
+            project_name=data.get("project_name", "Unnamed Project"),
+            author=data.get("author", "Unknown"),
+            version=data.get("version", "1.0"),
+        )

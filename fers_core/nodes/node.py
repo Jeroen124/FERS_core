@@ -34,6 +34,22 @@ class Node:
         }
 
     @classmethod
+    def from_dict(cls, data: dict, nodal_supports_by_id: dict[int, NodalSupport] | None = None) -> "Node":
+        support = None
+        support_id = data.get("nodal_support")
+        if nodal_supports_by_id is not None and support_id is not None:
+            support = nodal_supports_by_id.get(support_id)
+
+        return cls(
+            X=data["X"],
+            Y=data["Y"],
+            Z=data["Z"],
+            id=data.get("id"),
+            classification=data.get("classification", ""),
+            nodal_support=support,
+        )
+
+    @classmethod
     def reset_counter(cls) -> None:
         cls._node_counter = 1
 
@@ -72,3 +88,41 @@ class Node:
             nodes,
             key=lambda node: ((node.X - X) ** 2 + (node.Y - Y) ** 2 + (node.Z - Z) ** 2) ** 0.5,
         )
+
+    @classmethod
+    def get_or_create_from_dict(
+        cls,
+        data: "dict | Node",
+        nodes_by_id: dict[int, "Node"],
+        nodal_supports_by_id: dict[int, NodalSupport] | None = None,
+    ) -> "Node":
+        """
+        Ensure a single Node instance per id.
+
+        - If given a Node instance: register it (if it has id) and return it.
+        - If given a dict with an 'id' that exists in nodes_by_id: return existing.
+        - Otherwise: construct via from_dict, store in nodes_by_id (if has id), return.
+        """
+        # Already a Node instance?
+        if isinstance(data, cls):
+            node = data
+            if node.id is not None:
+                nodes_by_id.setdefault(node.id, node)
+            return node
+
+        if not isinstance(data, dict):
+            raise TypeError(f"Node.get_or_create_from_dict expects dict or Node, got {type(data).__name__}")
+
+        node_id = data.get("id")
+
+        # Reuse if already created
+        if node_id is not None and node_id in nodes_by_id:
+            return nodes_by_id[node_id]
+
+        # Create new
+        node = cls.from_dict(data, nodal_supports_by_id=nodal_supports_by_id)
+
+        if node.id is not None:
+            nodes_by_id.setdefault(node.id, node)
+
+        return node

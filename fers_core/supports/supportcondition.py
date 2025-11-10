@@ -80,6 +80,43 @@ class SupportCondition:
             "stiffness": self.stiffness,
         }
 
+    @classmethod
+    def from_dict(cls, data: dict) -> "SupportCondition":
+        if data is None:
+            raise ValueError("SupportCondition.from_dict: 'data' must not be None.")
+
+        # Accept either "condition_type" or "type" as key
+        raw_type = (
+            data.get("condition_type") or data.get("type") or data.get("ConditionType") or data.get("Type")
+        )
+        if raw_type is None:
+            raise ValueError("SupportCondition.from_dict: missing 'condition_type'/'type' field.")
+
+        stiffness = data.get("stiffness", None)
+
+        # If already an enum, keep it
+        if isinstance(raw_type, SupportConditionType):
+            condition_type = raw_type
+        else:
+            # Normalize string variants
+            raw = str(raw_type).strip().lower().replace("_", "-")
+
+            if raw in ("fixed",):
+                condition_type = SupportConditionType.FIXED
+            elif raw in ("free",):
+                condition_type = SupportConditionType.FREE
+            elif raw in ("spring",):
+                condition_type = SupportConditionType.SPRING
+            elif raw in ("positive-only", "positiveonly", "pos-only", "pos"):
+                condition_type = SupportConditionType.POSITIVE_ONLY
+            elif raw in ("negative-only", "negativeonly", "neg-only", "neg"):
+                condition_type = SupportConditionType.NEGATIVE_ONLY
+            else:
+                raise ValueError(f"SupportCondition.from_dict: unknown condition_type '{raw_type}'.")
+
+        # Let __init__ + _validate handle correctness
+        return cls(condition_type=condition_type, stiffness=stiffness)
+
     def to_display_string(self) -> str:
         if self.condition_type == SupportConditionType.SPRING:
             return f"Spring (stiffness={self.stiffness})"
