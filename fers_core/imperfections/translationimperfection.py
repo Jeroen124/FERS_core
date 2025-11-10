@@ -1,6 +1,6 @@
 from typing import Any
 
-from fers_core.utils.list_utils import as_list
+from fers_core.types.list_utils import as_list
 from ..members.memberset import MemberSet
 
 

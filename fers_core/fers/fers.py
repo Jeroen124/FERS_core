@@ -18,7 +18,7 @@ from fers_core.supports.support_utils import (
     color_for_condition_type,
     translational_summary,
 )
-from fers_core.utils.list_utils import as_list
+from fers_core.types.list_utils import as_list
 
 
 from ..imperfections.imperfectioncase import ImperfectionCase
@@ -1001,7 +1001,14 @@ class FERS:
             else:
                 selected_key = str(loadcase)
                 if selected_key not in self.resultsbundle.loadcases:
-                    raise KeyError(f"Loadcase '{selected_key}' not found.")
+                    available_loadcases = [
+                        f"'{v.name}'" if getattr(v, "name", None) else f"'{k}'"
+                        for k, v in self.resultsbundle.loadcases.items()
+                    ]
+                    raise KeyError(
+                        f"Loadcase '{selected_key}' not found. "
+                        f"Available loadcases: {', '.join(available_loadcases)}"
+                    )
             chosen_results = self.resultsbundle.loadcases[selected_key]
             chosen_title = chosen_results.name if hasattr(chosen_results, "name") else str(selected_key)
         elif loadcombination is not None:
@@ -1013,7 +1020,14 @@ class FERS:
             else:
                 selected_key = str(loadcombination)
                 if selected_key not in self.resultsbundle.loadcombinations:
-                    raise KeyError(f"Loadcombination '{selected_key}' not found.")
+                    available_combinations = [
+                        f"'{v.name}'" if getattr(v, "name", None) else f"'{k}'"
+                        for k, v in self.resultsbundle.loadcombinations.items()
+                    ]
+                    raise KeyError(
+                        f"Loadcombination '{selected_key}' not found. "
+                        f"Available loadcombinations: {', '.join(available_combinations) or 'none'}"
+                    )
             chosen_results = self.resultsbundle.loadcombinations[selected_key]
             chosen_title = chosen_results.name if hasattr(chosen_results, "name") else str(selected_key)
         else:
@@ -1485,6 +1499,9 @@ class FERS:
         diagram_line_width_pixels: int = 6,  # Used for 'line' moment_style
         diagram_on_deformed_centerline: bool = True,  # Draw diagram offset from deformed centerline
         moment_style: str = "tube",
+        show_reactions: bool = True,
+        reaction_scale_fraction: float = 0.15,
+        show_reaction_labels: bool = True,
     ):
         """
         Visualize a load case or combination in 3D using PyVista.
@@ -1493,6 +1510,10 @@ class FERS:
         If plot_bending_moment in {"M_x","M_y","M_z"}:
         - moment_style="tube": draw a scaled 3D diagram as tubes, offset along the local axis
         - moment_style="line": draw unscaled centerlines, colored by the moment along the length
+
+        Reactions:
+        - Uses chosen.reaction_nodes (ReactionNodeResult) with global nodal_forces.
+        - Arrows are scaled relative to the model size and max reaction magnitude.
         """
         if self.resultsbundle is None:
             raise ValueError("No analysis results available.")
@@ -1541,27 +1562,6 @@ class FERS:
         else:
             structure_size = 1.0
         support_arrow_scale = max(1e-6, structure_size * support_size_fraction)
-
-        # Displacements (for deformed centerline)
-
-        need_displacements = (plot_bending_moment is None and displacement) or (
-            plot_bending_moment is not None and diagram_on_deformed_centerline
-        )
-        node_displacements: dict[int, Tuple[np.ndarray, np.ndarray]] = {}
-        if need_displacements:
-            displacement_nodes = getattr(chosen, "displacement_nodes", {})
-            for node_id_string, disp in displacement_nodes.items():
-                node_id = int(node_id_string)
-                node = self.get_node_by_pk(node_id)
-                if node is None:
-                    continue
-                if disp:
-                    d_global = np.array([disp.dx, disp.dy, disp.dz], dtype=float)
-                    r_global = np.array([disp.rx, disp.ry, disp.rz], dtype=float)
-                else:
-                    d_global = np.zeros(3, dtype=float)
-                    r_global = np.zeros(3, dtype=float)
-                node_displacements[node_id] = (d_global, r_global)
 
         # Helpers for moment plotting
         def _normalize_key(s: str) -> str:
@@ -1705,13 +1705,11 @@ class FERS:
                     if start_val is None and isinstance(rec, dict):
                         # flat variants
                         for k, v in rec.items():
-                            if _normalize_key(k).startswith(
-                                _normalize_key(plot_bending_moment)
-                            ) and _normalize_key(k).endswith("i"):
+                            key_norm = _normalize_key(k)
+                            pm_norm = _normalize_key(plot_bending_moment)
+                            if key_norm.startswith(pm_norm) and key_norm.endswith("i"):
                                 start_val = float(v)
-                            if _normalize_key(k).startswith(
-                                _normalize_key(plot_bending_moment)
-                            ) and _normalize_key(k).endswith("j"):
+                            if key_norm.startswith(pm_norm) and key_norm.endswith("j"):
                                 end_val = float(v)
                     if start_val is not None and end_val is not None:
                         s_vals = np.array([0.0, 1.0], dtype=float)
@@ -1727,7 +1725,7 @@ class FERS:
             end_is_supported = getattr(member.end_node, "nodal_support", None) is not None
             if not (start_is_supported ^ end_is_supported):
                 return None
-            reactions = getattr(chosen, "reaction_nodes", {})
+            reactions = getattr(chosen, "reaction_nodes", {}) or {}
             if not reactions:
                 return None
             supported_node_id = member.start_node.id if start_is_supported else member.end_node.id
@@ -1745,9 +1743,94 @@ class FERS:
                 m_vals = np.array([0.0, float(val)], dtype=float)
             return s_vals, m_vals
 
+        # NEW: plot reaction forces as arrows (global)
+        def _plot_reactions():
+            if not show_reactions:
+                return
+
+            reaction_nodes = getattr(chosen, "reaction_nodes", {}) or {}
+            if not reaction_nodes:
+                return
+
+            max_force_magnitude = 0.0
+            for node_id_string, reaction in reaction_nodes.items():
+                forces = reaction.nodal_forces
+                force_vector = np.array([forces.fx, forces.fy, forces.fz], dtype=float)
+                magnitude = float(np.linalg.norm(force_vector))
+                if magnitude > max_force_magnitude:
+                    max_force_magnitude = magnitude
+
+            if max_force_magnitude <= 0.0:
+                return
+
+            base_arrow_length = max(1e-6, float(structure_size) * float(reaction_scale_fraction))
+            added_legend = False
+
+            for node_id_string, reaction in reaction_nodes.items():
+                forces = reaction.nodal_forces
+                force_vector = np.array([forces.fx, forces.fy, forces.fz], dtype=float)
+                magnitude = float(np.linalg.norm(force_vector))
+                if magnitude <= 0.0:
+                    continue
+
+                # Prefer actual model node for consistency with deformations etc.
+                try:
+                    node_object = self.get_node_by_pk(int(node_id_string))
+                except Exception:
+                    node_object = None
+
+                if node_object is not None:
+                    position = np.array([node_object.X, node_object.Y, node_object.Z], dtype=float)
+                else:
+                    loc = reaction.location
+                    position = np.array([loc.X, loc.Y, loc.Z], dtype=float)
+
+                direction = force_vector / magnitude
+                arrow_length = base_arrow_length * (magnitude / max_force_magnitude)
+
+                plotter.add_arrows(
+                    position,
+                    direction * arrow_length,
+                    color="magenta",
+                    label="Reaction forces" if not added_legend else None,
+                )
+
+                if show_reaction_labels:
+                    label_text = f"Rx={forces.fx:.2f}, Ry={forces.fy:.2f}, Rz={forces.fz:.2f}"
+                    label_position = position + direction * arrow_length * 0.6
+                    plotter.add_point_labels(
+                        label_position,
+                        [label_text],
+                        font_size=10,
+                        text_color="magenta",
+                        always_visible=True,
+                    )
+
+                added_legend = True
+
         # ======================================================================
         # BRANCH A: Deformed/original shapes (no moment diagram)
         # ======================================================================
+
+        need_displacements = (plot_bending_moment is None and displacement) or (
+            plot_bending_moment is not None and diagram_on_deformed_centerline
+        )
+        node_displacements: dict[int, Tuple[np.ndarray, np.ndarray]] = {}
+        if need_displacements:
+            displacement_nodes = getattr(chosen, "displacement_nodes", {})
+            for node_id_string, disp in displacement_nodes.items():
+                node_id = int(node_id_string)
+                node = self.get_node_by_pk(node_id)
+                if node is None:
+                    continue
+                if disp:
+                    d_global = np.array([disp.dx, disp.dy, disp.dz], dtype=float)
+                    r_global = np.array([disp.rx, disp.ry, disp.rz], dtype=float)
+                else:
+                    d_global = np.zeros(3, dtype=float)
+                    r_global = np.zeros(3, dtype=float)
+                node_displacements[node_id] = (d_global, r_global)
+
         if plot_bending_moment is None:
             centerline_samples = num_points
             extrusion_samples = max(num_points * 2, 2 * num_points + 1)
@@ -1761,7 +1844,13 @@ class FERS:
                 d1_gl, r1_gl = node_displacements.get(member.end_node.id, (np.zeros(3), np.zeros(3)))
 
                 original_curve, deformed_curve = centerline_path_points(
-                    member, d0_gl, r0_gl, d1_gl, r1_gl, centerline_samples, displacement_scale
+                    member,
+                    d0_gl,
+                    r0_gl,
+                    d1_gl,
+                    r1_gl,
+                    centerline_samples,
+                    displacement_scale,
                 )
 
                 deformed_path_points = np.ascontiguousarray(
@@ -1883,6 +1972,9 @@ class FERS:
                             always_visible=True,
                         )
 
+            # Reactions (added)
+            _plot_reactions()
+
             plotter.add_legend()
             plotter.show_grid(color="gray")
             plotter.view_isometric()
@@ -1954,6 +2046,50 @@ class FERS:
                 poly = pv.PolyData(pts)
                 poly.lines = np.array(lines, dtype=np.int32)
                 plotter.add_mesh(poly, color="gray", line_width=2.0, label="Members")
+
+            if show_supports:
+                legend_added_for_type: set[str] = set()
+                axis_unit_vectors = {
+                    "X": np.array([1.0, 0.0, 0.0]),
+                    "Y": np.array([0.0, 1.0, 0.0]),
+                    "Z": np.array([0.0, 0.0, 1.0]),
+                }
+                for node in self.get_all_nodes():
+                    nodal_support = getattr(node, "nodal_support", None)
+                    if not nodal_support:
+                        continue
+                    node_position = np.array([node.X, node.Y, node.Z], dtype=float)
+                    for axis_name, axis_vector in axis_unit_vectors.items():
+                        condition_type = get_condition_type(
+                            nodal_support.displacement_conditions.get(axis_name)
+                        )
+                        color_value = color_for_condition_type(condition_type)
+                        label = None
+                        if condition_type not in legend_added_for_type:
+                            label = f"Support {axis_name} – {condition_type.title()}"
+                            legend_added_for_type.add(condition_type)
+                        plotter.add_arrows(
+                            node_position,
+                            axis_vector * support_arrow_scale,
+                            color=color_value,
+                            label=label,
+                        )
+                    if show_support_labels:
+                        label_text = format_support_label(nodal_support)
+                        label_position = node_position + np.array([1.0, 1.0, 1.0]) * (
+                            support_arrow_scale * 0.6
+                        )
+                        plotter.add_point_labels(
+                            label_position,
+                            [label_text],
+                            font_size=12,
+                            text_color="black",
+                            always_visible=True,
+                        )
+
+            # Reactions (added)
+            _plot_reactions()
+
             plotter.add_legend()
             plotter.show_grid(color="gray")
             plotter.view_isometric()
@@ -1968,27 +2104,30 @@ class FERS:
             else (0.06 * structure_size / global_abs_max)
         )
 
-        # Apply offsets and draw as tubes (guaranteed visible)
-        # color_limits = (-global_abs_max, global_abs_max)
-
+        # Apply offsets and draw as tubes or lines
         if moment_style.lower() == "tube":
-            # Scaled graph as tubes (your existing behavior)
-            # tube_radius = max(1e-6, 0.0075 * structure_size)
             for polydata, values, offset_axis in zip(diagram_polys, diagram_vals, offset_axes):
                 displaced_points = (
                     polydata.points + (effective_moment_scale * values[:, None]) * offset_axis[None, :]
                 )
                 polydata.points = displaced_points
                 polydata["moment"] = values.astype(float)
-                # tube = polydata.tube(radius=tube_radius)
-
+                tube = polydata.tube(radius=max(1e-6, 0.0075 * structure_size))
+                plotter.add_mesh(tube, scalars="moment", line_width=1.0, show_scalar_bar=False)
         elif moment_style.lower() == "line":
-            # Unscaled centerline colored by moment (no geometric offset)
             for polydata, values in zip(diagram_polys, diagram_vals):
                 polydata["moment"] = values.astype(float)
-
+                plotter.add_mesh(
+                    polydata,
+                    scalars="moment",
+                    line_width=diagram_line_width_pixels,
+                    show_scalar_bar=False,
+                )
         else:
             raise ValueError("moment_style must be 'tube' or 'line'")
+
+        if show_moment_colorbar:
+            plotter.add_scalar_bar(title=f"{plot_bending_moment} diagram")
 
         # Member centerlines (optional coloring by peak |M|)
         all_points = []
@@ -2012,7 +2151,8 @@ class FERS:
             if color_members_by_peak_moment and member_scalar_values:
                 lines_poly["peak_abs_moment"] = np.array(member_scalar_values, dtype=float)
                 plotter.add_mesh(lines_poly, scalars="peak_abs_moment", line_width=3.0)
-                plotter.add_scalar_bar(title=f"Peak |{plot_bending_moment}| per member")
+                if show_moment_colorbar:
+                    plotter.add_scalar_bar(title=f"Peak |{plot_bending_moment}| per member")
             else:
                 plotter.add_mesh(lines_poly, color="blue", line_width=2.0, label="Members")
 
@@ -2034,25 +2174,33 @@ class FERS:
                 "Z": np.array([0.0, 0.0, 1.0]),
             }
             for node in self.get_all_nodes():
-                support = getattr(node, "nodal_support", None)
-                if not support:
+                nodal_support = getattr(node, "nodal_support", None)
+                if not nodal_support:
                     continue
-                p = np.array([node.X, node.Y, node.Z], dtype=float)
+                node_position = np.array([node.X, node.Y, node.Z], dtype=float)
                 for axis_name, axis_vector in axis_unit_vectors.items():
-                    condition_type = get_condition_type(support.displacement_conditions.get(axis_name))
+                    condition_type = get_condition_type(nodal_support.displacement_conditions.get(axis_name))
                     color_value = color_for_condition_type(condition_type)
                     label = None
                     if condition_type not in legend_added_for_type:
                         label = f"Support {axis_name} – {condition_type.title()}"
                         legend_added_for_type.add(condition_type)
-                    plotter.add_arrows(p, axis_vector * support_arrow_scale, color=color_value, label=label)
+                    plotter.add_arrows(
+                        node_position,
+                        axis_vector * support_arrow_scale,
+                        color=color_value,
+                        label=label,
+                    )
 
                 if show_support_labels:
-                    text = format_support_label(support)
-                    label_pos = p + np.array([1.0, 1.0, 1.0]) * (support_arrow_scale * 0.6)
+                    text = format_support_label(nodal_support)
+                    label_pos = node_position + np.array([1.0, 1.0, 1.0]) * (support_arrow_scale * 0.6)
                     plotter.add_point_labels(
                         label_pos, [text], font_size=12, text_color="black", always_visible=True
                     )
+
+        # Reactions (added)
+        _plot_reactions()
 
         plotter.add_legend()
         plotter.show_grid(color="gray")
