@@ -1826,14 +1826,6 @@ class FERS:
                     color="magenta",
                     label="Reaction forces" if not added_legend else None,
                 )
-                print(
-                    f"[Reaction arrow] node={node_id_string} "
-                    f"|R|={mag:.3f} "
-                    f"rel={rel:.3f} "
-                    f"base_len={base_arrow_length:.3f} "
-                    f"len={arrow_length:.3f} "
-                    f"vec={arrow_vec}"
-                )
                 if show_reaction_labels:
                     label_text = f"Rx={forces.fx:.2f}, Ry={forces.fy:.2f}, Rz={forces.fz:.2f}"
                     label_pos = pos + arrow_vec * 0.6
