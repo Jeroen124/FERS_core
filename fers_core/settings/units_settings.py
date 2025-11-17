@@ -6,7 +6,7 @@ class UnitSettings:
         force_unit: str = "N",
         density_unit: str = "kg/m3",
         weight_unit: str = "kg",
-        pressure_unit: str = "MPa",
+        pressure_unit: str = "Pa",
         temperature_unit: str = "celsius",
     ):
         self.system = system
