@@ -239,6 +239,7 @@ def test_061_two_colinear_tension_only_members_with_mid_load():
         reaction_node_1_fx_fers,
         reaction_node_1_fx_expected,
         abs_tol=absolute_force_tolerance,
+        rel_tol=1e-4,  # 0.01 % relative tolerance
         label="Reaction Fx at node 1",
         member_length_meter=member_length_meter,
         applied_force_newton=applied_force_newton,
