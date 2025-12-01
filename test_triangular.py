@@ -3,7 +3,6 @@ import sys
 sys.path.insert(0, "tests")
 from common_functions import build_steel_s235, build_ipe180
 from fers_core import Node, Member, FERS, MemberSet, NodalSupport, DistributedLoad
-from fers_core.loads.distributionshape import DistributionShape
 import ujson
 
 steel = build_steel_s235()
@@ -23,7 +22,6 @@ lc = calculation.create_load_case(name="Test")
 load = DistributedLoad(
     member=member,
     load_case=lc,
-    distribution_shape=DistributionShape.TRIANGULAR,
     magnitude=1000.0,
     end_magnitude=0.0,
     direction=(0.0, 1.0, 0.0),

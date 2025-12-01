@@ -8,7 +8,6 @@ from fers_core import (
     MemberSet,
     NodalSupport,
     DistributedLoad,
-    DistributionShape,
 )
 
 
@@ -57,7 +56,6 @@ load_case_2 = calculation_1.create_load_case(name="Inverse Triangular Load")
 distributed_load = DistributedLoad(
     member=beam,
     load_case=load_case_1,
-    distribution_shape=DistributionShape.TRIANGULAR,
     magnitude=1000.0,  # 1000 N/m (example triangular load)
     direction=(0, -1, 0),  # Downward in the global Y-axis
     start_frac=0,  # Start at 0% of the member length
@@ -67,7 +65,6 @@ distributed_load = DistributedLoad(
 distributed_load = DistributedLoad(
     member=beam,
     load_case=load_case_2,
-    distribution_shape=DistributionShape.INVERSE_TRIANGULAR,
     magnitude=1000.0,  # 1000 N/m (example triangular load)
     direction=(0, -1, 0),  # Downward in the global Y-axis
     start_frac=0.3,  # Start at 30% of the member length
