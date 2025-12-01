@@ -33,5 +33,16 @@ class Material:
         }
 
     @classmethod
+    def from_dict(cls, data: dict) -> "Material":
+        return cls(
+            id=data.get("id"),
+            name=data["name"],
+            e_mod=data["e_mod"],
+            g_mod=data["g_mod"],
+            density=data["density"],
+            yield_stress=data["yield_stress"],
+        )
+
+    @classmethod
     def reset_counter(cls):
         cls._material_counter = 1

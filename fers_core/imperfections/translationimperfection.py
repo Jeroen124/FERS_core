@@ -1,3 +1,6 @@
+from typing import Any
+
+from fers_core.types.list_utils import as_list
 from ..members.memberset import MemberSet
 
 
@@ -27,3 +30,40 @@ class TranslationImperfection:
             "magnitude": self.magnitude,
             "axis": self.axis,
         }
+
+    @classmethod
+    def from_dict(
+        cls,
+        data: dict[str, Any],
+        *,
+        membersets_by_id: dict[int, MemberSet],
+    ) -> "TranslationImperfection":
+        """
+        data schema (typical):
+        {
+            "memberset": [1, 2],            # or "membersets"
+            "magnitude": 0.01,
+            "axis": [0, 1, 0]
+        }
+        """
+
+        # Resolve member sets
+        ms_ids = as_list(
+            data.get("memberset") or data.get("membersets"),
+            "memberset",
+        )
+        if not ms_ids:
+            raise ValueError("TranslationImperfection.from_dict: 'memberset' list is required.")
+
+        membersets: list[MemberSet] = []
+        for ms_id in ms_ids:
+            ms = membersets_by_id.get(ms_id)
+            if ms is None:
+                raise KeyError(f"TranslationImperfection.from_dict: MemberSet with id={ms_id} not found.")
+            membersets.append(ms)
+
+        magnitude = float(data.get("magnitude", 0.0))
+        axis_raw = data.get("axis", (0.0, 0.0, 0.0))
+        axis = tuple(axis_raw) if isinstance(axis_raw, (list, tuple)) else tuple(float(x) for x in axis_raw)
+
+        return cls(memberset=membersets, magnitude=magnitude, axis=axis)

@@ -9,7 +9,6 @@ from fers_core import (
     SupportCondition,
 )
 
-from fers_core.loads.distributionshape import DistributionShape
 from tests.common_functions import (
     build_steel_s235,
     build_ipe180,
@@ -226,15 +225,15 @@ def test_005_Cantilever_with_Triangular_Distributed_Load():
     DistributedLoad(
         member=member,
         load_case=lc_tri,
-        distribution_shape=DistributionShape.TRIANGULAR,
         magnitude=load_intensity_in_newton_per_meter,
+        end_magnitude=0.0,
         direction=(0.0, -1.0, 0.0),
     )
     DistributedLoad(
         member=member,
         load_case=lc_inv,
-        distribution_shape=DistributionShape.INVERSE_TRIANGULAR,
-        magnitude=load_intensity_in_newton_per_meter,
+        magnitude=0.0,
+        end_magnitude=load_intensity_in_newton_per_meter,
         direction=(0.0, -1.0, 0.0),
     )
 
@@ -284,8 +283,8 @@ def test_006_Cantilever_with_Partial_Triangular_Distributed_Load():
     DistributedLoad(
         member=member,
         load_case=lc_tri,
-        distribution_shape=DistributionShape.TRIANGULAR,
         magnitude=load_intensity_in_newton_per_meter,
+        end_magnitude=0.0,
         direction=(0.0, -1.0, 0.0),
         start_frac=0.0,
         end_frac=0.6,
@@ -293,8 +292,8 @@ def test_006_Cantilever_with_Partial_Triangular_Distributed_Load():
     DistributedLoad(
         member=member,
         load_case=lc_inv,
-        distribution_shape=DistributionShape.INVERSE_TRIANGULAR,
-        magnitude=load_intensity_in_newton_per_meter,
+        magnitude=0.0,
+        end_magnitude=load_intensity_in_newton_per_meter,
         direction=(0.0, -1.0, 0.0),
         start_frac=0.3,
         end_frac=0.7,

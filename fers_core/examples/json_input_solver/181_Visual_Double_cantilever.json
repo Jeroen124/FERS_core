@@ -22,7 +22,7 @@
                         "X": 5,
                         "Y": 0,
                         "Z": 0,
-                        "nodal_support": 1
+                        "nodal_support": 2
                     },
                     "section": 1,
                     "rotation_angle": 0.0,
@@ -51,7 +51,7 @@
                         "X": 5,
                         "Y": 0,
                         "Z": 0,
-                        "nodal_support": 1
+                        "nodal_support": 2
                     },
                     "end_node": {
                         "id": 3,
@@ -103,14 +103,25 @@
     "imperfection_cases": [],
     "settings": {
         "id": 1,
-        "analysis_option": {
+        "analysis_options": {
             "id": 1,
             "solve_loadcases": true,
             "solver": "newton_raphson",
             "tolerance": 0.01,
             "max_iterations": 30,
             "dimensionality": "3D",
-            "order": "Nonlinear"
+            "order": "Nonlinear",
+            "rigid_strategy": "Rigid_Member",
+            "axial_slack": 500
+        },
+        "unit_settings": {
+            "system": "metric",
+            "lengthUnit": "m",
+            "forceUnit": "N",
+            "densityUnit": "kg\/m3",
+            "weightUnit": "kg",
+            "pressureUnit": "Pa",
+            "temperatureUnit": "celsius"
         },
         "general_info": {
             "project_name": "Unnamed Project",
@@ -118,7 +129,6 @@
             "version": "1.0"
         }
     },
-    "results": null,
     "memberhinges": [],
     "materials": [
         {
@@ -164,15 +174,15 @@
             },
             "rotation_conditions": {
                 "X": {
-                    "condition_type": "Free",
+                    "condition_type": "Fixed",
                     "stiffness": null
                 },
                 "Y": {
-                    "condition_type": "Free",
+                    "condition_type": "Fixed",
                     "stiffness": null
                 },
                 "Z": {
-                    "condition_type": "Free",
+                    "condition_type": "Fixed",
                     "stiffness": null
                 }
             }
@@ -387,5 +397,6 @@
                 }
             ]
         }
-    ]
+    ],
+    "resultsbundle": null
 }

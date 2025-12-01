@@ -35,6 +35,36 @@ class ShapePath:
             "shape_commands": [cmd.to_dict() for cmd in self.shape_commands],
         }
 
+    @classmethod
+    def from_dict(cls, data: dict) -> "ShapePath":
+        """
+        Inverse of to_dict.
+
+        Expects:
+          {
+            "id": int,
+            "name": str,
+            "shape_commands": [
+              {
+                "command": "moveTo" | "lineTo" | "arcTo" | "closePath",
+                ... other ShapeCommand fields ...
+              },
+              ...
+            ]
+          }
+        """
+        commands_data = data.get("shape_commands", []) or []
+        commands: List[ShapeCommand] = []
+
+        for command_data in commands_data:
+            command_data = ShapeCommand.from_dict(command_data)
+
+        return cls(
+            name=data["name"],
+            shape_commands=commands,
+            id=data.get("id"),
+        )
+
     @staticmethod
     def arc_center_angles(
         center_y: float,

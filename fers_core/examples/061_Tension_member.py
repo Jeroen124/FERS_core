@@ -53,7 +53,7 @@ section = Section(
 )
 
 # Add a force in the middle node
-mid_force_newton = 1  # N
+mid_force_newton = 10000  # N
 
 # Members
 rope_1 = Member(start_node=node1, end_node=node2, section=section, member_type="TENSION")

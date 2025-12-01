@@ -1,7 +1,7 @@
 from ..imperfections.rotationimperfection import RotationImperfection
 from ..imperfections.translationimperfection import TranslationImperfection
 from ..loads.loadcombination import LoadCombination
-from typing import Optional
+from typing import Any, Iterable, Optional
 
 
 class ImperfectionCase:
@@ -59,3 +59,70 @@ class ImperfectionCase:
             "rotation_imperfections": [ri.to_dict() for ri in self.rotation_imperfections],
             "translation_imperfections": [ti.to_dict() for ti in self.translation_imperfections],
         }
+
+    @classmethod
+    def from_dict(
+        cls,
+        data: dict[str, Any],
+        *,
+        load_combinations: Iterable[LoadCombination],
+    ) -> "ImperfectionCase":
+        """
+        Expected schema (matching to_dict):
+        {
+            "imperfection_case_id": int,
+            "load_combinations": [lc_id, ...],
+            "rotation_imperfections": [ {...}, ... ],
+            "translation_imperfections": [ {...}, ... ]
+        }
+        """
+        by_id = {lc.id: lc for lc in load_combinations}
+        loadcomb_ids = data.get("load_combinations", []) or []
+        resolved_lcs: list[LoadCombination] = []
+
+        for ref in loadcomb_ids:
+            lc = None
+            if isinstance(ref, int):
+                lc = by_id.get(ref)
+            elif isinstance(ref, str) and ref.isdigit():
+                lc = by_id.get(int(ref))
+            else:
+                # allow fallback by name
+                for cand in load_combinations:
+                    if cand.name == str(ref):
+                        lc = cand
+                        break
+            if lc is None:
+                raise KeyError(
+                    f"ImperfectionCase.from_dict: cannot resolve load combination {ref!r} "
+                    f"for imperfection case {data.get('imperfection_case_id')!r}"
+                )
+            resolved_lcs.append(lc)
+
+        # Rotation imperfections
+        rotation_imperfections: list[RotationImperfection] = []
+        for ri_data in data.get("rotation_imperfections", []) or []:
+            if isinstance(ri_data, RotationImperfection):
+                rotation_imperfections.append(ri_data)
+            elif hasattr(RotationImperfection, "from_dict") and isinstance(ri_data, dict):
+                rotation_imperfections.append(RotationImperfection.from_dict(ri_data))
+            else:
+                # last resort: ignore or raise; here we raise so bad input is visible
+                raise TypeError("Invalid rotation_imperfection entry in ImperfectionCase.from_dict")
+
+        # Translation imperfections
+        translation_imperfections: list[TranslationImperfection] = []
+        for ti_data in data.get("translation_imperfections", []) or []:
+            if isinstance(ti_data, TranslationImperfection):
+                translation_imperfections.append(ti_data)
+            elif hasattr(TranslationImperfection, "from_dict") and isinstance(ti_data, dict):
+                translation_imperfections.append(TranslationImperfection.from_dict(ti_data))
+            else:
+                raise TypeError("Invalid translation_imperfection entry in ImperfectionCase.from_dict")
+
+        return cls(
+            loadcombinations=resolved_lcs,
+            imperfection_case_id=data.get("imperfection_case_id") or data.get("id"),
+            rotation_imperfections=rotation_imperfections,
+            translation_imperfections=translation_imperfections,
+        )

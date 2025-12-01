@@ -131,7 +131,18 @@
             "tolerance": 0.01,
             "max_iterations": 30,
             "dimensionality": "3D",
-            "order": "NONLINEAR"
+            "order": "Nonlinear",
+            "rigid_strategy": "Rigid_Member",
+            "axial_slack": 500
+        },
+        "unit_settings": {
+            "system": "metric",
+            "lengthUnit": "m",
+            "forceUnit": "N",
+            "densityUnit": "kg\/m3",
+            "weightUnit": "kg",
+            "pressureUnit": "Pa",
+            "temperatureUnit": "celsius"
         },
         "general_info": {
             "project_name": "Unnamed Project",

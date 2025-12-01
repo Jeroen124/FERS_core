@@ -75,34 +75,30 @@
             "nodal_moments": [],
             "distributed_loads": [
                 {
-                    "id": 1,
                     "member": 1,
                     "load_case": 1,
-                    "distribution_shape": "Uniform",
                     "magnitude": 1000.0,
+                    "end_magnitude": 1000.0,
                     "direction": [
                         0,
                         -1,
                         0
                     ],
                     "start_frac": 0.0,
-                    "end_frac": 1.0,
-                    "end_magnitude": 1000.0
+                    "end_frac": 1.0
                 },
                 {
-                    "id": 2,
                     "member": 2,
                     "load_case": 1,
-                    "distribution_shape": "Uniform",
                     "magnitude": 1000.0,
+                    "end_magnitude": 1000.0,
                     "direction": [
                         0,
                         -1,
                         0
                     ],
                     "start_frac": 0.0,
-                    "end_frac": 1.0,
-                    "end_magnitude": 1000.0
+                    "end_frac": 1.0
                 }
             ],
             "rotation_imperfections": [],
@@ -120,7 +116,18 @@
             "tolerance": 0.01,
             "max_iterations": 30,
             "dimensionality": "3D",
-            "order": "NONLINEAR"
+            "order": "Nonlinear",
+            "rigid_strategy": "Rigid_Member",
+            "axial_slack": 500
+        },
+        "unit_settings": {
+            "system": "metric",
+            "lengthUnit": "m",
+            "forceUnit": "N",
+            "densityUnit": "kg\/m3",
+            "weightUnit": "kg",
+            "pressureUnit": "Pa",
+            "temperatureUnit": "celsius"
         },
         "general_info": {
             "project_name": "Unnamed Project",
