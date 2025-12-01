@@ -73,7 +73,10 @@ class FERS:
         # Parse and validate the results
         try:
             results_dictionary = ujson.loads(result_string)
-            validated = ResultsBundleSchema(**results_dictionary)
+            results_bundle_dict = results_dictionary.get("results")
+            if results_bundle_dict is None:
+                raise ValueError("No 'results' field found in the calculation output")
+            validated = ResultsBundleSchema(**results_bundle_dict)
             self.resultsbundle = ResultsBundle.from_pydantic(validated)
         except Exception as e:
             raise ValueError(f"Failed to parse or validate results: {e}")
@@ -103,7 +106,11 @@ class FERS:
 
         try:
             results_dictionary = ujson.loads(result_string)
-            validated = ResultsBundleSchema(**results_dictionary)
+            # Extract the 'results' field from the response
+            results_bundle_dict = results_dictionary.get("results")
+            if results_bundle_dict is None:
+                raise ValueError("No 'results' field found in the calculation output")
+            validated = ResultsBundleSchema(**results_bundle_dict)
             self.resultsbundle = ResultsBundle.from_pydantic(validated)
         except Exception as e:
             raise ValueError(f"Failed to parse or validate results: {e}")
