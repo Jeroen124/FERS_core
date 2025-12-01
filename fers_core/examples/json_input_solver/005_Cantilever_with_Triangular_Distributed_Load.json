@@ -46,19 +46,17 @@
             "nodal_moments": [],
             "distributed_loads": [
                 {
-                    "id": 1,
                     "member": 1,
                     "load_case": 1,
-                    "distribution_shape": "Triangular",
                     "magnitude": 1000.0,
+                    "end_magnitude": 0.0,
                     "direction": [
                         0,
                         -1,
                         0
                     ],
                     "start_frac": 0.0,
-                    "end_frac": 1.0,
-                    "end_magnitude": 1000.0
+                    "end_frac": 1.0
                 }
             ],
             "rotation_imperfections": [],
@@ -71,19 +69,17 @@
             "nodal_moments": [],
             "distributed_loads": [
                 {
-                    "id": 2,
                     "member": 1,
                     "load_case": 2,
-                    "distribution_shape": "InverseTriangular",
-                    "magnitude": 1000.0,
+                    "magnitude": 0.0,
+                    "end_magnitude": 1000.0,
                     "direction": [
                         0,
                         -1,
                         0
                     ],
                     "start_frac": 0.0,
-                    "end_frac": 1.0,
-                    "end_magnitude": 1000.0
+                    "end_frac": 1.0
                 }
             ],
             "rotation_imperfections": [],
@@ -111,7 +107,7 @@
             "forceUnit": "N",
             "densityUnit": "kg\/m3",
             "weightUnit": "kg",
-            "pressureUnit": "MPa",
+            "pressureUnit": "Pa",
             "temperatureUnit": "celsius"
         },
         "general_info": {

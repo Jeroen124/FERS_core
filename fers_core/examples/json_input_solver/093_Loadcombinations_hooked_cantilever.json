@@ -235,7 +235,7 @@
             "forceUnit": "N",
             "densityUnit": "kg\/m3",
             "weightUnit": "kg",
-            "pressureUnit": "MPa",
+            "pressureUnit": "Pa",
             "temperatureUnit": "celsius"
         },
         "general_info": {

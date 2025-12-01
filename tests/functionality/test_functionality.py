@@ -145,16 +145,18 @@ def test_061_two_colinear_tension_only_members_with_mid_load():
     """
     Two colinear tension-only members (node_1 -> node_2 -> node_3) with a load at node_2.
     Node_1 and node_3 are supports; node_2 is restrained in Y and Z but free in X.
+
     Expected:
       - Displacement u_x at node_2 equals F * L / (A * E) for the pulled side.
       - Reaction at node_1 in Fx equals -F.
       - Reaction at node_3 in Fx equals 0 (member cannot take compression).
     """
+
     steel = build_steel_s235()
     section = build_ipe180(steel)
 
     member_length_meter = 2.5
-    applied_force_newton = 1.0
+    applied_force_newton = 10_000.0  # match your example script load
 
     calculation = FERS()
 
@@ -162,7 +164,11 @@ def test_061_two_colinear_tension_only_members_with_mid_load():
     node_2 = Node(member_length_meter, 0.0, 0.0)
     node_3 = Node(2.0 * member_length_meter, 0.0, 0.0)
 
+    # Node 1 and 3 fully fixed (all translations and rotations)
     node_1.nodal_support = NodalSupport()
+    node_3.nodal_support = NodalSupport()
+
+    # Node 2: free in X, fixed in Y and Z (to keep the system stable)
     node_2.nodal_support = NodalSupport(
         displacement_conditions={
             "X": SupportCondition.free(),
@@ -170,16 +176,32 @@ def test_061_two_colinear_tension_only_members_with_mid_load():
             "Z": SupportCondition.fixed(),
         }
     )
-    node_3.nodal_support = NodalSupport()
 
-    member_left = Member(start_node=node_1, end_node=node_2, section=section, member_type="TENSION")
-    member_right = Member(start_node=node_2, end_node=node_3, section=section, member_type="TENSION")
+    member_left = Member(
+        start_node=node_1,
+        end_node=node_2,
+        section=section,
+        member_type="TENSION",
+    )
+    member_right = Member(
+        start_node=node_2,
+        end_node=node_3,
+        section=section,
+        member_type="TENSION",
+    )
     calculation.add_member_set(MemberSet(members=[member_left, member_right]))
 
     load_case = calculation.create_load_case(name="Mid Load")
-    NodalLoad(node=node_2, load_case=load_case, magnitude=applied_force_newton, direction=(1.0, 0.0, 0.0))
+    NodalLoad(
+        node=node_2,
+        load_case=load_case,
+        magnitude=applied_force_newton,
+        direction=(1.0, 0.0, 0.0),  # +X, same as in your script
+    )
 
-    calculation.settings.analysis_options.axial_slack = 0.1
+    # Optional: if you want to test with a specific slack model, set it here.
+    # This is the place to play with "minimal stiffness" / slack effects:
+    # calculation.settings.analysis_options.axial_slack = 0.1
 
     calculation.run_analysis()
     results = calculation.resultsbundle.loadcases["Mid Load"]
@@ -191,19 +213,43 @@ def test_061_two_colinear_tension_only_members_with_mid_load():
     elastic_modulus = steel.e_mod
     cross_section_area = section.area
 
-    displacement_node_2_dx_expected = (applied_force_newton * member_length_meter) / (
-        cross_section_area * elastic_modulus
+    # Sign convention: load is in +X, so analytical displacement at node 2 is +F L / (A E)
+    displacement_node_2_dx_expected = (
+        applied_force_newton * member_length_meter / (cross_section_area * elastic_modulus)
     )
     reaction_node_1_fx_expected = -applied_force_newton
     reaction_node_3_fx_expected = 0.0
 
+    # --- Displacement check ---------------------------------------------------
     assert_close(
         displacement_node_2_dx_fers,
         displacement_node_2_dx_expected,
-        abs_tol=getattr(TOL, "absolute_displacement_in_meter", 1e-3),
+        abs_tol=TOL.absolute_displacement_in_meter,
+        label="Displacement at node 2, dx",
+        member_length_meter=member_length_meter,
+        applied_force_newton=applied_force_newton,
+        cross_section_area=cross_section_area,
+        elastic_modulus=elastic_modulus,
     )
 
-    absolute_force_tolerance = getattr(TOL, "absolute_force_in_newton", 1e-3)
-    absolute_force_tolerance = max(absolute_force_tolerance, 1.0e-3)
-    assert abs(reaction_node_1_fx_fers - reaction_node_1_fx_expected) < absolute_force_tolerance
-    assert abs(reaction_node_3_fx_fers - reaction_node_3_fx_expected) < absolute_force_tolerance
+    # --- Reaction at node 1 (tension side) ------------------------------------
+    absolute_force_tolerance = max(TOL.absolute_force_in_newton, 1.0e-3)
+
+    assert_close(
+        reaction_node_1_fx_fers,
+        reaction_node_1_fx_expected,
+        abs_tol=absolute_force_tolerance,
+        label="Reaction Fx at node 1",
+        member_length_meter=member_length_meter,
+        applied_force_newton=applied_force_newton,
+    )
+
+    # --- Reaction at node 3 (compression side, should be ~0) ------------------
+    assert_close(
+        reaction_node_3_fx_fers,
+        reaction_node_3_fx_expected,
+        abs_tol=absolute_force_tolerance,
+        label="Reaction Fx at node 3 (tension-only member cannot push)",
+        member_length_meter=member_length_meter,
+        applied_force_newton=applied_force_newton,
+    )

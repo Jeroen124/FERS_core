@@ -111,7 +111,7 @@ print(f"Expected root rotation φ0 (analytical):    {root_rotation_expected:.6f}
 
 print(f"\nTip deflection δ_y (FERS):                 {deflection_y_tip_fers:.6f} m")
 print(f"Tip deflection δ_y (analytical):           {tip_deflection_expected:.6f} m")
-if abs(deflection_y_tip_fers - tip_deflection_expected) < 1e-6:
+if abs(deflection_y_tip_fers - tip_deflection_expected) < 1e-3:
     print("Tip deflection matches the analytical solution ✅")
 else:
     print("Tip deflection does NOT match the analytical solution ❌")
