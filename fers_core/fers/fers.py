@@ -230,13 +230,18 @@ class FERS:
             comb = LoadCombination.from_dict(comb_data, load_cases=fers.load_cases)
             fers.add_load_combination(comb)
 
+        # Build membersets_by_id for imperfection cases
+        membersets_by_id = {ms.id: ms for ms in fers.member_sets}
+
         # imperfection cases
         for imp_data in data.get("imperfection_cases", []):
-            ic = ImperfectionCase.from_dict(imp_data, load_combinations=fers.load_combinations)
+            ic = ImperfectionCase.from_dict(
+                imp_data, load_combinations=fers.load_combinations, membersets_by_id=membersets_by_id
+            )
             fers.add_imperfection_case(ic)
 
         # results
-        res_data = data.get("resultsbundle")
+        res_data = data.get("results")
         if res_data:
             validated = ResultsBundleSchema(**res_data)
             fers.resultsbundle = ResultsBundle.from_pydantic(validated)

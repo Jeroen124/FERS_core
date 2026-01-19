@@ -155,11 +155,15 @@ class LoadCombination:
             limit_state = cls._parse_limit_state(data["limit_state"])
 
         obj = cls(
-            id=data.get("id"),
             name=data.get("name", f"Load Combination {data.get('id', '')}"),
             load_cases_factors=load_cases_factors,
             situation=data.get("situation"),
             check=data.get("check", "ALL"),
             limit_state=limit_state,
         )
+
+        # Restore the original id if present in the data
+        if "id" in data:
+            obj.id = data["id"]
+
         return obj

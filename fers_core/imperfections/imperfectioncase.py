@@ -66,6 +66,7 @@ class ImperfectionCase:
         data: dict[str, Any],
         *,
         load_combinations: Iterable[LoadCombination],
+        membersets_by_id: dict[int, Any],
     ) -> "ImperfectionCase":
         """
         Expected schema (matching to_dict):
@@ -105,7 +106,9 @@ class ImperfectionCase:
             if isinstance(ri_data, RotationImperfection):
                 rotation_imperfections.append(ri_data)
             elif hasattr(RotationImperfection, "from_dict") and isinstance(ri_data, dict):
-                rotation_imperfections.append(RotationImperfection.from_dict(ri_data))
+                rotation_imperfections.append(
+                    RotationImperfection.from_dict(ri_data, membersets_by_id=membersets_by_id)
+                )
             else:
                 # last resort: ignore or raise; here we raise so bad input is visible
                 raise TypeError("Invalid rotation_imperfection entry in ImperfectionCase.from_dict")
@@ -116,7 +119,9 @@ class ImperfectionCase:
             if isinstance(ti_data, TranslationImperfection):
                 translation_imperfections.append(ti_data)
             elif hasattr(TranslationImperfection, "from_dict") and isinstance(ti_data, dict):
-                translation_imperfections.append(TranslationImperfection.from_dict(ti_data))
+                translation_imperfections.append(
+                    TranslationImperfection.from_dict(ti_data, membersets_by_id=membersets_by_id)
+                )
             else:
                 raise TypeError("Invalid translation_imperfection entry in ImperfectionCase.from_dict")
 
