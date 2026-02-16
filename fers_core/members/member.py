@@ -1,4 +1,4 @@
-from typing import Optional, Union, List
+from typing import Optional, Union, List, Tuple, TYPE_CHECKING
 import numpy as np
 
 from fers_core.supports.nodalsupport import NodalSupport
@@ -7,6 +7,9 @@ from ..nodes.node import Node
 from ..members.memberhinge import MemberHinge
 from ..members.enums import MemberType, normalize_member_type
 from ..members.section import Section
+
+if TYPE_CHECKING:
+    import pyvista as pv
 
 
 class Member:
@@ -318,3 +321,64 @@ class Member:
             local_y, local_z = y_rot, z_rot
 
         return local_x, local_y, local_z
+
+    def render(self, theme: str = "default") -> List[Tuple["pv.PolyData", str, int]]:
+        """Render the member as PyVista meshes.
+
+        This method returns a list of (mesh, color, line_width) tuples that
+        represent the visual representation of this member.
+
+        Args:
+            theme: Color theme ('default', 'dark', etc.)
+
+        Returns:
+            List of (mesh, color, line_width) tuples for rendering
+        """
+        import pyvista as pv
+
+        meshes = []
+
+        # Determine member color based on type and theme
+        if self.member_type == MemberType.RIGID:
+            member_color = "red" if theme == "default" else "orange"
+            line_width = 3
+        elif self.member_type == MemberType.TENSION_ONLY:
+            member_color = "green" if theme == "default" else "lightgreen"
+            line_width = 2
+        elif self.member_type == MemberType.COMPRESSION_ONLY:
+            member_color = "purple" if theme == "default" else "violet"
+            line_width = 2
+        else:
+            member_color = "black" if theme == "default" else "white"
+            line_width = 2
+
+        # Create a line for the member
+        line = pv.Line(
+            (self.start_node.X, self.start_node.Y, self.start_node.Z),
+            (self.end_node.X, self.end_node.Y, self.end_node.Z),
+        )
+        meshes.append((line, member_color, line_width))
+
+        # Add hinge indicators if present
+        hinge_color = "blue" if theme == "default" else "cyan"
+        hinge_size = self.length() * 0.05  # 5% of member length
+
+        if self.start_hinge is not None:
+            # Small circle at start to indicate hinge
+            circle = pv.Circle(radius=hinge_size, resolution=16)
+            # Position at start node
+            circle.points[:, 0] += self.start_node.X
+            circle.points[:, 1] += self.start_node.Y
+            circle.points[:, 2] += self.start_node.Z
+            meshes.append((circle, hinge_color, 2))
+
+        if self.end_hinge is not None:
+            # Small circle at end to indicate hinge
+            circle = pv.Circle(radius=hinge_size, resolution=16)
+            # Position at end node
+            circle.points[:, 0] += self.end_node.X
+            circle.points[:, 1] += self.end_node.Y
+            circle.points[:, 2] += self.end_node.Z
+            meshes.append((circle, hinge_color, 2))
+
+        return meshes

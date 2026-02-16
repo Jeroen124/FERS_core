@@ -19,6 +19,8 @@ from fers_core.supports.support_utils import (
     translational_summary,
 )
 from fers_core.types.list_utils import as_list
+from fers_core.visualization.model_renderer import ModelRenderer
+from fers_core.visualization.result_renderer import ResultRenderer
 
 
 from ..imperfections.imperfectioncase import ImperfectionCase
@@ -852,6 +854,7 @@ class FERS:
         if load_case:
             lc = self.get_load_case_by_name(load_case)
             if lc:
+                # Nodal loads (point loads)
                 for nl in lc.nodal_loads:
                     node = nl.node
                     vec = np.array(nl.direction) * nl.magnitude * display_load_scale
@@ -868,6 +871,93 @@ class FERS:
                             [f"{mag:.2f}"],
                             font_size=14,
                             text_color="#FFA500",
+                            always_visible=show_load_labels,
+                        )
+
+                # Distributed loads (line loads)
+                distributed_legend_added = False
+                envelope_legend_added = False
+                for dl in lc.distributed_loads:
+                    member = dl.member
+                    start_node = member.start_node
+                    end_node = member.end_node
+
+                    # Member vector and length
+                    member_vec = np.array(
+                        [end_node.X - start_node.X, end_node.Y - start_node.Y, end_node.Z - start_node.Z]
+                    )
+                    member_length = np.linalg.norm(member_vec)
+
+                    if member_length < 1e-6:
+                        continue
+
+                    # Start and end positions along member
+                    start_pos = (
+                        np.array([start_node.X, start_node.Y, start_node.Z]) + member_vec * dl.start_frac
+                    )
+                    end_pos = np.array([start_node.X, start_node.Y, start_node.Z]) + member_vec * dl.end_frac
+
+                    # Number of arrows to display along the distributed load
+                    num_arrows = max(
+                        3, int((dl.end_frac - dl.start_frac) * member_length / structure_size * 10)
+                    )
+
+                    # Store arrow tip positions for envelope line
+                    envelope_points = []
+                    base_points = []  # Store base positions for connecting lines
+
+                    for i in range(num_arrows):
+                        t = i / (num_arrows - 1) if num_arrows > 1 else 0.5
+                        # Position along the load
+                        pos = start_pos + t * (end_pos - start_pos)
+
+                        # Interpolate magnitude
+                        mag_at_pos = dl.magnitude + t * (dl.end_magnitude - dl.magnitude)
+
+                        # Load vector
+                        load_vec = np.array(dl.direction) * mag_at_pos * display_load_scale
+                        load_mag = np.linalg.norm(load_vec)
+
+                        if load_mag > 1e-6:
+                            direction = load_vec / load_mag
+                            arrow_length = arrow_scale_for_loads * 0.4  # Smaller arrows for distributed loads
+
+                            label = "Distributed Load" if not distributed_legend_added else None
+                            plotter.add_arrows(pos, direction * arrow_length, color="#FF6B6B", label=label)
+                            distributed_legend_added = True
+
+                            # Store arrow tip for envelope line
+                            arrow_tip = pos + direction * arrow_length
+                            envelope_points.append(arrow_tip)
+                            base_points.append(pos)
+
+                    # Draw vertical lines from member to arrow tips to show load height
+                    for base, tip in zip(base_points, envelope_points):
+                        vertical_line = pv.Line(base, tip)
+                        plotter.add_mesh(vertical_line, color="#FF6B6B", line_width=1, opacity=0.6)
+
+                    # Draw envelope line connecting arrow tips to show load profile
+                    if len(envelope_points) > 1:
+                        envelope_line = pv.lines_from_points(np.array(envelope_points))
+                        label = "Load Envelope" if not envelope_legend_added else None
+                        plotter.add_mesh(envelope_line, color="#FF6B6B", line_width=3, label=label)
+                        envelope_legend_added = True
+
+                    # Optionally add a label showing the magnitude range
+                    if show_load_labels and num_arrows > 0:
+                        mid_pos = (start_pos + end_pos) / 2.0
+                        if abs(dl.magnitude - dl.end_magnitude) < 1e-6:
+                            # Uniform load
+                            label_text = f"{dl.magnitude:.2f} N/m"
+                        else:
+                            # Varying load
+                            label_text = f"{dl.magnitude:.2f} → {dl.end_magnitude:.2f} N/m"
+
+                        plotter.add_point_labels(
+                            mid_pos,
+                            [label_text],
+                            font_size=12,
+                            text_color="#FF6B6B",
                             always_visible=show_load_labels,
                         )
 
@@ -2578,3 +2668,38 @@ class FERS:
 
         combined_member_set = MemberSet(members=combined_members)
         return combined_member_set
+
+    def get_model_renderer(self) -> ModelRenderer:
+        """Create and return a ModelRenderer instance for this model.
+
+        This provides access to the modular visualization system where each
+        element (Node, Member, etc.) defines its own rendering.
+
+        Returns:
+            ModelRenderer: Configured renderer for the model structure
+
+        Example:
+            >>> renderer = model.get_model_renderer()
+            >>> renderer.render_nodes = True
+            >>> renderer.render_supports = True
+            >>> renderer.show()
+        """
+        return ModelRenderer(self)
+
+    def get_result_renderer(self) -> ResultRenderer:
+        """Create and return a ResultRenderer instance for this model.
+
+        This provides access to the modular result visualization system for
+        displaying deformed shapes, diagrams, and contours.
+
+        Returns:
+            ResultRenderer: Configured renderer for analysis results
+
+        Example:
+            >>> renderer = model.get_result_renderer()
+            >>> renderer.deformed_shape = True
+            >>> renderer.deformed_scale = 50.0
+            >>> renderer.member_diagrams = 'My'
+            >>> renderer.show()
+        """
+        return ResultRenderer(self)
