@@ -15,12 +15,13 @@ if TYPE_CHECKING:
 warnings.filterwarnings("ignore", category=UserWarning, module="pyvista")
 warnings.filterwarnings("ignore", message=".*Points is not a float type.*")
 
-# Configure PyVista for Jupyter notebook support
+# Configure PyVista for Jupyter notebook support (optional)
 try:
     pv.global_theme.trame.jupyter_extension_enabled = True
-except Exception:
+    pv.set_jupyter_backend("trame")
+except (ImportError, Exception):
+    # Trame not installed - jupyter functionality will be limited
     pass
-pv.set_jupyter_backend("trame")
 
 
 class ModelRenderer:
