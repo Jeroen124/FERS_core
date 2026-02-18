@@ -1,6 +1,11 @@
+from __future__ import annotations
+
 import re
-from typing import Any, Optional, Tuple, Union
+from typing import Any, Optional, Tuple, Union, TYPE_CHECKING
 import fers_calculations
+
+if TYPE_CHECKING:
+    from fers_core.cloud import FersCloudClient
 import ujson
 
 import numpy as np
@@ -2713,3 +2718,213 @@ class FERS:
             >>> renderer.show()
         """
         return ResultRenderer(self)
+
+    # ── FersCloud integration ───────────────────────────
+
+    _cloud_client: Optional["FersCloudClient"] = None
+
+    def cloud_login(
+        self,
+        email: str,
+        password: str,
+        base_url: str = "https://ferscloud.com",
+    ) -> dict:
+        """Authenticate with FersCloud and obtain a 1-hour SDK token.
+
+        After a successful login the token is cached on the FERS instance
+        so that subsequent ``cloud_save`` / ``cloud_load`` calls work
+        without re-authenticating.
+
+        Parameters
+        ----------
+        email : str
+            Your FersCloud account email.
+        password : str
+            Your FersCloud account password.
+        base_url : str
+            Override the FersCloud URL (use ``http://localhost:3000``
+            for local development).
+
+        Returns
+        -------
+        dict
+            Token info including ``is_premium`` and ``expires_at``.
+
+        Example
+        -------
+        >>> model = FERS()
+        >>> model.cloud_login("you@example.com", "s3cret")
+        """
+        from fers_core.cloud import FersCloudClient
+
+        self._cloud_client = FersCloudClient(base_url=base_url)
+        return self._cloud_client.login(email, password)
+
+    def cloud_connect(
+        self,
+        api_key: str,
+        base_url: str = "https://ferscloud.com",
+    ) -> dict:
+        """Authenticate with FersCloud using a persistent API key.
+
+        API keys are created in your FersCloud profile or via the
+        SDK API.  They persist until revoked and do not expire
+        after 1 hour like email/password tokens.
+
+        Parameters
+        ----------
+        api_key : str
+            A FersCloud API key in ``{keyId}.{secret}`` format.
+        base_url : str
+            Override the FersCloud URL (use ``http://localhost:3000``
+            for local development).
+
+        Returns
+        -------
+        dict
+            User information: ``user_id``, ``email``, ``is_premium``.
+
+        Example
+        -------
+        >>> model = FERS()
+        >>> model.cloud_connect("clxyz123.AbCdEfGhIjKlMnOpQrStUvWx")
+        """
+        from fers_core.cloud import FersCloudClient
+
+        self._cloud_client = FersCloudClient(base_url=base_url)
+        return self._cloud_client.connect(api_key)
+
+    def _ensure_cloud(self) -> FersCloudClient:
+        if self._cloud_client is None or not self._cloud_client.is_authenticated:
+            raise RuntimeError(
+                "Not authenticated with FersCloud. "
+                "Call cloud_connect(api_key) or cloud_login(email, password) first."
+            )
+        return self._cloud_client
+
+    def cloud_save(
+        self,
+        name: str,
+        description: str | None = None,
+        include_results: bool = False,
+    ) -> dict:
+        """Save this FERS model to FersCloud.
+
+        Parameters
+        ----------
+        name : str
+            A display name for the saved model.
+        description : str, optional
+            An optional description.
+        include_results : bool
+            Whether to include analysis results in the saved JSON.
+            Defaults to ``False`` (model geometry + loads only).
+
+        Returns
+        -------
+        dict
+            Created model metadata (``id``, ``name``, etc.).
+
+        Example
+        -------
+        >>> model.cloud_login("you@example.com", "s3cret")
+        >>> info = model.cloud_save("My Bridge")
+        >>> print(info["id"])
+        """
+        client = self._ensure_cloud()
+        return client.save_model(
+            name,
+            self.to_dict(include_results=include_results),
+            description=description,
+        )
+
+    @classmethod
+    def cloud_load(
+        cls,
+        model_id: str,
+        cloud_client: "FersCloudClient",
+    ) -> "FERS":
+        """Load a FERS model from FersCloud by its ID.
+
+        Parameters
+        ----------
+        model_id : str
+            The cloud model ID.
+        cloud_client : FersCloudClient
+            An authenticated ``FersCloudClient`` instance.  You can obtain
+            one from an existing FERS instance via ``model._cloud_client``
+            or by creating one directly.
+
+        Returns
+        -------
+        FERS
+            A fully reconstructed FERS instance.
+
+        Example
+        -------
+        >>> cloud = FersCloudClient("http://localhost:3000")
+        >>> cloud.login("you@example.com", "s3cret")
+        >>> model = FERS.cloud_load("clx123abc", cloud)
+        """
+        data = cloud_client.load_model(model_id)
+        model_dict = data["model"]
+        instance = cls.from_dict(model_dict)
+        instance._cloud_client = cloud_client
+        return instance
+
+    def cloud_list(self) -> list[dict]:
+        """List all cloud models for the authenticated user.
+
+        Returns
+        -------
+        list[dict]
+            Each dict has ``id``, ``name``, ``description``,
+            ``createdAt``, ``updatedAt``.
+        """
+        client = self._ensure_cloud()
+        return client.list_models()
+
+    def cloud_delete(self, model_id: str) -> None:
+        """Delete a cloud model by its ID.
+
+        Parameters
+        ----------
+        model_id : str
+            The cloud model ID to delete.
+        """
+        client = self._ensure_cloud()
+        client.delete_model(model_id)
+
+    def cloud_update(
+        self,
+        model_id: str,
+        *,
+        name: str | None = None,
+        description: str | None = None,
+        include_results: bool = False,
+    ) -> dict:
+        """Update an existing cloud model with the current state.
+
+        Parameters
+        ----------
+        model_id : str
+            The cloud model ID to update.
+        name : str, optional
+            New display name.
+        description : str, optional
+            New description.
+        include_results : bool
+            Whether to include analysis results.
+
+        Returns
+        -------
+        dict
+            Updated model metadata.
+        """
+        client = self._ensure_cloud()
+        return client.update_model(
+            model_id,
+            name=name,
+            description=description,
+            model_dict=self.to_dict(include_results=include_results),
+        )

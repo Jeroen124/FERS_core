@@ -24,6 +24,7 @@ from .results.singleresults import SingleResults
 from .results.member import MemberResult
 from .results.nodes import NodeDisplacement, NodeForces, ReactionNodeResult
 from .visualization import ModelRenderer, ResultRenderer
+from .cloud import FersCloudClient
 
 __all__ = [
     "AnalysisOrder",
@@ -31,6 +32,7 @@ __all__ = [
     "DistributedLoad",
     "DistributionShape",
     "FERS",
+    "FersCloudClient",
     "ImperfectionCase",
     "LoadCase",
     "LoadCombination",
