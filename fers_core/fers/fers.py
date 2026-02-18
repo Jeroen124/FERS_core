@@ -529,6 +529,16 @@ class FERS:
         """Return all member sets in the model."""
         return self.member_sets
 
+    @property
+    def members(self) -> list:
+        """All unique members in the model (property shorthand for get_all_members)."""
+        return self.get_all_members()
+
+    @property
+    def nodes(self) -> list:
+        """All unique nodes in the model (property shorthand for get_all_nodes)."""
+        return self.get_all_nodes()
+
     def get_all_members(self):
         """Returns a list of all members in the model."""
         members = []

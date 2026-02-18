@@ -1,7 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import field
-from typing import Dict, Any
+from typing import Dict, Any, List, Tuple, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import numpy as np
+    import pyvista as pv
 
 # -------------------------------
 # Leaf data classes
@@ -37,6 +41,43 @@ class NodeDisplacement:
             "rz": self.rz,
         }
 
+    def as_translation(self) -> "np.ndarray":
+        """Return the translational displacement as a 3-element numpy array."""
+        import numpy as _np
+
+        return _np.array([self.dx, self.dy, self.dz], dtype=float)
+
+    def as_rotation(self) -> "np.ndarray":
+        """Return the rotational displacement as a 3-element numpy array."""
+        import numpy as _np
+
+        return _np.array([self.rx, self.ry, self.rz], dtype=float)
+
+    def render_displaced_node(
+        self,
+        original_position: "np.ndarray",
+        scale: float = 1.0,
+        annotation_size: float = 1.0,
+    ) -> List[Tuple["pv.PolyData", str]]:
+        """Render the displaced node position as PyVista meshes.
+
+        Args:
+            original_position: Original [X, Y, Z] position of the node.
+            scale: Displacement scale factor.
+            annotation_size: Size reference for node markers.
+
+        Returns:
+            List of (mesh, color) tuples for rendering.
+        """
+        import pyvista as _pv
+
+        displaced_pos = original_position + self.as_translation() * scale
+        sphere = _pv.Sphere(
+            center=tuple(displaced_pos),
+            radius=0.2 * annotation_size,
+        )
+        return [(sphere, "red")]
+
 
 class NodeForces:
     fx: float = 0.0
@@ -66,6 +107,33 @@ class NodeForces:
             "my": self.my,
             "mz": self.mz,
         }
+
+    def get_value(self, component: str) -> float:
+        """Return a single force/moment component by name.
+
+        Args:
+            component: One of 'N'/'fx', 'Vy'/'fy', 'Vz'/'fz',
+                       'T'/'mx', 'My'/'my', 'Mz'/'mz'.
+
+        Returns:
+            The scalar value for the requested component.
+        """
+        mapping = {
+            "n": self.fx,
+            "fx": self.fx,
+            "vy": self.fy,
+            "fy": self.fy,
+            "vz": self.fz,
+            "fz": self.fz,
+            "t": self.mx,
+            "mx": self.mx,
+            "my": self.my,
+            "mz": self.mz,
+        }
+        key = component.lower()
+        if key not in mapping:
+            raise ValueError(f"Unknown force component '{component}'. Valid: {list(mapping.keys())}")
+        return mapping[key]
 
 
 class NodeLocation:
@@ -104,3 +172,48 @@ class ReactionNodeResult:
             "nodal_forces": self.nodal_forces.to_dict(),
             "support_id": self.support_id,
         }
+
+    def render_reaction(
+        self,
+        position: "np.ndarray",
+        max_force_magnitude: float,
+        arrow_scale: float = 1.0,
+        show_label: bool = False,
+    ) -> List[Tuple["pv.PolyData", str]]:
+        """Render reaction force arrows as PyVista meshes.
+
+        Args:
+            position: [X, Y, Z] position of the reaction node.
+            max_force_magnitude: Maximum reaction force magnitude across all
+                reaction nodes (used for relative scaling).
+            arrow_scale: Base arrow length.
+            show_label: Whether to include a text label (not rendered
+                directly, returned as metadata).
+
+        Returns:
+            List of (mesh, color) tuples for rendering.
+        """
+        import numpy as _np
+        import pyvista as _pv
+
+        fv = _np.array(
+            [self.nodal_forces.fx, self.nodal_forces.fy, self.nodal_forces.fz],
+            dtype=float,
+        )
+        mag = float(_np.linalg.norm(fv))
+        if mag <= 0.0 or max_force_magnitude <= 0.0:
+            return []
+
+        direction = fv / mag
+        rel = mag / max_force_magnitude
+        length = arrow_scale * max(rel, 0.1)
+        arrow_vec = direction * length
+
+        meshes: List[Tuple["_pv.PolyData", str]] = []
+        arrow = _pv.Arrow(
+            start=tuple(position),
+            direction=tuple(arrow_vec),
+            scale="auto",
+        )
+        meshes.append((arrow, "magenta"))
+        return meshes

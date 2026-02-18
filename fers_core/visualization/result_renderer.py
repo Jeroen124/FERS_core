@@ -1,16 +1,25 @@
 """Result renderer for FERS finite element analysis results.
 
-This module provides the ResultRenderer class for visualizing analysis results
-including deformed shapes, stress contours, and internal force diagrams.
+This module provides the :class:`ResultRenderer` class for visualising
+analysis results — deformed shapes, internal-force diagrams, and reaction
+arrows — using PyVista.
+
+The renderer follows the same *"each class knows how to display itself"*
+pattern as :class:`ModelRenderer`: it looks up result objects (e.g.
+:class:`~fers_core.results.nodes.NodeDisplacement`,
+:class:`~fers_core.results.member.MemberResult`,
+:class:`~fers_core.results.nodes.ReactionNodeResult`) and delegates
+rendering to their own ``render_*`` methods.
 """
 
-from typing import TYPE_CHECKING, Optional, Tuple
+from typing import TYPE_CHECKING, Optional, List
 import warnings
 import numpy as np
 import pyvista as pv
 
 if TYPE_CHECKING:
     from ..fers.fers import FERS
+    from ..results.singleresults import SingleResults
 
 # Suppress PyVista warnings for clean console output
 warnings.filterwarnings("ignore", category=UserWarning, module="pyvista")
@@ -21,82 +30,124 @@ try:
     pv.global_theme.trame.jupyter_extension_enabled = True
     pv.set_jupyter_backend("trame")
 except (ImportError, Exception):
-    # Trame not installed - jupyter functionality will be limited
     pass
 
 
 class ResultRenderer:
     """Renderer for FERS finite element analysis results.
 
-    This class provides methods for visualizing analysis results including
-    deformed shapes, stress contours, and internal force diagrams.
+    After running an analysis the model's
+    :pyattr:`~fers_core.fers.fers.FERS.resultsbundle` contains one
+    :class:`~fers_core.results.singleresults.SingleResults` per load case /
+    combination.  The renderer selects one of those and delegates rendering
+    to the result-data classes themselves.
 
     Attributes:
-        model: The FERS model with analysis results
-        plotter: PyVista plotter instance for rendering
-        deformed_shape: Whether to render deformed shape
-        deformed_scale: Scale factor for deformed shape
-        color_map: Color map for contour plots
-        scalar_bar: Whether to show scalar bar
-        member_diagrams: Type of member diagram to display
-        diagram_scale: Scale factor for diagrams
+        model: The FERS model **with** analysis results.
+        plotter: PyVista plotter instance.
+        active_loadcase: Name of the active load-case to render (mutually
+            exclusive with ``active_loadcombination``).
+        active_loadcombination: Name of the active load-combination to
+            render.
+        deformed_shape: Whether to render the deformed shape.
+        deformed_scale: Scale factor for deformations.
+        member_diagrams: Which internal-force diagram to show
+            (``'N'``, ``'Vy'``, ``'Vz'``, ``'My'``, ``'Mz'``, ``'T'``,
+            or ``None``).
+        diagram_scale: Scale factor for diagrams.
+        show_reactions: Whether to draw reaction-force arrows.
+        show_undeformed: Whether to ghost-draw the undeformed model.
     """
 
-    def __init__(self, model: "FERS") -> None:
-        """Initialize the result renderer.
+    # Valid diagram types
+    VALID_DIAGRAMS: List[Optional[str]] = [None, "N", "Vy", "Vz", "My", "Mz", "T"]
 
-        Args:
-            model: FERS finite element model with analysis results
-        """
+    def __init__(self, model: "FERS") -> None:
         self.model = model
 
-        # Rendering settings
-        self._deformed_shape: bool = False
+        # --- result selection ---
+        self._active_loadcase: Optional[str] = None
+        self._active_loadcombination: Optional[str] = None
+
+        # --- rendering options ---
+        self._deformed_shape: bool = True
         self._deformed_scale: float = 30.0
+        self._member_diagrams: Optional[str] = None
+        self._diagram_scale: float = 30.0
+        self._show_reactions: bool = True
+        self._show_undeformed: bool = True
+        self._show_nodes: bool = True
+        self._annotation_size: Optional[float] = None
         self._color_map: Optional[str] = "jet"
         self._scalar_bar: bool = True
-        self._scalar_bar_text_size: int = 24
-        self._member_diagrams: Optional[str] = None  # Options: 'N', 'Vy', 'Vz', 'My', 'Mz', 'T'
-        self._diagram_scale: float = 30.0
-        self._annotation_size: Optional[float] = None
+        self._num_points: int = 20
 
-        # Create plotter
+        # --- plotter ---
         self.plotter: pv.Plotter = pv.Plotter(off_screen=pv.OFF_SCREEN)
         self.plotter.set_background("white")
 
-        # Set up view (only in interactive mode)
         if not pv.OFF_SCREEN:
             self.plotter.view_xy()
             self.plotter.show_axes()
             self.plotter.set_viewup((0, 1, 0))
 
-        # Make X button behave like 'q' key
         self.plotter.iren.add_observer("ExitEvent", lambda obj, event: obj.TerminateApp())
+
+    # ------------------------------------------------------------------
+    # Properties
+    # ------------------------------------------------------------------
 
     @property
     def annotation_size(self) -> float:
-        """Get the annotation size, auto-calculating if not set."""
+        """Auto-calculated annotation size (fraction of model extent)."""
         if self._annotation_size is not None:
             return self._annotation_size
+        nodes = self.model.nodes if hasattr(self.model, "nodes") else []
+        if not nodes:
+            return 1.0
+        xs = [n.X for n in nodes]
+        ys = [n.Y for n in nodes]
+        zs = [n.Z for n in nodes]
+        max_range = max(
+            max(xs) - min(xs),
+            max(ys) - min(ys),
+            max(zs) - min(zs),
+            1.0,
+        )
+        return max_range * 0.05
 
-        # Auto-calculate based on model bounds
-        if hasattr(self.model, "nodes") and len(self.model.nodes) > 0:
-            x_coords = [node.X for node in self.model.nodes]
-            y_coords = [node.Y for node in self.model.nodes]
-            z_coords = [node.Z for node in self.model.nodes]
+    @annotation_size.setter
+    def annotation_size(self, value: float) -> None:
+        self._annotation_size = value
 
-            x_range = max(x_coords) - min(x_coords) if x_coords else 1.0
-            y_range = max(y_coords) - min(y_coords) if y_coords else 1.0
-            z_range = max(z_coords) - min(z_coords) if z_coords else 1.0
+    # --- active result selection ---
 
-            max_range = max(x_range, y_range, z_range, 1.0)
-            return max_range * 0.05
+    @property
+    def active_loadcase(self) -> Optional[str]:
+        """Name of the active load case to render."""
+        return self._active_loadcase
 
-        return 1.0
+    @active_loadcase.setter
+    def active_loadcase(self, value: Optional[str]) -> None:
+        self._active_loadcase = value
+        if value is not None:
+            self._active_loadcombination = None
+
+    @property
+    def active_loadcombination(self) -> Optional[str]:
+        """Name of the active load combination to render."""
+        return self._active_loadcombination
+
+    @active_loadcombination.setter
+    def active_loadcombination(self, value: Optional[str]) -> None:
+        self._active_loadcombination = value
+        if value is not None:
+            self._active_loadcase = None
+
+    # --- toggles ---
 
     @property
     def deformed_shape(self) -> bool:
-        """Whether to render deformed shape."""
         return self._deformed_shape
 
     @deformed_shape.setter
@@ -105,7 +156,6 @@ class ResultRenderer:
 
     @property
     def deformed_scale(self) -> float:
-        """Scale factor for deformed shape."""
         return self._deformed_scale
 
     @deformed_scale.setter
@@ -113,17 +163,57 @@ class ResultRenderer:
         self._deformed_scale = value
 
     @property
+    def member_diagrams(self) -> Optional[str]:
+        return self._member_diagrams
+
+    @member_diagrams.setter
+    def member_diagrams(self, value: Optional[str]) -> None:
+        if value not in self.VALID_DIAGRAMS:
+            raise ValueError(f"Invalid diagram type '{value}'. Must be one of {self.VALID_DIAGRAMS}")
+        self._member_diagrams = value
+
+    @property
+    def diagram_scale(self) -> float:
+        return self._diagram_scale
+
+    @diagram_scale.setter
+    def diagram_scale(self, value: float) -> None:
+        self._diagram_scale = value
+
+    @property
+    def show_reactions(self) -> bool:
+        return self._show_reactions
+
+    @show_reactions.setter
+    def show_reactions(self, value: bool) -> None:
+        self._show_reactions = value
+
+    @property
+    def show_undeformed(self) -> bool:
+        return self._show_undeformed
+
+    @show_undeformed.setter
+    def show_undeformed(self, value: bool) -> None:
+        self._show_undeformed = value
+
+    @property
+    def show_nodes(self) -> bool:
+        return self._show_nodes
+
+    @show_nodes.setter
+    def show_nodes(self, value: bool) -> None:
+        self._show_nodes = value
+
+    @property
     def color_map(self) -> Optional[str]:
-        """Color map for contour plots."""
         return self._color_map
 
     @color_map.setter
-    def color_map(self, value: str) -> None:
+    def color_map(self, value: Optional[str]) -> None:
         self._color_map = value
 
     @property
     def scalar_bar(self) -> bool:
-        """Whether to show scalar bar."""
         return self._scalar_bar
 
     @scalar_bar.setter
@@ -131,214 +221,328 @@ class ResultRenderer:
         self._scalar_bar = value
 
     @property
-    def member_diagrams(self) -> Optional[str]:
-        """Type of member diagram to display."""
-        return self._member_diagrams
+    def num_points(self) -> int:
+        """Number of interpolation points for curves."""
+        return self._num_points
 
-    @member_diagrams.setter
-    def member_diagrams(self, value: Optional[str]) -> None:
-        """Set the type of member diagram to display.
+    @num_points.setter
+    def num_points(self, value: int) -> None:
+        self._num_points = max(2, int(value))
 
-        Args:
-            value: Diagram type ('N', 'Vy', 'Vz', 'My', 'Mz', 'T') or None
+    # ------------------------------------------------------------------
+    # Result look-up
+    # ------------------------------------------------------------------
+
+    def _get_active_results(self) -> Optional["SingleResults"]:
+        """Return the :class:`SingleResults` currently selected.
+
+        Resolution order:
+        1. ``active_loadcase``
+        2. ``active_loadcombination``
+        3. First available loadcase in the bundle.
         """
-        valid_diagrams = [None, "N", "Vy", "Vz", "My", "Mz", "T"]
-        if value not in valid_diagrams:
-            raise ValueError(f"Invalid diagram type. Must be one of {valid_diagrams}")
-        self._member_diagrams = value
+        bundle = getattr(self.model, "resultsbundle", None)
+        if bundle is None:
+            return None
 
-    @property
-    def diagram_scale(self) -> float:
-        """Scale factor for diagrams."""
-        return self._diagram_scale
+        if self._active_loadcase and hasattr(bundle, "loadcases"):
+            return bundle.loadcases.get(self._active_loadcase)
 
-    @diagram_scale.setter
-    def diagram_scale(self, value: float) -> None:
-        self._diagram_scale = value
+        if self._active_loadcombination and hasattr(bundle, "loadcombinations"):
+            return bundle.loadcombinations.get(self._active_loadcombination)
 
-    def update(self) -> None:
-        """Update the visualization by clearing and re-rendering results."""
-        # Clear the plotter
+        # Fallback: first loadcase
+        if hasattr(bundle, "loadcases") and bundle.loadcases:
+            first_key = next(iter(bundle.loadcases))
+            return bundle.loadcases[first_key]
+
+        return None
+
+    # ------------------------------------------------------------------
+    # Main update
+    # ------------------------------------------------------------------
+
+    def update(self) -> None:  # noqa: C901
+        """Clear the plotter and re-render everything."""
         self.plotter.clear()
 
-        # Render undeformed shape in light color if showing deformed shape
-        if self.deformed_shape:
-            self._render_undeformed_model(color="lightgray", line_width=1)
+        results = self._get_active_results()
+        members = self.model.members if hasattr(self.model, "members") else []
+        nodes = self.model.nodes if hasattr(self.model, "nodes") else []
 
-        # Render members
-        if hasattr(self.model, "members"):
-            for member in self.model.members:
-                self._render_member(member)
+        # ---- undeformed ghost model ----
+        if self.show_undeformed:
+            self._render_undeformed_model(members)
 
-        # Render nodes
-        if hasattr(self.model, "nodes"):
-            for node in self.model.nodes:
-                self._render_node(node)
+        # ---- build displacement lookup ----
+        node_displacements: dict[int, tuple[np.ndarray, np.ndarray]] = {}
+        if results is not None and self.deformed_shape:
+            disp_nodes = getattr(results, "displacement_nodes", {}) or {}
+            for nid_str, disp in disp_nodes.items():
+                nid = int(nid_str)
+                if disp is not None:
+                    node_displacements[nid] = (
+                        disp.as_translation(),
+                        disp.as_rotation(),
+                    )
 
-        # Render member diagrams if specified
-        if self.member_diagrams and hasattr(self.model, "members"):
-            for member in self.model.members:
-                self._render_member_diagram(member, self.member_diagrams)
+        # ---- deformed members ----
+        if self.deformed_shape and node_displacements:
+            self._render_deformed_members(members, node_displacements, results)
 
-        # Set up view for off-screen mode
+        # ---- deformed/original nodes ----
+        if self.show_nodes:
+            self._render_nodes(nodes, node_displacements, results)
+
+        # ---- internal-force diagrams ----
+        if self.member_diagrams and results is not None:
+            self._render_diagrams(members, results)
+
+        # ---- reactions ----
+        if self.show_reactions and results is not None:
+            self._render_reactions(nodes, results)
+
+        # ---- view ----
         if pv.OFF_SCREEN:
             self.plotter.view_xy()
             self.plotter.show_axes()
             self.plotter.set_viewup((0, 1, 0))
 
-    def _render_undeformed_model(self, color: str = "lightgray", line_width: int = 1) -> None:
-        """Render the undeformed model.
+    # ------------------------------------------------------------------
+    # Private render helpers
+    # ------------------------------------------------------------------
 
-        Args:
-            color: Color for undeformed shape
-            line_width: Line width for members
-        """
-        if hasattr(self.model, "members"):
-            for member in self.model.members:
-                line = pv.Line(
-                    (member.start_node.X, member.start_node.Y, member.start_node.Z),
-                    (member.end_node.X, member.end_node.Y, member.end_node.Z),
+    def _render_undeformed_model(self, members: list) -> None:
+        """Draw members in a faded colour as reference."""
+        for member in members:
+            line = pv.Line(
+                (member.start_node.X, member.start_node.Y, member.start_node.Z),
+                (member.end_node.X, member.end_node.Y, member.end_node.Z),
+            )
+            self.plotter.add_mesh(line, color="lightgray", line_width=1)
+
+    def _render_deformed_members(
+        self,
+        members: list,
+        node_displacements: dict,
+        results: "SingleResults",
+    ) -> None:
+        """Delegate deformed-shape rendering to each :class:`MemberResult`."""
+        member_results = getattr(results, "member_results", {}) or {}
+        zeros = np.zeros(3, dtype=float)
+        labeled_original = False
+        labeled_deformed = False
+
+        for member in members:
+            d0, r0 = node_displacements.get(member.start_node.id, (zeros, zeros))
+            d1, r1 = node_displacements.get(member.end_node.id, (zeros, zeros))
+
+            mr = member_results.get(str(member.id))
+            if mr is not None and hasattr(mr, "render_deformed_shape"):
+                meshes = mr.render_deformed_shape(
+                    member,
+                    d0,
+                    r0,
+                    d1,
+                    r1,
+                    scale=self.deformed_scale,
+                    num_points=self.num_points,
                 )
-                self.plotter.add_mesh(line, color=color, line_width=line_width)
+                for mesh, color, lw in meshes:
+                    if color == "blue" and not labeled_original:
+                        self.plotter.add_mesh(
+                            mesh,
+                            color=color,
+                            line_width=lw,
+                            label="Original Shape",
+                        )
+                        labeled_original = True
+                    elif color == "red" and not labeled_deformed:
+                        self.plotter.add_mesh(
+                            mesh,
+                            color=color,
+                            line_width=lw,
+                            label="Deformed Shape",
+                        )
+                        labeled_deformed = True
+                    else:
+                        self.plotter.add_mesh(mesh, color=color, line_width=lw)
+            else:
+                # Fallback: simple straight-line deformation
+                p0 = (
+                    np.array(
+                        [member.start_node.X, member.start_node.Y, member.start_node.Z],
+                        dtype=float,
+                    )
+                    + d0 * self.deformed_scale
+                )
+                p1 = (
+                    np.array(
+                        [member.end_node.X, member.end_node.Y, member.end_node.Z],
+                        dtype=float,
+                    )
+                    + d1 * self.deformed_scale
+                )
+                line = pv.Line(tuple(p0), tuple(p1))
+                label = "Deformed Shape" if not labeled_deformed else None
+                self.plotter.add_mesh(
+                    line,
+                    color="red",
+                    line_width=2,
+                    label=label,
+                )
+                labeled_deformed = True
 
-    def _get_node_displacement(self, node) -> Tuple[float, float, float]:
-        """Get node displacement values.
+    def _render_nodes(
+        self,
+        nodes: list,
+        node_displacements: dict,
+        results: Optional["SingleResults"],
+    ) -> None:
+        """Render nodes; if deformed mode, delegate to :class:`NodeDisplacement`."""
+        disp_nodes: dict = {}
+        if results is not None:
+            disp_nodes = getattr(results, "displacement_nodes", {}) or {}
+
+        labeled_original = False
+        labeled_deformed = False
+
+        for node in nodes:
+            pos = np.array([node.X, node.Y, node.Z], dtype=float)
+
+            # Original node
+            sphere_orig = pv.Sphere(center=tuple(pos), radius=0.2 * self.annotation_size)
+            label_o = "Original Nodes" if not labeled_original else None
+            self.plotter.add_mesh(sphere_orig, color="blue", label=label_o)
+            labeled_original = True
+
+            # Displaced node
+            if self.deformed_shape and str(node.id) in disp_nodes:
+                disp = disp_nodes[str(node.id)]
+                if disp is not None and hasattr(disp, "render_displaced_node"):
+                    meshes = disp.render_displaced_node(
+                        pos,
+                        scale=self.deformed_scale,
+                        annotation_size=self.annotation_size,
+                    )
+                    for mesh, color in meshes:
+                        label_d = "Deformed Nodes" if not labeled_deformed else None
+                        self.plotter.add_mesh(mesh, color=color, label=label_d)
+                        labeled_deformed = True
+
+    def _render_diagrams(self, members: list, results: "SingleResults") -> None:
+        """Delegate diagram rendering to each :class:`MemberResult`."""
+        member_results = getattr(results, "member_results", {}) or {}
+        for member in members:
+            mr = member_results.get(str(member.id))
+            if mr is None or not hasattr(mr, "render_diagram"):
+                continue
+            meshes = mr.render_diagram(
+                member,
+                self.member_diagrams,
+                scale=self.diagram_scale,
+                num_points=self.num_points,
+            )
+            for mesh, color, lw in meshes:
+                self.plotter.add_mesh(mesh, color=color, line_width=lw)
+
+    def _render_reactions(self, nodes: list, results: "SingleResults") -> None:
+        """Delegate reaction rendering to each :class:`ReactionNodeResult`."""
+        reaction_nodes = getattr(results, "reaction_nodes", {}) or {}
+        if not reaction_nodes:
+            return
+
+        # Compute max magnitude for relative scaling
+        max_mag = 0.0
+        for reaction in reaction_nodes.values():
+            fv = np.array(
+                [reaction.nodal_forces.fx, reaction.nodal_forces.fy, reaction.nodal_forces.fz],
+                dtype=float,
+            )
+            mag = float(np.linalg.norm(fv))
+            if mag > max_mag:
+                max_mag = mag
+
+        if max_mag <= 0.0:
+            return
+
+        arrow_scale = self.annotation_size * 5.0
+        labeled = False
+
+        for nid_str, reaction in reaction_nodes.items():
+            # Find the node position
+            node = self.model.get_node_by_pk(int(nid_str))
+            if node is not None:
+                pos = np.array([node.X, node.Y, node.Z], dtype=float)
+            else:
+                loc = reaction.location
+                pos = np.array([loc.X, loc.Y, loc.Z], dtype=float)
+
+            if hasattr(reaction, "render_reaction"):
+                meshes = reaction.render_reaction(
+                    pos,
+                    max_force_magnitude=max_mag,
+                    arrow_scale=arrow_scale,
+                )
+                for mesh, color in meshes:
+                    lbl = "Reaction Forces" if not labeled else None
+                    self.plotter.add_mesh(mesh, color=color, label=lbl)
+                    labeled = True
+            else:
+                # Fallback: simple arrows via plotter
+                fv = np.array(
+                    [reaction.nodal_forces.fx, reaction.nodal_forces.fy, reaction.nodal_forces.fz],
+                    dtype=float,
+                )
+                mag = float(np.linalg.norm(fv))
+                if mag <= 0.0:
+                    continue
+                direction = fv / mag
+                lbl = "Reaction Forces" if not labeled else None
+                self.plotter.add_arrows(
+                    pos,
+                    direction * arrow_scale * (mag / max_mag),
+                    color="magenta",
+                    label=lbl,
+                )
+                labeled = True
+
+    # ------------------------------------------------------------------
+    # Public API
+    # ------------------------------------------------------------------
+
+    def show(
+        self,
+        jupyter_backend: str = "trame",
+        screenshot: Optional[str] = None,
+    ) -> None:
+        """Update and display the rendered results.
 
         Args:
-            node: Node instance
-
-        Returns:
-            Tuple of (dx, dy, dz) displacements
-        """
-        # This is a placeholder - actual implementation depends on how
-        # results are stored in your model
-        # You'll need to adapt this to match your results structure
-        if hasattr(node, "displacement"):
-            disp = node.displacement
-            return (disp.get("dx", 0.0), disp.get("dy", 0.0), disp.get("dz", 0.0))
-        return (0.0, 0.0, 0.0)
-
-    def _render_node(self, node) -> None:
-        """Render a node with displacement.
-
-        Args:
-            node: Node instance to render
-        """
-        # Get coordinates
-        x, y, z = node.X, node.Y, node.Z
-
-        # Apply deformation if enabled
-        if self.deformed_shape:
-            dx, dy, dz = self._get_node_displacement(node)
-            x += dx * self.deformed_scale
-            y += dy * self.deformed_scale
-            z += dz * self.deformed_scale
-
-        # Render node
-        sphere = pv.Sphere(center=(x, y, z), radius=0.2 * self.annotation_size)
-        self.plotter.add_mesh(sphere, color="red")
-
-    def _render_member(self, member) -> None:
-        """Render a member with deformation.
-
-        Args:
-            member: Member instance to render
-        """
-        # Get start and end coordinates
-        x1, y1, z1 = member.start_node.X, member.start_node.Y, member.start_node.Z
-        x2, y2, z2 = member.end_node.X, member.end_node.Y, member.end_node.Z
-
-        # Apply deformation if enabled
-        if self.deformed_shape:
-            dx1, dy1, dz1 = self._get_node_displacement(member.start_node)
-            dx2, dy2, dz2 = self._get_node_displacement(member.end_node)
-
-            x1 += dx1 * self.deformed_scale
-            y1 += dy1 * self.deformed_scale
-            z1 += dz1 * self.deformed_scale
-
-            x2 += dx2 * self.deformed_scale
-            y2 += dy2 * self.deformed_scale
-            z2 += dz2 * self.deformed_scale
-
-        # Render member
-        line = pv.Line((x1, y1, z1), (x2, y2, z2))
-        self.plotter.add_mesh(line, color="blue", line_width=3)
-
-    def _render_member_diagram(self, member, diagram_type: str) -> None:
-        """Render internal force diagram for a member.
-
-        Args:
-            member: Member instance
-            diagram_type: Type of diagram ('N', 'Vy', 'Vz', 'My', 'Mz', 'T')
-        """
-        # This is a placeholder for diagram rendering
-        # You'll need to implement this based on your results structure
-
-        # Get member axis
-        x1, y1, z1 = member.start_node.X, member.start_node.Y, member.start_node.Z
-        x2, y2, z2 = member.end_node.X, member.end_node.Y, member.end_node.Z
-
-        # Create points along member for diagram
-        num_points = 10
-        t_values = np.linspace(0, 1, num_points)
-
-        diagram_points = []
-        for t in t_values:
-            # Interpolate along member
-            x = x1 + t * (x2 - x1)
-            y = y1 + t * (y2 - y1)
-            z = z1 + t * (z2 - z1)
-
-            # Get force/moment value at this location
-            # This is a placeholder - implement based on your results
-            force_value = self._get_member_force(member, diagram_type, t)
-
-            # Offset point perpendicular to member
-            # This is simplified - you may want to use member local axes
-            y_offset = force_value * self.diagram_scale / 1000.0  # Scale appropriately
-
-            diagram_points.append([x, y + y_offset, z])
-
-        # Create polyline for diagram
-        if len(diagram_points) > 1:
-            polyline = pv.lines_from_points(np.array(diagram_points))
-            self.plotter.add_mesh(polyline, color="red", line_width=2)
-
-    def _get_member_force(self, member, force_type: str, position: float) -> float:
-        """Get member internal force at a position.
-
-        Args:
-            member: Member instance
-            force_type: Type of force ('N', 'Vy', 'Vz', 'My', 'Mz', 'T')
-            position: Position along member (0 to 1)
-
-        Returns:
-            Force value
-        """
-        # This is a placeholder - implement based on your results structure
-        # You'll need to access the actual analysis results from the model
-        return 0.0
-
-    def show(self, jupyter_backend: str = "trame", screenshot: Optional[str] = None) -> None:
-        """Display the rendered results.
-
-        Args:
-            jupyter_backend: Backend to use in Jupyter notebooks
-            screenshot: Path to save screenshot, if provided
+            jupyter_backend: Backend to use in Jupyter notebooks.
+            screenshot: Path to save a screenshot, if provided.
         """
         self.update()
+
+        self.plotter.add_legend()
+        self.plotter.show_grid(color="gray")
+        self.plotter.view_isometric()
 
         if screenshot:
             self.plotter.screenshot(screenshot)
 
-        return self.plotter.show(jupyter_backend=jupyter_backend)
+        title = "Results"
+        results = self._get_active_results()
+        if results is not None and hasattr(results, "name"):
+            title = f'Results: "{results.name}"'
+
+        return self.plotter.show(jupyter_backend=jupyter_backend, title=title)
 
     def screenshot(self, filename: str) -> None:
         """Save a screenshot of the current view.
 
         Args:
-            filename: Path to save the screenshot
+            filename: Path to save the screenshot.
         """
         self.update()
         self.plotter.screenshot(filename)
