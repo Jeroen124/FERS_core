@@ -12,7 +12,7 @@ pattern as :class:`ModelRenderer`: it looks up result objects (e.g.
 rendering to their own ``render_*`` methods.
 """
 
-from typing import TYPE_CHECKING, Optional, List
+from typing import TYPE_CHECKING, Optional, List, Any
 import warnings
 import numpy as np
 import pyvista as pv
@@ -550,3 +550,73 @@ class ResultRenderer:
     def close(self) -> None:
         """Close the plotter."""
         self.plotter.close()
+
+    def plot_diagrams(
+        self,
+        diagram_type: str,
+        member_ids: Optional[List] = None,
+        ncols: int = 2,
+        figsize_per_member: tuple = (6, 2.5),
+    ) -> Any:
+        """Plot 2D force/moment diagrams for all (or selected) members.
+
+        Args:
+            diagram_type: 'N', 'Vy', 'Vz', 'My', 'Mz', or 'T'.
+            member_ids: Optional list of member IDs to include. Defaults to all.
+            ncols: Number of columns in the subplot grid.
+            figsize_per_member: (width, height) per subplot.
+
+        Returns:
+            matplotlib Figure with one subplot per member.
+        """
+        import matplotlib.pyplot as _plt
+
+        results = self._get_active_results()
+        if results is None:
+            raise RuntimeError("No active results. Run analysis first.")
+
+        members = self.model.members if hasattr(self.model, "members") else []
+        if member_ids is not None:
+            members = [m for m in members if m.id in member_ids]
+
+        member_results = getattr(results, "member_results", {}) or {}
+
+        valid = [
+            (m, member_results.get(str(m.id))) for m in members if member_results.get(str(m.id)) is not None
+        ]
+
+        if not valid:
+            raise RuntimeError("No member results found for the active load case.")
+
+        nrows = (len(valid) + ncols - 1) // ncols
+        fig, axes = _plt.subplots(
+            nrows,
+            ncols,
+            figsize=(figsize_per_member[0] * ncols, figsize_per_member[1] * nrows),
+            squeeze=False,
+        )
+
+        for idx, (member, mr) in enumerate(valid):
+            row, col = divmod(idx, ncols)
+            mr.plot_diagram(member, diagram_type, ax=axes[row][col], label=f"Member {member.id}")
+
+        for idx in range(len(valid), nrows * ncols):
+            row, col = divmod(idx, ncols)
+            axes[row][col].set_visible(False)
+
+        title_map = {
+            "N": "Axial Force (N)",
+            "Vy": "Shear Force Vy",
+            "Vz": "Shear Force Vz",
+            "My": "Bending Moment My",
+            "Mz": "Bending Moment Mz",
+            "T": "Torsion (T)",
+        }
+        result_name = getattr(results, "name", "")
+        fig.suptitle(
+            f"{title_map.get(diagram_type, diagram_type)} — {result_name}",
+            fontsize=12,
+            fontweight="bold",
+        )
+        fig.tight_layout()
+        return fig

@@ -97,7 +97,7 @@ model.plot_model_3d(
 )
 
 # 3D results (existing method)
-model.show_results_3d(
+model.plot_results_3d(
     loadcombination=1,
     displacement=True,
     plot_bending_moment='M_y'

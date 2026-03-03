@@ -136,6 +136,41 @@ class NodeForces:
         return mapping[key]
 
 
+class SectionForce:
+    x_frac: float = 0.0
+    forces: "NodeForces" = None
+
+    def __init__(self):
+        self.x_frac = 0.0
+        self.forces = NodeForces()
+
+    @classmethod
+    def from_pydantic(cls, source) -> "SectionForce":
+        instance = cls()
+        instance.x_frac = float(getattr(source, "x_frac", 0.0))
+        forces_raw = getattr(source, "forces", None)
+        instance.forces = NodeForces.from_pydantic(forces_raw) if forces_raw is not None else NodeForces()
+        return instance
+
+    @classmethod
+    def from_dict(cls, d: dict) -> "SectionForce":
+        instance = cls()
+        instance.x_frac = float(d.get("x_frac", 0.0))
+        forces_raw = d.get("forces", {})
+
+        class _N:
+            pass
+
+        n = _N()
+        for k, v in forces_raw.items():
+            setattr(n, k, v)
+        instance.forces = NodeForces.from_pydantic(n)
+        return instance
+
+    def to_dict(self) -> dict:
+        return {"x_frac": self.x_frac, "forces": self.forces.to_dict()}
+
+
 class NodeLocation:
     X: float = 0.0
     Y: float = 0.0
