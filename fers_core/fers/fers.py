@@ -1014,8 +1014,9 @@ class FERS:
                     actors.append(actor)
             lc_actor_groups.append((lc_name, color, actors))
 
-        # ── Checkbox widgets to toggle each load case ────────────────
+        # ── Checkbox widgets to toggle each load case (top-left) ─────
         if len(lc_actor_groups) > 1:
+            _win_w, _win_h = plotter.window_size
             for cb_idx, (lc_name, color, actors) in enumerate(lc_actor_groups):
 
                 def _make_toggle(actor_list):
@@ -1030,10 +1031,11 @@ class FERS:
 
                     return toggle
 
+                _y = _win_h - 40 - cb_idx * 40
                 plotter.add_checkbox_button_widget(
                     _make_toggle(actors),
                     value=True,
-                    position=(10, 10 + cb_idx * 40),
+                    position=(10, _y),
                     size=30,
                     color_on=color,
                     color_off="grey",
@@ -1041,7 +1043,7 @@ class FERS:
                 # Label next to checkbox
                 plotter.add_text(
                     lc_name,
-                    position=(50, 14 + cb_idx * 40),
+                    position=(50, _y + 4),
                     font_size=9,
                     color=color,
                 )
@@ -1106,7 +1108,7 @@ class FERS:
                         label_pos, [text], font_size=12, text_color="black", always_visible=True
                     )
 
-        plotter.add_legend()
+        plotter.add_legend(loc="lower right")
 
         min_coords, max_coords = self.get_structure_bounds()
         if min_coords and max_coords:
@@ -2715,7 +2717,9 @@ class FERS:
                 scale=False,
                 orient=False,
             )
-            plotter.add_mesh(glyph, color="black", label="Nodes")
+            _node_actor = plotter.add_mesh(glyph, color="black", label="Nodes")
+        else:
+            _node_actor = None
 
         if show_supports:
             legend_added_for_type: set[str] = set()
@@ -2800,30 +2804,34 @@ class FERS:
                 a = plotter.add_mesh(sphere, color="red")
                 actors.append(a)
 
-            # Node displacement labels
-            if show_node_values:
-                displacement_nodes_map = getattr(chosen, "displacement_nodes", {}) or {}
-                for node in self.get_all_nodes():
-                    disp = displacement_nodes_map.get(str(node.id))
-                    if disp is None:
-                        continue
-                    dgl, _ = node_displacements.get(node.id, (np.zeros(3), np.zeros(3)))
-                    lp = np.array([node.X, node.Y, node.Z], dtype=float) + dgl * displacement_scale
-                    txt = (
-                        f"N{node.id}\n"
-                        f"dx={disp.dx:.2f} {length_unit}\n"
-                        f"dy={disp.dy:.2f} {length_unit}\n"
-                        f"dz={disp.dz:.2f} {length_unit}"
-                    )
-                    a = plotter.add_point_labels(
-                        lp,
-                        [txt],
-                        font_size=10,
-                        text_color="darkred",
-                        always_visible=True,
-                    )
-                    actors.append(a)
             return actors
+
+        # ── Helper: build node displacement value label actors ────────
+        def _build_node_value_actors():
+            """Build displacement-value text label actors for each node."""
+            value_actors = []
+            displacement_nodes_map = getattr(chosen, "displacement_nodes", {}) or {}
+            for node in self.get_all_nodes():
+                disp = displacement_nodes_map.get(str(node.id))
+                if disp is None:
+                    continue
+                dgl, _ = node_displacements.get(node.id, (np.zeros(3), np.zeros(3)))
+                lp = np.array([node.X, node.Y, node.Z], dtype=float) + dgl * displacement_scale
+                txt = (
+                    f"N{node.id}\n"
+                    f"dx={disp.dx:.2f} {length_unit}\n"
+                    f"dy={disp.dy:.2f} {length_unit}\n"
+                    f"dz={disp.dz:.2f} {length_unit}"
+                )
+                a = plotter.add_point_labels(
+                    lp,
+                    [txt],
+                    font_size=10,
+                    text_color="darkred",
+                    always_visible=True,
+                )
+                value_actors.append(a)
+            return value_actors
 
         # ── Helper: build diagram actors for one component ───────────
         def _build_diagram_actors(comp: str, color: str):
@@ -2964,34 +2972,80 @@ class FERS:
                         a.SetVisibility(False)
                 _layers.append((label, color, acts, False))
 
-        # ── Checkbox widgets ─────────────────────────────────────────
+        # Node value label actors (built always; visibility set below)
+        _node_value_actors = _build_node_value_actors()
+        for a in _node_value_actors:
+            if hasattr(a, "SetVisibility"):
+                a.SetVisibility(show_node_values)
+
+        # ── Top-left: diagram-layer checkbox widgets ──────────────────
+        _win_w, _win_h = plotter.window_size
+
+        def _make_layer_toggle(actor_list):
+            def toggle(flag):
+                for a in actor_list:
+                    if hasattr(a, "SetVisibility"):
+                        a.SetVisibility(flag)
+                plotter.render()
+
+            return toggle
+
         for cb_idx, (label, color, actors, visible) in enumerate(_layers):
-
-            def _make_toggle(actor_list):
-                def toggle(flag):
-                    for a in actor_list:
-                        if hasattr(a, "SetVisibility"):
-                            a.SetVisibility(flag)
-                    plotter.render()
-
-                return toggle
-
+            _y = _win_h - 40 - cb_idx * 40
             plotter.add_checkbox_button_widget(
-                _make_toggle(actors),
+                _make_layer_toggle(actors),
                 value=visible,
-                position=(10, 10 + cb_idx * 40),
+                position=(10, _y),
                 size=30,
                 color_on=color,
                 color_off="grey",
             )
             plotter.add_text(
                 label,
-                position=(50, 14 + cb_idx * 40),
+                position=(50, _y + 4),
                 font_size=9,
                 color=color,
             )
 
-        plotter.add_legend()
+        # ── Top-right: node values / node visibility / member results toggles ──
+        # "Member Results" toggles only the first layer (Displacement); the
+        # individual diagram-layer checkboxes on the left control the rest.
+        _first_layer_actors = _layers[0][2] if _layers else []
+
+        _right_toggles = [
+            ("Node Values", "darkred", _node_value_actors, show_node_values),
+            ("Nodes", "black", [_node_actor] if _node_actor else [], show_nodes),
+            ("Member Results", "#FF0000", _first_layer_actors, True),
+        ]
+
+        def _make_right_toggle(actor_list):
+            def toggle(flag):
+                for a in actor_list:
+                    if hasattr(a, "SetVisibility"):
+                        a.SetVisibility(flag)
+                plotter.render()
+
+            return toggle
+
+        for btn_idx, (label, color, actors, initial) in enumerate(_right_toggles):
+            _y = _win_h - 40 - btn_idx * 40
+            _x_cb = _win_w - 200
+            plotter.add_checkbox_button_widget(
+                _make_right_toggle(actors),
+                value=initial,
+                position=(_x_cb, _y),
+                size=30,
+                color_on=color,
+                color_off="grey",
+            )
+            plotter.add_text(
+                label,
+                position=(_x_cb + 40, _y + 4),
+                font_size=9,
+                color=color,
+            )
+
+        plotter.add_legend(loc="lower right")
         plotter.show_grid(
             color="gray",
             xtitle=f"X [{length_unit}]",

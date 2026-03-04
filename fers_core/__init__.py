@@ -25,6 +25,7 @@ from .results.member import MemberResult
 from .results.nodes import NodeDisplacement, NodeForces, ReactionNodeResult
 from .visualization import ModelRenderer, ResultRenderer
 from .cloud import FersCloudClient
+from .sections.steel_sections_en import resolve_section, list_sections
 
 __all__ = [
     "AnalysisOrder",
@@ -54,6 +55,8 @@ __all__ = [
     "RigidStrategy",
     "RotationImperfection",
     "Section",
+    "list_sections",
+    "resolve_section",
     "ShapePath",
     "SingleResults",
     "SupportCondition",

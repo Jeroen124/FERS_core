@@ -66,6 +66,129 @@ class ShapePath:
         )
 
     @staticmethod
+    def from_dxf(filepath: str, name: Optional[str] = None, layer: Optional[str] = None) -> "ShapePath":
+        """
+        Import a cross-section outline from a DXF file and return a ShapePath.
+
+        Supported DXF entities: LINE, LWPOLYLINE, ARC, CIRCLE.
+        DXF coordinates are mapped as: DXF-X → ShapePath-z, DXF-Y → ShapePath-y.
+
+        Parameters:
+            filepath (str): Path to the .dxf file.
+            name (str, optional): Name for the ShapePath. Defaults to the filename stem.
+            layer (str, optional): If given, only entities on this layer are imported.
+        """
+        try:
+            import ezdxf
+        except ImportError:
+            raise ImportError("ezdxf is required for DXF import. Install it with: pip install ezdxf")
+
+        import os
+
+        doc = ezdxf.readfile(filepath)
+        msp = doc.modelspace()
+
+        if name is None:
+            name = os.path.splitext(os.path.basename(filepath))[0]
+
+        commands: List[ShapeCommand] = []
+
+        for entity in msp:
+            if layer is not None and entity.dxf.layer != layer:
+                continue
+
+            dxftype = entity.dxftype()
+
+            if dxftype == "LINE":
+                sx, sy = entity.dxf.start.x, entity.dxf.start.y
+                ex, ey = entity.dxf.end.x, entity.dxf.end.y
+                commands.append(ShapeCommand("moveTo", z=sx, y=sy))
+                commands.append(ShapeCommand("lineTo", z=ex, y=ey))
+
+            elif dxftype == "LWPOLYLINE":
+                points = list(entity.get_points(format="xyseb"))  # x, y, start_width, end_width, bulge
+                if not points:
+                    continue
+                closed = entity.closed
+
+                for i, pt in enumerate(points):
+                    px, py, _sw, _ew, bulge = pt
+                    if i == 0:
+                        commands.append(ShapeCommand("moveTo", z=px, y=py))
+                    else:
+                        prev_pt = points[i - 1]
+                        prev_bulge = prev_pt[4]
+                        if abs(prev_bulge) > 1e-9:
+                            # Convert bulge to arc
+                            x0, y0 = prev_pt[0], prev_pt[1]
+                            x1, y1 = px, py
+                            b = prev_bulge
+                            # Chord midpoint and distance
+                            d = math.hypot(x1 - x0, y1 - y0)
+                            r_arc = d * (1 + b * b) / (4 * abs(b))
+                            # Center of arc
+                            alpha = math.atan2(y1 - y0, x1 - x0)
+                            theta_half = 2 * math.atan(b)
+                            cx = (x0 + x1) / 2 - r_arc * math.sin(theta_half) * math.cos(
+                                alpha + math.pi / 2 * (1 if b > 0 else -1)
+                            )
+                            cy = (y0 + y1) / 2 - r_arc * math.sin(theta_half) * math.sin(
+                                alpha + math.pi / 2 * (1 if b > 0 else -1)
+                            )
+                            t0_arc = math.atan2(y0 - cy, x0 - cx)
+                            t1_arc = math.atan2(y1 - cy, x1 - cx)
+                            # Adjust angles for CCW/CW convention used by arc_center_angles
+                            # ShapePath arcTo: z = cz + r*sin(t), y = cy + r*cos(t)
+                            # DXF arc in XY: x = cx + r*cos(a), y = cy + r*sin(a)
+                            # Convert: shapepath theta = pi/2 - dxf_angle
+                            sp_t0 = math.pi / 2 - t0_arc
+                            sp_t1 = math.pi / 2 - t1_arc
+                            if b < 0:
+                                # CW arc: ensure t1 < t0
+                                while sp_t1 > sp_t0:
+                                    sp_t1 -= 2 * math.pi
+                            else:
+                                # CCW arc: ensure t1 > t0
+                                while sp_t1 < sp_t0:
+                                    sp_t1 += 2 * math.pi
+                            commands.extend(ShapePath.arc_center_angles(cy, cx, r_arc, sp_t0, sp_t1))
+                        else:
+                            commands.append(ShapeCommand("lineTo", z=px, y=py))
+
+                if closed:
+                    commands.append(ShapeCommand("closePath"))
+
+            elif dxftype == "ARC":
+                cx, cy = entity.dxf.center.x, entity.dxf.center.y
+                r_arc = entity.dxf.radius
+                # DXF angles are in degrees, CCW from +X axis
+                a0 = math.radians(entity.dxf.start_angle)
+                a1 = math.radians(entity.dxf.end_angle)
+                if a1 <= a0:
+                    a1 += 2 * math.pi
+                # Convert to ShapePath theta convention
+                sp_t0 = math.pi / 2 - a0
+                sp_t1 = math.pi / 2 - a1
+                # Emit moveTo start of arc
+                start_z = cx + r_arc * math.cos(a0)
+                start_y = cy + r_arc * math.sin(a0)
+                commands.append(ShapeCommand("moveTo", z=start_z, y=start_y))
+                commands.extend(ShapePath.arc_center_angles(cy, cx, r_arc, sp_t0, sp_t1))
+
+            elif dxftype == "CIRCLE":
+                cx, cy = entity.dxf.center.x, entity.dxf.center.y
+                r_arc = entity.dxf.radius
+                start_z = cx + r_arc
+                start_y = cy
+                commands.append(ShapeCommand("moveTo", z=start_z, y=start_y))
+                # Full CCW circle: theta goes from pi/2 to pi/2 - 2pi
+                commands.extend(
+                    ShapePath.arc_center_angles(cy, cx, r_arc, math.pi / 2, math.pi / 2 - 2 * math.pi)
+                )
+
+        return ShapePath(name=name, shape_commands=commands)
+
+    @staticmethod
     def arc_center_angles(
         center_y: float,
         center_z: float,
@@ -293,6 +416,273 @@ class ShapePath:
         This delegates to create_ipe_profile to keep one robust implementation.
         """
         return ShapePath.create_ipe_profile(h=h, b=b, t_f=t_f, t_w=t_w, r=r)
+
+    @staticmethod
+    def create_rhs_profile(h: float, b: float, t: float, r_out: float = 0.0) -> List[ShapeCommand]:
+        """
+        Rectangular Hollow Section (RHS / SHS) outline.
+        Outer rectangle with optional corner radii, inner rectangle as hole.
+        Coordinates: z horizontal, y vertical. Centered on origin.
+
+        Parameters:
+            h: Total height (y-direction).
+            b: Total width (z-direction).
+            t: Wall thickness.
+            r_out: Outer corner radius (0 for sharp corners).
+        """
+        commands: List[ShapeCommand] = []
+        half_h = h / 2.0
+        half_b = b / 2.0
+        r_in = max(0.0, r_out - t)
+
+        # ---- Outer contour (CCW) ----
+        if r_out > 0.0:
+            # Start at top-left, just right of the top-left radius
+            commands.append(ShapeCommand("moveTo", z=-half_b + r_out, y=+half_h))
+            # Top edge → top-right corner
+            commands.append(ShapeCommand("lineTo", z=+half_b - r_out, y=+half_h))
+            commands.extend(
+                ShapePath.arc_center_angles(half_h - r_out, half_b - r_out, r_out, 0.0, -math.pi / 2.0)
+            )
+            # Right edge → bottom-right corner
+            commands.append(ShapeCommand("lineTo", z=+half_b, y=-half_h + r_out))
+            commands.extend(
+                ShapePath.arc_center_angles(-half_h + r_out, half_b - r_out, r_out, -math.pi / 2.0, -math.pi)
+            )
+            # Bottom edge → bottom-left corner
+            commands.append(ShapeCommand("lineTo", z=-half_b + r_out, y=-half_h))
+            commands.extend(
+                ShapePath.arc_center_angles(
+                    -half_h + r_out, -half_b + r_out, r_out, -math.pi, -3.0 * math.pi / 2.0
+                )
+            )
+            # Left edge → top-left corner
+            commands.append(ShapeCommand("lineTo", z=-half_b, y=+half_h - r_out))
+            commands.extend(
+                ShapePath.arc_center_angles(
+                    half_h - r_out, -half_b + r_out, r_out, -3.0 * math.pi / 2.0, -2.0 * math.pi
+                )
+            )
+        else:
+            commands.append(ShapeCommand("moveTo", z=-half_b, y=+half_h))
+            commands.append(ShapeCommand("lineTo", z=+half_b, y=+half_h))
+            commands.append(ShapeCommand("lineTo", z=+half_b, y=-half_h))
+            commands.append(ShapeCommand("lineTo", z=-half_b, y=-half_h))
+        commands.append(ShapeCommand("closePath"))
+
+        # ---- Inner contour (hole, CW) ----
+        ih = half_h - t
+        ib = half_b - t
+        if r_in > 0.0:
+            commands.append(ShapeCommand("moveTo", z=-ib + r_in, y=+ih))
+            commands.append(ShapeCommand("lineTo", z=+ib - r_in, y=+ih))
+            commands.extend(ShapePath.arc_center_angles(ih - r_in, ib - r_in, r_in, 0.0, -math.pi / 2.0))
+            commands.append(ShapeCommand("lineTo", z=+ib, y=-ih + r_in))
+            commands.extend(
+                ShapePath.arc_center_angles(-ih + r_in, ib - r_in, r_in, -math.pi / 2.0, -math.pi)
+            )
+            commands.append(ShapeCommand("lineTo", z=-ib + r_in, y=-ih))
+            commands.extend(
+                ShapePath.arc_center_angles(-ih + r_in, -ib + r_in, r_in, -math.pi, -3.0 * math.pi / 2.0)
+            )
+            commands.append(ShapeCommand("lineTo", z=-ib, y=+ih - r_in))
+            commands.extend(
+                ShapePath.arc_center_angles(ih - r_in, -ib + r_in, r_in, -3.0 * math.pi / 2.0, -2.0 * math.pi)
+            )
+        else:
+            commands.append(ShapeCommand("moveTo", z=-ib, y=+ih))
+            commands.append(ShapeCommand("lineTo", z=+ib, y=+ih))
+            commands.append(ShapeCommand("lineTo", z=+ib, y=-ih))
+            commands.append(ShapeCommand("lineTo", z=-ib, y=-ih))
+        commands.append(ShapeCommand("closePath"))
+
+        return commands
+
+    @staticmethod
+    def create_angle_profile(
+        h: float,
+        b: float,
+        t: float,
+        r_root: float = 0.0,
+        r_toe: float = 0.0,
+    ) -> List[ShapeCommand]:
+        """
+        Equal or unequal angle (L) section outline.
+        Centered on the geometric centroid of the gross section.
+        Vertical leg along y, horizontal leg along z.
+
+        Parameters:
+            h: Height of the vertical leg.
+            b: Width of the horizontal leg.
+            t: Uniform thickness.
+            r_root: Root radius at the inner corner.
+            r_toe: Toe radius at the tips (ignored for simplicity in path).
+        """
+        commands: List[ShapeCommand] = []
+
+        # Centroid offsets for an angle with legs along +y and +z from origin
+        area = (h + b - t) * t
+        z_c = (b * t * (b / 2.0) + (h - t) * t * (t / 2.0)) / area
+        y_c = (t * h * (h / 2.0) + (b - t) * t * (t / 2.0)) / area
+
+        # Shift so centroid is at origin
+        def p(z: float, y: float):
+            return z - z_c, y - y_c
+
+        # Trace the L-shape outline CCW from bottom-left
+        z0, y0 = p(0.0, 0.0)
+        commands.append(ShapeCommand("moveTo", z=z0, y=y0))
+
+        z1, y1 = p(b, 0.0)
+        commands.append(ShapeCommand("lineTo", z=z1, y=y1))
+
+        z2, y2 = p(b, t)
+        commands.append(ShapeCommand("lineTo", z=z2, y=y2))
+
+        if r_root > 0.0:
+            z3, y3 = p(t + r_root, t)
+            commands.append(ShapeCommand("lineTo", z=z3, y=y3))
+            # Inner corner fillet — use the shifted coordinates directly
+            fillet_cy = t + r_root - y_c
+            fillet_cz = t + r_root - z_c
+            commands.extend(
+                ShapePath.arc_center_angles(fillet_cy, fillet_cz, r_root, -math.pi, -math.pi / 2.0)
+            )
+            z4, y4 = p(t, t + r_root)
+            commands.append(ShapeCommand("lineTo", z=z4, y=y4))
+        else:
+            z3, y3 = p(t, t)
+            commands.append(ShapeCommand("lineTo", z=z3, y=y3))
+
+        z5, y5 = p(t, h)
+        commands.append(ShapeCommand("lineTo", z=z5, y=y5))
+
+        z6, y6 = p(0.0, h)
+        commands.append(ShapeCommand("lineTo", z=z6, y=y6))
+
+        commands.append(ShapeCommand("closePath"))
+        return commands
+
+    @staticmethod
+    def create_welded_i_profile(
+        h: float,
+        b: float,
+        t_f: float,
+        t_w: float,
+    ) -> List[ShapeCommand]:
+        """
+        Welded I-section (no root radius). Identical topology to IPE but with r=0.
+        Centered on origin.
+        """
+        return ShapePath.create_ipe_profile(h=h, b=b, t_f=t_f, t_w=t_w, r=0.0)
+
+    @staticmethod
+    def create_cfs_c_profile(
+        h: float,
+        b: float,
+        lip: float,
+        t: float,
+        r_out: float = 0.0,
+    ) -> List[ShapeCommand]:
+        """
+        Cold-formed steel C-section (lipped channel) outline.
+        Thin-walled representation using the mid-line.
+        Centered on origin. Open on the right.
+
+        Parameters:
+            h: Total depth.
+            b: Flange width.
+            lip: Lip length (can be 0).
+            t: Wall thickness.
+            r_out: Outer bend radius.
+        """
+        commands: List[ShapeCommand] = []
+        half_h = h / 2.0
+
+        # Outer contour
+        if lip > 0:
+            commands.append(ShapeCommand("moveTo", z=b, y=half_h - lip))
+            commands.append(ShapeCommand("lineTo", z=b, y=half_h))
+        else:
+            commands.append(ShapeCommand("moveTo", z=b, y=half_h))
+
+        commands.append(ShapeCommand("lineTo", z=0.0, y=half_h))
+        commands.append(ShapeCommand("lineTo", z=0.0, y=-half_h))
+        commands.append(ShapeCommand("lineTo", z=b, y=-half_h))
+
+        if lip > 0:
+            commands.append(ShapeCommand("lineTo", z=b, y=-half_h + lip))
+            commands.append(ShapeCommand("lineTo", z=b - t, y=-half_h + lip))
+
+        commands.append(ShapeCommand("lineTo", z=b - t, y=-half_h + t))
+        commands.append(ShapeCommand("lineTo", z=t, y=-half_h + t))
+        commands.append(ShapeCommand("lineTo", z=t, y=half_h - t))
+        commands.append(ShapeCommand("lineTo", z=b - t, y=half_h - t))
+
+        if lip > 0:
+            commands.append(ShapeCommand("lineTo", z=b - t, y=half_h - lip))
+
+        commands.append(ShapeCommand("closePath"))
+        return commands
+
+    @staticmethod
+    def create_cfs_z_profile(
+        h: float,
+        b_top: float,
+        b_bot: float,
+        lip: float,
+        t: float,
+        r_out: float = 0.0,
+    ) -> List[ShapeCommand]:
+        """
+        Cold-formed steel Z-section (lipped zed) outline.
+        Flanges extend in opposite directions. Centered on origin.
+
+        Parameters:
+            h: Total depth.
+            b_top: Top flange width (extends in +z).
+            b_bot: Bottom flange width (extends in -z).
+            lip: Lip length (can be 0).
+            t: Wall thickness.
+            r_out: Outer bend radius.
+        """
+        commands: List[ShapeCommand] = []
+        half_h = h / 2.0
+        half_tw = t / 2.0
+
+        # Outer contour of Z shape
+        # Start at top-right lip
+        if lip > 0:
+            commands.append(ShapeCommand("moveTo", z=b_top, y=half_h - lip))
+            commands.append(ShapeCommand("lineTo", z=b_top, y=half_h))
+        else:
+            commands.append(ShapeCommand("moveTo", z=b_top, y=half_h))
+
+        # Top flange left → web top
+        commands.append(ShapeCommand("lineTo", z=-half_tw, y=half_h))
+        commands.append(ShapeCommand("lineTo", z=-half_tw, y=-half_h + t))
+
+        # Bottom flange extends in -z direction
+        commands.append(ShapeCommand("lineTo", z=-b_bot, y=-half_h + t))
+
+        if lip > 0:
+            commands.append(ShapeCommand("lineTo", z=-b_bot, y=-half_h + lip))
+            commands.append(ShapeCommand("lineTo", z=-b_bot + t, y=-half_h + lip))
+
+        commands.append(ShapeCommand("lineTo", z=-b_bot + t, y=-half_h + t))
+        commands.append(ShapeCommand("lineTo", z=half_tw, y=-half_h + t))
+
+        # Web inner right → bottom flange inner
+        commands.append(ShapeCommand("lineTo", z=half_tw, y=half_h - t))
+
+        # Top flange inner
+        commands.append(ShapeCommand("lineTo", z=b_top - t, y=half_h - t))
+
+        if lip > 0:
+            commands.append(ShapeCommand("lineTo", z=b_top - t, y=half_h - lip))
+
+        commands.append(ShapeCommand("closePath"))
+        return commands
 
     def plot(self, show_nodes: bool = True):
         """
