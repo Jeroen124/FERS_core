@@ -2,6 +2,7 @@ from .nodes.node import Node
 from .members.member import Member
 from .fers.fers import FERS
 from .members.material import Material
+from .members.material_library import MaterialLibrary
 from .members.section import Section
 from .members.shapepath import ShapePath
 from .members.memberset import MemberSet
@@ -38,6 +39,7 @@ __all__ = [
     "LoadCase",
     "LoadCombination",
     "Material",
+    "MaterialLibrary",
     "Member",
     "MemberHinge",
     "MemberResult",

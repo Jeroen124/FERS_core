@@ -684,6 +684,197 @@ class ShapePath:
         commands.append(ShapeCommand("closePath"))
         return commands
 
+    @staticmethod
+    def stroke_path(
+        commands: List[ShapeCommand],
+        thickness: float,
+        offset: str = "center",
+    ) -> List[ShapeCommand]:
+        """
+        Extrude an open path (centerline) into a closed filled cross-section profile.
+
+        The input path may contain ``moveTo``, ``lineTo``, and ``arcTo`` commands.
+        Straight segments are offset by shifting perpendicular to the travel direction.
+        Arc segments are offset radially: the circle's radius grows or shrinks by the
+        offset distance while the center and sweep angles remain identical.
+
+        Parameters
+        ----------
+        commands : list of ShapeCommand
+            Open path commands defining the centerline or one edge.
+        thickness : float
+            Extrusion thickness (must be positive).
+        offset : {"center", "left", "right"}
+            Where the original path sits relative to the extruded shape.
+
+            - ``"center"`` – the input path is the centerline; the shape extends
+              ``thickness/2`` to each side.
+            - ``"left"``   – the input path is the **right** edge; the shape extends
+              ``thickness`` to the left.
+            - ``"right"``  – the input path is the **left** edge; the shape extends
+              ``thickness`` to the right.
+
+        Returns
+        -------
+        list of ShapeCommand
+            Closed profile (ends with ``closePath``).
+
+        Notes
+        -----
+        Arc convention (same as :meth:`arc_center_angles`)::
+
+            z(θ) = center_z + r·sin(θ)
+            y(θ) = center_y + r·cos(θ)
+
+        For an arc swept in the *increasing-θ* direction (clockwise in the yz-plane
+        when z points right and y points up) the left-hand side is the outer arc
+        (larger radius). For a *decreasing-θ* arc the relationship is reversed.
+
+        Join style between consecutive offset segments is **bevel** (a straight lineTo
+        bridges any gap between the end of one offset segment and the start of the next).
+        """
+        # ---- parse input into simple geometric segments -----------------------
+        # Each segment is a tuple:
+        #   ("line", y0, z0, y1, z1)
+        #   ("arc",  center_y, center_z, r, theta0, theta1)
+        segments = []
+        cur_y: Optional[float] = None
+        cur_z: Optional[float] = None
+
+        for cmd in commands:
+            if cmd.command == "moveTo":
+                cur_y, cur_z = cmd.y, cmd.z
+            elif cmd.command == "lineTo":
+                if cur_y is None:
+                    raise ValueError("stroke_path: 'lineTo' before 'moveTo'")
+                segments.append(("line", cur_y, cur_z, cmd.y, cmd.z))
+                cur_y, cur_z = cmd.y, cmd.z
+            elif cmd.command == "arcTo":
+                if cur_y is None:
+                    raise ValueError("stroke_path: 'arcTo' before 'moveTo'")
+                end_z = cmd.center_z + cmd.r * math.sin(cmd.theta1)
+                end_y = cmd.center_y + cmd.r * math.cos(cmd.theta1)
+                segments.append(("arc", cmd.center_y, cmd.center_z, cmd.r, cmd.theta0, cmd.theta1))
+                cur_y, cur_z = end_y, end_z
+            elif cmd.command == "closePath":
+                break  # open-path input only; stop here
+
+        if not segments:
+            return []
+
+        # ---- determine signed offset for each side ----------------------------
+        # Positive d → offset to the *left* of the travel direction.
+        if offset == "center":
+            d_left = thickness / 2.0
+            d_right = -thickness / 2.0
+        elif offset == "left":
+            d_left = thickness
+            d_right = 0.0
+        elif offset == "right":
+            d_left = 0.0
+            d_right = -thickness
+        else:
+            raise ValueError(f"stroke_path: unknown offset '{offset}'. Use 'center', 'left', or 'right'.")
+
+        # ---- helpers ----------------------------------------------------------
+        def _offset_seg(seg, d):
+            """Return a copy of *seg* shifted *d* to the left of travel direction."""
+            if seg[0] == "line":
+                _, y0, z0, y1, z1 = seg
+                dy = y1 - y0
+                dz = z1 - z0
+                length = math.hypot(dz, dy)
+                if length < 1e-12:
+                    return seg
+                # Left normal in (z, y): (-dy/len, dz/len)
+                nz = -dy / length
+                ny = dz / length
+                return ("line", y0 + d * ny, z0 + d * nz, y1 + d * ny, z1 + d * nz)
+            else:  # arc
+                _, cy, cz, r, t0, t1 = seg
+                # For increasing θ (CW sweep): left = outward → r + d
+                # For decreasing θ (CCW sweep): left = inward  → r - d
+                r_new = (r + d) if t1 >= t0 else (r - d)
+                if r_new <= 0.0:
+                    raise ValueError(
+                        f"stroke_path: offset {d} collapses arc radius {r} to {r_new}. "
+                        "Reduce thickness or choose a different offset side."
+                    )
+                return ("arc", cy, cz, r_new, t0, t1)
+
+        def _seg_start(seg):
+            """Start point (y, z) of a segment."""
+            if seg[0] == "line":
+                return seg[1], seg[2]
+            _, cy, cz, r, t0, _ = seg
+            return cy + r * math.cos(t0), cz + r * math.sin(t0)
+
+        def _seg_end(seg):
+            """End point (y, z) of a segment."""
+            if seg[0] == "line":
+                return seg[3], seg[4]
+            _, cy, cz, r, _, t1 = seg
+            return cy + r * math.cos(t1), cz + r * math.sin(t1)
+
+        def _seg_to_cmds(seg):
+            """Convert a segment to ShapeCommand(s), *without* the initial moveTo."""
+            if seg[0] == "line":
+                return [ShapeCommand("lineTo", y=seg[3], z=seg[4])]
+            _, cy, cz, r, t0, t1 = seg
+            return [ShapeCommand("arcTo", r=r, center_y=cy, center_z=cz, theta0=t0, theta1=t1)]
+
+        def _reverse_seg(seg):
+            """Reverse a segment's travel direction."""
+            if seg[0] == "line":
+                _, y0, z0, y1, z1 = seg
+                return ("line", y1, z1, y0, z0)
+            _, cy, cz, r, t0, t1 = seg
+            return ("arc", cy, cz, r, t1, t0)  # swap θ0 ↔ θ1
+
+        def _append_seg(result_cmds, seg, prev_end):
+            """
+            Append *seg* to *result_cmds*.  If the segment's start does not coincide
+            with *prev_end*, insert a bevel lineTo to close the gap first.
+            """
+            sy, sz = _seg_start(seg)
+            if prev_end is not None:
+                py, pz = prev_end
+                if abs(sy - py) > 1e-9 or abs(sz - pz) > 1e-9:
+                    result_cmds.append(ShapeCommand("lineTo", y=sy, z=sz))
+            result_cmds.extend(_seg_to_cmds(seg))
+            return _seg_end(seg)
+
+        # ---- build the two offset sides --------------------------------------
+        left_segs = [_offset_seg(s, d_left) for s in segments]
+        right_segs = [_offset_seg(s, d_right) for s in segments]
+
+        # ---- assemble the closed profile ------------------------------------
+        result: List[ShapeCommand] = []
+
+        # Start: moveTo the beginning of the left-side path
+        start_y, start_z = _seg_start(left_segs[0])
+        result.append(ShapeCommand("moveTo", y=start_y, z=start_z))
+
+        # Forward along the left side
+        pen = (start_y, start_z)
+        for seg in left_segs:
+            pen = _append_seg(result, seg, pen)
+
+        # End cap: bridge from end of left side to end of right side
+        end_right_y, end_right_z = _seg_end(right_segs[-1])
+        result.append(ShapeCommand("lineTo", y=end_right_y, z=end_right_z))
+
+        # Backward along the right side (reversed)
+        reversed_right = [_reverse_seg(s) for s in reversed(right_segs)]
+        pen = (end_right_y, end_right_z)
+        for seg in reversed_right:
+            pen = _append_seg(result, seg, pen)
+
+        # Start cap: closePath returns to the first moveTo point
+        result.append(ShapeCommand("closePath"))
+
+        return result
+
     def plot(self, show_nodes: bool = True):
         """
         Plots the shape on the yz plane, with y as the horizontal axis and z as the vertical axis.
