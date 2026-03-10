@@ -18,7 +18,7 @@ from tests.common_functions import (
 )
 
 # Strong-axis second moment used by your helpers (about local z for vertical loading)
-SECOND_MOMENT_STRONG_AXIS_IN_M4 = 10.63e-6
+SECOND_MOMENT_STRONG_AXIS_IN_M4 = 13.21e-6
 
 
 def test_041_rigid_member_end_load():

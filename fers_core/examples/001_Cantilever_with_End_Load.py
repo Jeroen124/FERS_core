@@ -20,7 +20,7 @@ Steel_S235 = Material(name="Steel", e_mod=210e9, g_mod=80.769e9, density=7850, y
 
 # Define the beam cross-section (IPE 180)
 section = Section(
-    name="IPE 180 Beam Section", material=Steel_S235, i_y=0.819e-6, i_z=10.63e-6, j=0.027e-6, area=0.00196
+    name="IPE 180 Beam Section", material=Steel_S235, i_y=1.01e-6, i_z=13.21e-6, j=0.027e-6, area=0.00196
 )
 
 # Create the beam element
@@ -71,7 +71,7 @@ Mz_fers = results.reaction_nodes["1"].nodal_forces.mz
 F = 1000  # Force in Newtons
 L = 5  # Length of the beam in meters
 E = 210e9  # Modulus of elasticity in Pascals
-I = 10.63e-6  # Moment of inertia in m^4
+I = 13.21e-6  # Moment of inertia in m^4
 x = L  # Distance to the free end for max deflection and slope
 
 # Calculate analytical solutions for deflection and moment

@@ -32,7 +32,7 @@ from tests.common_functions import (
 )
 
 # Constant used for analytical formulas (strong axis inertia in your examples)
-SECOND_MOMENT_STRONG_AXIS_IN_M4 = 10.63e-6
+SECOND_MOMENT_STRONG_AXIS_IN_M4 = 13.21e-6
 
 # 001_Cantilever_with_End_Load -------------------------------------------------
 

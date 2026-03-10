@@ -73,7 +73,7 @@ Mz_fers = result_loadcase.reaction_nodes["1"].nodal_forces.mz  # Reaction moment
 F = 1000  # Force in Newtons
 L = 5  # Length of the beam in meters
 E = 210e9  # Modulus of elasticity in Pascals
-I = 10.63e-6  # Moment of inertia in m^4
+I = 13.21e-6  # Moment of inertia in m^4
 x = L  # Distance to the free end for max deflection and slope
 
 # Calculate analytical solutions for deflection and moment
