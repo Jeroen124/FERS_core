@@ -1,7 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import field
-from typing import Dict, Any
+from typing import Dict, Any, List, Tuple, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import numpy as np
+    import pyvista as pv
 
 # -------------------------------
 # Leaf data classes
@@ -15,6 +19,7 @@ class NodeDisplacement:
     rx: float = 0.0
     ry: float = 0.0
     rz: float = 0.0
+    warp: float = 0.0
 
     @classmethod
     def from_pydantic(cls, source) -> "NodeDisplacement":
@@ -25,6 +30,7 @@ class NodeDisplacement:
         instance.rx = float(getattr(source, "rx", 0.0))
         instance.ry = float(getattr(source, "ry", 0.0))
         instance.rz = float(getattr(source, "rz", 0.0))
+        instance.warp = float(getattr(source, "warp", 0.0))
         return instance
 
     def to_dict(self) -> Dict[str, float]:
@@ -35,7 +41,45 @@ class NodeDisplacement:
             "rx": self.rx,
             "ry": self.ry,
             "rz": self.rz,
+            "warp": self.warp,
         }
+
+    def as_translation(self) -> "np.ndarray":
+        """Return the translational displacement as a 3-element numpy array."""
+        import numpy as _np
+
+        return _np.array([self.dx, self.dy, self.dz], dtype=float)
+
+    def as_rotation(self) -> "np.ndarray":
+        """Return the rotational displacement as a 3-element numpy array."""
+        import numpy as _np
+
+        return _np.array([self.rx, self.ry, self.rz], dtype=float)
+
+    def render_displaced_node(
+        self,
+        original_position: "np.ndarray",
+        scale: float = 1.0,
+        annotation_size: float = 1.0,
+    ) -> List[Tuple["pv.PolyData", str]]:
+        """Render the displaced node position as PyVista meshes.
+
+        Args:
+            original_position: Original [X, Y, Z] position of the node.
+            scale: Displacement scale factor.
+            annotation_size: Size reference for node markers.
+
+        Returns:
+            List of (mesh, color) tuples for rendering.
+        """
+        import pyvista as _pv
+
+        displaced_pos = original_position + self.as_translation() * scale
+        sphere = _pv.Sphere(
+            center=tuple(displaced_pos),
+            radius=0.2 * annotation_size,
+        )
+        return [(sphere, "red")]
 
 
 class NodeForces:
@@ -45,6 +89,7 @@ class NodeForces:
     mx: float = 0.0
     my: float = 0.0
     mz: float = 0.0
+    bw: float = 0.0
 
     @classmethod
     def from_pydantic(cls, pyd_object: Any) -> "NodeForces":
@@ -55,6 +100,7 @@ class NodeForces:
         instance.mx = float(getattr(pyd_object, "mx", 0.0))
         instance.my = float(getattr(pyd_object, "my", 0.0))
         instance.mz = float(getattr(pyd_object, "mz", 0.0))
+        instance.bw = float(getattr(pyd_object, "bw", 0.0))
         return instance
 
     def to_dict(self) -> Dict[str, float]:
@@ -65,7 +111,72 @@ class NodeForces:
             "mx": self.mx,
             "my": self.my,
             "mz": self.mz,
+            "bw": self.bw,
         }
+
+    def get_value(self, component: str) -> float:
+        """Return a single force/moment component by name.
+
+        Args:
+            component: One of 'N'/'fx', 'Vy'/'fy', 'Vz'/'fz',
+                       'T'/'mx', 'My'/'my', 'Mz'/'mz', 'bw'/'bimoment'.
+
+        Returns:
+            The scalar value for the requested component.
+        """
+        mapping = {
+            "n": self.fx,
+            "fx": self.fx,
+            "vy": self.fy,
+            "fy": self.fy,
+            "vz": self.fz,
+            "fz": self.fz,
+            "t": self.mx,
+            "mx": self.mx,
+            "my": self.my,
+            "mz": self.mz,
+            "bw": self.bw,
+            "bimoment": self.bw,
+        }
+        key = component.lower()
+        if key not in mapping:
+            raise ValueError(f"Unknown force component '{component}'. Valid: {list(mapping.keys())}")
+        return mapping[key]
+
+
+class SectionForce:
+    x_frac: float = 0.0
+    forces: "NodeForces" = None
+
+    def __init__(self):
+        self.x_frac = 0.0
+        self.forces = NodeForces()
+
+    @classmethod
+    def from_pydantic(cls, source) -> "SectionForce":
+        instance = cls()
+        instance.x_frac = float(getattr(source, "x_frac", 0.0))
+        forces_raw = getattr(source, "forces", None)
+        instance.forces = NodeForces.from_pydantic(forces_raw) if forces_raw is not None else NodeForces()
+        return instance
+
+    @classmethod
+    def from_dict(cls, d: dict) -> "SectionForce":
+        instance = cls()
+        instance.x_frac = float(d.get("x_frac", 0.0))
+        forces_raw = d.get("forces", {})
+
+        class _N:
+            pass
+
+        n = _N()
+        for k, v in forces_raw.items():
+            setattr(n, k, v)
+        instance.forces = NodeForces.from_pydantic(n)
+        return instance
+
+    def to_dict(self) -> dict:
+        return {"x_frac": self.x_frac, "forces": self.forces.to_dict()}
 
 
 class NodeLocation:
@@ -104,3 +215,48 @@ class ReactionNodeResult:
             "nodal_forces": self.nodal_forces.to_dict(),
             "support_id": self.support_id,
         }
+
+    def render_reaction(
+        self,
+        position: "np.ndarray",
+        max_force_magnitude: float,
+        arrow_scale: float = 1.0,
+        show_label: bool = False,
+    ) -> List[Tuple["pv.PolyData", str]]:
+        """Render reaction force arrows as PyVista meshes.
+
+        Args:
+            position: [X, Y, Z] position of the reaction node.
+            max_force_magnitude: Maximum reaction force magnitude across all
+                reaction nodes (used for relative scaling).
+            arrow_scale: Base arrow length.
+            show_label: Whether to include a text label (not rendered
+                directly, returned as metadata).
+
+        Returns:
+            List of (mesh, color) tuples for rendering.
+        """
+        import numpy as _np
+        import pyvista as _pv
+
+        fv = _np.array(
+            [self.nodal_forces.fx, self.nodal_forces.fy, self.nodal_forces.fz],
+            dtype=float,
+        )
+        mag = float(_np.linalg.norm(fv))
+        if mag <= 0.0 or max_force_magnitude <= 0.0:
+            return []
+
+        direction = fv / mag
+        rel = mag / max_force_magnitude
+        length = arrow_scale * max(rel, 0.1)
+        arrow_vec = direction * length
+
+        meshes: List[Tuple["_pv.PolyData", str]] = []
+        arrow = _pv.Arrow(
+            start=tuple(position),
+            direction=tuple(arrow_vec),
+            scale="auto",
+        )
+        meshes.append((arrow, "magenta"))
+        return meshes

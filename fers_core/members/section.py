@@ -1,7 +1,15 @@
 from typing import Optional
 from ..members.material import Material
 from ..members.shapepath import ShapePath
-from sectionproperties.pre.library.steel_sections import i_section, channel_section, circular_hollow_section
+from sectionproperties.pre.library.steel_sections import (
+    i_section,
+    channel_section,
+    circular_hollow_section,
+    rectangular_hollow_section,
+    angle_section,
+    cee_section,
+    zed_section,
+)
 from sectionproperties.analysis.section import Section as SP_section
 
 import matplotlib.pyplot as plt
@@ -22,6 +30,12 @@ class Section:
         b: Optional[float] = None,
         id: Optional[int] = None,
         shape_path: Optional[ShapePath] = None,
+        i_w: Optional[float] = None,
+        y_s: Optional[float] = None,
+        z_s: Optional[float] = None,
+        wagner_coeff: Optional[float] = None,
+        a_sy: Optional[float] = None,
+        a_sz: Optional[float] = None,
     ):
         """
         Initializes a Section object representing a structural element.
@@ -35,8 +49,12 @@ class Section:
         area (float): Cross-sectional area of the section, relevant for load calculations.
         h (float, optional): Height of the section, if applicable.
         b (float, optional): Width of the section, if applicable.
-        t_w (float, optional): Thickness of the web, if applicable (default is None).
-        t_f (float, optional): Thickness of the flange, if applicable (default is None).
+        i_w (float, optional): Warping constant (m^6), for thin-walled open sections.
+        y_s (float, optional): Shear center Y-coordinate relative to centroid (m).
+        z_s (float, optional): Shear center Z-coordinate relative to centroid (m).
+        wagner_coeff (float, optional): Wagner coefficient for lateral-torsional buckling.
+        a_sy (float, optional): Effective shear area in Y-direction (m^2) for Timoshenko beam.
+        a_sz (float, optional): Effective shear area in Z-direction (m^2) for Timoshenko beam.
         """
         self.id = id or Section._section_counter
         if id is None:
@@ -50,13 +68,58 @@ class Section:
         self.j = j
         self.area = area
         self.shape_path = shape_path
+        self.i_w = i_w
+        self.y_s = y_s
+        self.z_s = z_s
+        self.wagner_coeff = wagner_coeff
+        self.a_sy = a_sy
+        self.a_sz = a_sz
 
     @classmethod
     def reset_counter(cls):
         cls._section_counter = 1
 
+    @staticmethod
+    def _extract_advanced_props(analysis_section) -> dict:
+        """Extract warping and shear properties from a sectionproperties analysis section.
+
+        Returns a dict with keys: i_w, y_s, z_s, wagner_coeff, a_sy, a_sz.
+        Any property that cannot be computed returns None.
+        """
+        props = {}
+        sp = analysis_section.section_props
+        try:
+            props["i_w"] = float(sp.gamma)
+        except (AttributeError, TypeError):
+            props["i_w"] = None
+        try:
+            props["y_s"] = float(sp.x_se)
+            props["z_s"] = float(sp.y_se)
+        except (AttributeError, TypeError):
+            props["y_s"] = None
+            props["z_s"] = None
+        # Wagner coefficient: polar radius of gyration about shear center squared
+        # ip_s² = (Iy + Iz)/A + ys² + zs²
+        try:
+            iy = float(sp.iyy_c)
+            iz = float(sp.ixx_c)
+            area = float(sp.area)
+            ys = props["y_s"] or 0.0
+            zs = props["z_s"] or 0.0
+            props["wagner_coeff"] = (iy + iz) / area + ys**2 + zs**2
+        except (AttributeError, TypeError, ZeroDivisionError):
+            props["wagner_coeff"] = None
+        try:
+            as_tuple = analysis_section.get_as()
+            props["a_sy"] = float(as_tuple[0])
+            props["a_sz"] = float(as_tuple[1])
+        except (AttributeError, TypeError, IndexError):
+            props["a_sy"] = None
+            props["a_sz"] = None
+        return props
+
     def to_dict(self):
-        return {
+        d = {
             "id": self.id,
             "name": self.name,
             "material": self.material.id,
@@ -68,6 +131,19 @@ class Section:
             "area": self.area,
             "shape_path": self.shape_path.id if self.shape_path else None,
         }
+        if self.i_w is not None:
+            d["i_w"] = self.i_w
+        if self.y_s is not None:
+            d["y_s"] = self.y_s
+        if self.z_s is not None:
+            d["z_s"] = self.z_s
+        if self.wagner_coeff is not None:
+            d["wagner_coeff"] = self.wagner_coeff
+        if self.a_sy is not None:
+            d["a_sy"] = self.a_sy
+        if self.a_sz is not None:
+            d["a_sz"] = self.a_sz
+        return d
 
     @classmethod
     def from_dict(
@@ -93,6 +169,12 @@ class Section:
             j=data["j"],
             area=data["area"],
             shape_path=shape_path,
+            i_w=data.get("i_w"),
+            y_s=data.get("y_s"),
+            z_s=data.get("z_s"),
+            wagner_coeff=data.get("wagner_coeff"),
+            a_sy=data.get("a_sy"),
+            a_sz=data.get("a_sz"),
         )
 
     @staticmethod
@@ -129,6 +211,7 @@ class Section:
         analysis_section = SP_section(ipe_geometry, time_info=False)
         analysis_section.calculate_geometric_properties()
         analysis_section.calculate_warping_properties()
+        adv = Section._extract_advanced_props(analysis_section)
 
         return Section(
             name=name,
@@ -140,6 +223,7 @@ class Section:
             h=h,
             b=b,
             shape_path=shape_path,
+            **adv,
         )
 
     @staticmethod
@@ -184,6 +268,7 @@ class Section:
         analysis_section = SP_section(u_geometry, time_info=False)
         analysis_section.calculate_geometric_properties()
         analysis_section.calculate_warping_properties()
+        adv = Section._extract_advanced_props(analysis_section)
 
         return Section(
             name=name,
@@ -195,6 +280,7 @@ class Section:
             h=h,
             b=b,
             shape_path=shape_path,
+            **adv,
         )
 
     @staticmethod
@@ -236,6 +322,7 @@ class Section:
         analysis_section = SP_section(chs_geometry, time_info=False)
         analysis_section.calculate_geometric_properties()
         analysis_section.calculate_warping_properties()
+        adv = Section._extract_advanced_props(analysis_section)
 
         return Section(
             name=name,
@@ -247,6 +334,7 @@ class Section:
             h=float(diameter),
             b=float(diameter),
             shape_path=shape_path,
+            **adv,
         )
 
     @staticmethod
@@ -301,6 +389,7 @@ class Section:
         analysis_section = SP_section(he_geometry, time_info=False)
         analysis_section.calculate_geometric_properties()
         analysis_section.calculate_warping_properties()
+        adv = Section._extract_advanced_props(analysis_section)
 
         return Section(
             name=name,
@@ -312,6 +401,7 @@ class Section:
             h=h,
             b=b,
             shape_path=shape_path,
+            **adv,
         )
 
     def plot(self, show_nodes: bool = True):
@@ -332,3 +422,377 @@ class Section:
             plt.title(f"Section: {self.name}")
             plt.axis("off")
             plt.show()
+
+    @staticmethod
+    def create_rhs(
+        name: str,
+        material: Material,
+        h: float,
+        b: float,
+        t: float,
+        r_out: float = 0.0,
+    ) -> "Section":
+        """
+        Create a Rectangular Hollow Section (RHS). Also suitable for SHS when h == b.
+
+        Parameters:
+            name: Name of the section (e.g., "RHS 200x100x6").
+            material: Material used for the section.
+            h: Total height.
+            b: Total width.
+            t: Wall thickness.
+            r_out: Outer corner radius (0 for sharp corners).
+
+        Returns:
+            Section: A Section object representing the RHS profile.
+        """
+        shape_commands = ShapePath.create_rhs_profile(h=h, b=b, t=t, r_out=r_out)
+        shape_path = ShapePath(name=name, shape_commands=shape_commands)
+
+        rhs_geometry = rectangular_hollow_section(
+            d=h,
+            b=b,
+            t=t,
+            r_out=r_out,
+            n_r=16,
+        ).shift_section(x_offset=-b / 2.0, y_offset=-h / 2.0)
+        rhs_geometry.create_mesh(mesh_sizes=[max(b, h) / 1000.0])
+
+        analysis_section = SP_section(rhs_geometry, time_info=False)
+        analysis_section.calculate_geometric_properties()
+        analysis_section.calculate_warping_properties()
+        adv = Section._extract_advanced_props(analysis_section)
+
+        return Section(
+            name=name,
+            material=material,
+            i_y=float(analysis_section.section_props.iyy_c),
+            i_z=float(analysis_section.section_props.ixx_c),
+            j=float(analysis_section.get_j()),
+            area=float(analysis_section.section_props.area),
+            h=h,
+            b=b,
+            shape_path=shape_path,
+            **adv,
+        )
+
+    @staticmethod
+    def create_shs(
+        name: str,
+        material: Material,
+        b: float,
+        t: float,
+        r_out: float = 0.0,
+    ) -> "Section":
+        """
+        Create a Square Hollow Section (SHS). Convenience wrapper around create_rhs.
+
+        Parameters:
+            name: Name of the section (e.g., "SHS 100x100x6").
+            material: Material used for the section.
+            b: Side length.
+            t: Wall thickness.
+            r_out: Outer corner radius.
+
+        Returns:
+            Section: A Section object representing the SHS profile.
+        """
+        return Section.create_rhs(name=name, material=material, h=b, b=b, t=t, r_out=r_out)
+
+    @staticmethod
+    def create_angle_section(
+        name: str,
+        material: Material,
+        h: float,
+        b: float,
+        t: float,
+        r_root: float = 0.0,
+        r_toe: float = 0.0,
+    ) -> "Section":
+        """
+        Create an angle (L) section.
+
+        Parameters:
+            name: Name of the section (e.g., "L 100x100x10").
+            material: Material used for the section.
+            h: Height of the vertical leg.
+            b: Width of the horizontal leg.
+            t: Uniform thickness.
+            r_root: Root radius at the inner corner.
+            r_toe: Toe radius at tips.
+
+        Returns:
+            Section: A Section object representing the angle profile.
+        """
+        shape_commands = ShapePath.create_angle_profile(
+            h=h,
+            b=b,
+            t=t,
+            r_root=r_root,
+            r_toe=r_toe,
+        )
+        shape_path = ShapePath(name=name, shape_commands=shape_commands)
+
+        # sectionproperties places the angle with bottom-left at origin;
+        # we shift to center on centroid.
+        angle_geometry = angle_section(
+            d=h,
+            b=b,
+            t=t,
+            r_r=r_root,
+            r_t=r_toe,
+            n_r=16,
+        )
+        # Compute centroid first, then shift
+        angle_geometry.create_mesh(mesh_sizes=[max(h, b) / 1000.0])
+        analysis_section = SP_section(angle_geometry, time_info=False)
+        analysis_section.calculate_geometric_properties()
+        analysis_section.calculate_warping_properties()
+        adv = Section._extract_advanced_props(analysis_section)
+
+        return Section(
+            name=name,
+            material=material,
+            i_y=float(analysis_section.section_props.iyy_c),
+            i_z=float(analysis_section.section_props.ixx_c),
+            j=float(analysis_section.get_j()),
+            area=float(analysis_section.section_props.area),
+            h=h,
+            b=b,
+            shape_path=shape_path,
+            **adv,
+        )
+
+    @staticmethod
+    def create_welded_i_section(
+        name: str,
+        material: Material,
+        h: float,
+        b: float,
+        t_f: float,
+        t_w: float,
+    ) -> "Section":
+        """
+        Create a welded I-section (no root radius). Built from plates.
+
+        Parameters:
+            name: Name of the section (e.g., "Welded I 500x200x10x16").
+            material: Material used for the section.
+            h: Total height.
+            b: Flange width.
+            t_f: Flange thickness.
+            t_w: Web thickness.
+
+        Returns:
+            Section: A Section object representing the welded I profile.
+        """
+        shape_commands = ShapePath.create_welded_i_profile(
+            h=h,
+            b=b,
+            t_f=t_f,
+            t_w=t_w,
+        )
+        shape_path = ShapePath(name=name, shape_commands=shape_commands)
+
+        welded_geometry = i_section(
+            d=h,
+            b=b,
+            t_f=t_f,
+            t_w=t_w,
+            r=0.0,
+            n_r=1,
+        ).shift_section(x_offset=-b / 2.0, y_offset=-h / 2.0)
+        welded_geometry.create_mesh(mesh_sizes=[b / 1000.0])
+
+        analysis_section = SP_section(welded_geometry, time_info=False)
+        analysis_section.calculate_geometric_properties()
+        analysis_section.calculate_warping_properties()
+        adv = Section._extract_advanced_props(analysis_section)
+
+        return Section(
+            name=name,
+            material=material,
+            i_y=float(analysis_section.section_props.iyy_c),
+            i_z=float(analysis_section.section_props.ixx_c),
+            j=float(analysis_section.get_j()),
+            area=float(analysis_section.section_props.area),
+            h=h,
+            b=b,
+            shape_path=shape_path,
+            **adv,
+        )
+
+    @staticmethod
+    def create_cfs_c(
+        name: str,
+        material: Material,
+        h: float,
+        b: float,
+        lip: float,
+        t: float,
+        r_out: float = 0.0,
+    ) -> "Section":
+        """
+        Create a cold-formed steel C-section (lipped channel).
+
+        Parameters:
+            name: Name of the section (e.g., "C 200x75x20x2.0").
+            material: Material used for the section.
+            h: Total depth.
+            b: Flange width.
+            lip: Lip length (0 for unlipped).
+            t: Wall thickness.
+            r_out: Outer bend radius.
+
+        Returns:
+            Section: A Section object representing the cold-formed C profile.
+        """
+        shape_commands = ShapePath.create_cfs_c_profile(
+            h=h,
+            b=b,
+            lip=lip,
+            t=t,
+            r_out=r_out,
+        )
+        shape_path = ShapePath(name=name, shape_commands=shape_commands)
+
+        cfs_geometry = cee_section(
+            d=h,
+            b=b,
+            l=lip,
+            t=t,
+            r_out=r_out,
+            n_r=16,
+        ).shift_section(x_offset=-b / 2.0, y_offset=-h / 2.0)
+        cfs_geometry.create_mesh(mesh_sizes=[max(h, b) / 1000.0])
+
+        analysis_section = SP_section(cfs_geometry, time_info=False)
+        analysis_section.calculate_geometric_properties()
+        analysis_section.calculate_warping_properties()
+        adv = Section._extract_advanced_props(analysis_section)
+
+        return Section(
+            name=name,
+            material=material,
+            i_y=float(analysis_section.section_props.iyy_c),
+            i_z=float(analysis_section.section_props.ixx_c),
+            j=float(analysis_section.get_j()),
+            area=float(analysis_section.section_props.area),
+            h=h,
+            b=b,
+            shape_path=shape_path,
+            **adv,
+        )
+
+    @staticmethod
+    def create_cfs_z(
+        name: str,
+        material: Material,
+        h: float,
+        b_top: float,
+        b_bot: float,
+        lip: float,
+        t: float,
+        r_out: float = 0.0,
+    ) -> "Section":
+        """
+        Create a cold-formed steel Z-section (lipped zed).
+
+        Parameters:
+            name: Name of the section (e.g., "Z 200x75x75x20x2.0").
+            material: Material used for the section.
+            h: Total depth.
+            b_top: Top flange width.
+            b_bot: Bottom flange width.
+            lip: Lip length (0 for unlipped).
+            t: Wall thickness.
+            r_out: Outer bend radius.
+
+        Returns:
+            Section: A Section object representing the cold-formed Z profile.
+        """
+        shape_commands = ShapePath.create_cfs_z_profile(
+            h=h,
+            b_top=b_top,
+            b_bot=b_bot,
+            lip=lip,
+            t=t,
+            r_out=r_out,
+        )
+        shape_path = ShapePath(name=name, shape_commands=shape_commands)
+
+        zed_geometry = zed_section(
+            d=h,
+            b_l=b_bot,
+            b_r=b_top,
+            l=lip,
+            t=t,
+            r_out=r_out,
+            n_r=16,
+        ).shift_section(x_offset=-max(b_top, b_bot) / 2.0, y_offset=-h / 2.0)
+        zed_geometry.create_mesh(mesh_sizes=[max(h, b_top, b_bot) / 1000.0])
+
+        analysis_section = SP_section(zed_geometry, time_info=False)
+        analysis_section.calculate_geometric_properties()
+        analysis_section.calculate_warping_properties()
+        adv = Section._extract_advanced_props(analysis_section)
+
+        return Section(
+            name=name,
+            material=material,
+            i_y=float(analysis_section.section_props.iyy_c),
+            i_z=float(analysis_section.section_props.ixx_c),
+            j=float(analysis_section.get_j()),
+            area=float(analysis_section.section_props.area),
+            h=h,
+            b=max(b_top, b_bot),
+            shape_path=shape_path,
+            **adv,
+        )
+
+    @staticmethod
+    def from_name(name: str, material: Material) -> "Section":
+        """
+        Create a standard section by name from the built-in library.
+
+        Supports European steel profiles per EN 10365 and common hollow sections.
+
+        Examples:
+            Section.from_name("IPE200", steel)
+            Section.from_name("HEA160", steel)
+            Section.from_name("HEB300", steel)
+            Section.from_name("RHS 200x100x6", steel)
+            Section.from_name("SHS 100x100x6", steel)
+            Section.from_name("L 100x100x10", steel)
+            Section.from_name("CHS 168.3x5", steel)
+            Section.from_name("UPE200", steel)
+
+        Parameters:
+            name: Standard section designation.
+            material: Material object.
+
+        Returns:
+            Section: Fully constructed section with geometry and properties.
+
+        Raises:
+            ValueError: If the profile name is not found in the library.
+        """
+        from ..sections.steel_sections_en import resolve_section
+
+        return resolve_section(name, material)
+
+    @staticmethod
+    def list_available(series: Optional[str] = None) -> list:
+        """
+        List available section names in the built-in library.
+
+        Parameters:
+            series: Optional filter, e.g. "IPE", "HEA", "RHS", "SHS", "L", "CHS", "UPE".
+                    If None, returns all available sections.
+
+        Returns:
+            List of section name strings.
+        """
+        from ..sections.steel_sections_en import list_sections
+
+        return list_sections(series)

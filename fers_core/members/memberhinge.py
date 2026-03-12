@@ -11,12 +11,14 @@ class MemberHinge:
         rotational_release_mx: float = None,
         rotational_release_my: float = None,
         rotational_release_mz: float = None,
+        rotational_release_warp: float = None,
         max_tension_vx: float = None,
         max_tension_vy: float = None,
         max_tension_vz: float = None,
         max_moment_mx: float = None,
         max_moment_my: float = None,
         max_moment_mz: float = None,
+        max_bimoment_warp: float = None,
     ):
         """
         Initialize a new Member Hinge instance with optional parameters for
@@ -52,12 +54,14 @@ class MemberHinge:
         self.rotational_release_mx = rotational_release_mx
         self.rotational_release_my = rotational_release_my
         self.rotational_release_mz = rotational_release_mz
+        self.rotational_release_warp = rotational_release_warp
         self.max_tension_vx = max_tension_vx
         self.max_tension_vy = max_tension_vy
         self.max_tension_vz = max_tension_vz
         self.max_moment_mx = max_moment_mx
         self.max_moment_my = max_moment_my
         self.max_moment_mz = max_moment_mz
+        self.max_bimoment_warp = max_bimoment_warp
 
     @classmethod
     def reset_counter(cls):
@@ -73,12 +77,14 @@ class MemberHinge:
             "rotational_release_mx": self.rotational_release_mx,
             "rotational_release_my": self.rotational_release_my,
             "rotational_release_mz": self.rotational_release_mz,
+            "rotational_release_warp": self.rotational_release_warp,
             "max_tension_vx": self.max_tension_vx,
             "max_tension_vy": self.max_tension_vy,
             "max_tension_vz": self.max_tension_vz,
             "max_moment_mx": self.max_moment_mx,
             "max_moment_my": self.max_moment_my,
             "max_moment_mz": self.max_moment_mz,
+            "max_bimoment_warp": self.max_bimoment_warp,
         }
 
     @classmethod
@@ -92,10 +98,12 @@ class MemberHinge:
             rotational_release_mx=data.get("rotational_release_mx"),
             rotational_release_my=data.get("rotational_release_my"),
             rotational_release_mz=data.get("rotational_release_mz"),
+            rotational_release_warp=data.get("rotational_release_warp"),
             max_tension_vx=data.get("max_tension_vx"),
             max_tension_vy=data.get("max_tension_vy"),
             max_tension_vz=data.get("max_tension_vz"),
             max_moment_mx=data.get("max_moment_mx"),
             max_moment_my=data.get("max_moment_my"),
             max_moment_mz=data.get("max_moment_mz"),
+            max_bimoment_warp=data.get("max_bimoment_warp"),
         )

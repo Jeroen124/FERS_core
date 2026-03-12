@@ -22,9 +22,9 @@ calculation_1 = FERS()
 
 # Create nodes
 node1 = Node(0, 0, 0)  # Fixed end
-node2 = Node(5, 0, 0)  # Free end
+node2 = Node(5, 0, 0)  # Fixed end
 node3 = Node(5, 5, 0)  # Free end
-node4 = Node(5, 5, -1)  # Free end
+node4 = Node(5, 5, -1)  # Fixed end
 
 # Create material
 Steel_S235 = Material(name="Steel", e_mod=210e9, g_mod=80.769e9, density=7850, yield_stress=235e6)
@@ -32,7 +32,7 @@ Steel_S235 = Material(name="Steel", e_mod=210e9, g_mod=80.769e9, density=7850, y
 # Create a section
 # For example IPE 180: https://eurocodeapplied.com/design/en1993/ipe-hea-heb-hem-design-properties
 section = Section(
-    name="IPE 180 Beam Section", material=Steel_S235, i_z=10.63e-6, i_y=0.819e-6, j=0.027e-6, area=0.00196
+    name="IPE 180 Beam Section", material=Steel_S235, i_z=13.21e-6, i_y=1.01e-6, j=0.027e-6, area=0.00196
 )
 
 # Create member

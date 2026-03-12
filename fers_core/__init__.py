@@ -2,6 +2,7 @@ from .nodes.node import Node
 from .members.member import Member
 from .fers.fers import FERS
 from .members.material import Material
+from .members.material_library import MaterialLibrary
 from .members.section import Section
 from .members.shapepath import ShapePath
 from .members.memberset import MemberSet
@@ -20,6 +21,12 @@ from .supports.supportcondition import SupportConditionType
 from .settings.anlysis_options import AnalysisOrder, Dimensionality, RigidStrategy
 from .members.memberhinge import MemberHinge
 from .results.resultsbundle import ResultsBundle
+from .results.singleresults import SingleResults
+from .results.member import MemberResult
+from .results.nodes import NodeDisplacement, NodeForces, ReactionNodeResult
+from .visualization import ModelRenderer, ResultRenderer
+from .cloud import FersCloudClient
+from .sections.steel_sections_en import resolve_section, list_sections
 
 __all__ = [
     "AnalysisOrder",
@@ -27,22 +34,33 @@ __all__ = [
     "DistributedLoad",
     "DistributionShape",
     "FERS",
+    "FersCloudClient",
     "ImperfectionCase",
     "LoadCase",
     "LoadCombination",
     "Material",
+    "MaterialLibrary",
     "Member",
     "MemberHinge",
+    "MemberResult",
     "MemberSet",
+    "ModelRenderer",
     "Node",
+    "NodeDisplacement",
+    "NodeForces",
     "NodalLoad",
     "NodalMoment",
     "NodalSupport",
+    "ReactionNodeResult",
+    "ResultRenderer",
+    "ResultsBundle",
     "RigidStrategy",
     "RotationImperfection",
-    "ResultsBundle",
     "Section",
+    "list_sections",
+    "resolve_section",
     "ShapePath",
+    "SingleResults",
     "SupportCondition",
     "SupportConditionType",
     "TranslationImperfection",

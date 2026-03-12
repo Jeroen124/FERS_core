@@ -1,4 +1,4 @@
-from typing import Any, Iterable
+from typing import Any, Iterable, Optional
 from fers_core.loads.enums import LimitState
 from .loadcase import LoadCase
 
@@ -10,6 +10,7 @@ class LoadCombination:
     def __init__(
         self,
         name: str = "Load Combination",
+        id: Optional[int] = None,
         load_cases_factors: dict = None,
         situation: str = None,
         check: str = "ALL",
@@ -24,8 +25,9 @@ class LoadCombination:
             situation (str, optional): A description of the situation for this load combination.
             check (str, optional): A parameter to determine the type of checks to perform, defaulting to 'ALL'.
         """  # noqa: E501
-        self.id = LoadCombination._load_combination_counter
-        LoadCombination._load_combination_counter += 1
+        self.id = id or LoadCombination._load_combination_counter
+        if id is None:
+            LoadCombination._load_combination_counter += 1
         self.name = name
         self.load_cases_factors = load_cases_factors or {}
         self.situation = situation
@@ -155,11 +157,15 @@ class LoadCombination:
             limit_state = cls._parse_limit_state(data["limit_state"])
 
         obj = cls(
-            id=data.get("id"),
             name=data.get("name", f"Load Combination {data.get('id', '')}"),
             load_cases_factors=load_cases_factors,
             situation=data.get("situation"),
             check=data.get("check", "ALL"),
             limit_state=limit_state,
         )
+
+        # Restore the original id if present in the data
+        if "id" in data:
+            obj.id = data["id"]
+
         return obj

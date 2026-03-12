@@ -149,7 +149,9 @@
             "dimensionality": "3D",
             "order": "Nonlinear",
             "rigid_strategy": "Rigid_Member",
-            "axial_slack": 500
+            "axial_slack": 500,
+            "include_shear_deformation": true,
+            "include_warping": true
         },
         "unit_settings": {
             "system": "metric",
@@ -184,8 +186,8 @@
             "material": 1,
             "h": null,
             "b": null,
-            "i_y": 8.19e-7,
-            "i_z": 1.063e-5,
+            "i_y": 1.01e-6,
+            "i_z": 1.321e-5,
             "j": 2.7e-8,
             "area": 0.00196,
             "shape_path": null
@@ -222,7 +224,8 @@
                     "condition_type": "Free",
                     "stiffness": null
                 }
-            }
+            },
+            "warping_condition": null
         }
     ],
     "shape_paths": [],

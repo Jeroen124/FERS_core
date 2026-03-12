@@ -34,6 +34,8 @@ class RotationImperfection:
             "memberset": [ms.id for ms in self.memberset],
             "magnitude": self.magnitude,
             "axis": [self.axis[0], self.axis[1], self.axis[2]],
+            "axis_only": self.axis_only,
+            "point": [self.point[0], self.point[1], self.point[2]],
         }
 
     @classmethod
@@ -63,7 +65,7 @@ class RotationImperfection:
 
         # Resolve member sets
         ms_ids = _as_list(
-            data.get("memberset") or data.get("membersets"),
+            data.get("memberset") or data.get("membersets") or data.get("memberset_ids"),
             "memberset",
         )
         if not ms_ids:

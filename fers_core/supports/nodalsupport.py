@@ -17,12 +17,14 @@ class NodalSupport:
         classification: Optional[str] = None,
         displacement_conditions: Optional[Dict[str, Union[SupportCondition, int, float, str]]] = None,
         rotation_conditions: Optional[Dict[str, Union[SupportCondition, int, float, str]]] = None,
+        warping_condition: Optional[SupportCondition] = None,
     ):
         self.id = id if id is not None else NodalSupport.id
         if id is None:
             NodalSupport.id += 1
 
         self.classification = classification
+        self.warping_condition = warping_condition
 
         # Defaults to FIXED in all directions if not provided
         if displacement_conditions is None:
@@ -129,6 +131,9 @@ class NodalSupport:
                 direction: condition.to_exchange_dict()
                 for direction, condition in self.rotation_conditions.items()
             },
+            "warping_condition": self.warping_condition.to_exchange_dict()
+            if self.warping_condition
+            else None,
         }
 
     def to_dict(self) -> dict:
@@ -142,6 +147,7 @@ class NodalSupport:
             "rotation_conditions": {
                 direction: condition.to_dict() for direction, condition in self.rotation_conditions.items()
             },
+            "warping_condition": self.warping_condition.to_dict() if self.warping_condition else None,
         }
 
     @classmethod
@@ -160,11 +166,15 @@ class NodalSupport:
         displacement_conditions = decode_conditions(data.get("displacement_conditions"))
         rotation_conditions = decode_conditions(data.get("rotation_conditions"))
 
+        warping_raw = data.get("warping_condition")
+        warping_condition = SupportCondition.from_dict(warping_raw) if warping_raw else None
+
         return cls(
             id=data.get("id"),
             classification=data.get("classification"),
             displacement_conditions=displacement_conditions,
             rotation_conditions=rotation_conditions,
+            warping_condition=warping_condition,
         )
 
     def __repr__(self) -> str:

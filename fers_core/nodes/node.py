@@ -1,5 +1,8 @@
-from typing import List, Optional
+from typing import List, Optional, Tuple, TYPE_CHECKING
 from ..supports.nodalsupport import NodalSupport
+
+if TYPE_CHECKING:
+    import pyvista as pv
 
 
 class Node:
@@ -126,3 +129,32 @@ class Node:
             nodes_by_id.setdefault(node.id, node)
 
         return node
+
+    def render(self, annotation_size: float = 1.0, theme: str = "default") -> List[Tuple["pv.PolyData", str]]:
+        """Render the node as PyVista meshes.
+
+        This method returns a list of (mesh, color) tuples that represent
+        the visual representation of this node.
+
+        Args:
+            annotation_size: Size for the node marker
+            theme: Color theme ('default', 'dark', etc.)
+
+        Returns:
+            List of (mesh, color) tuples for rendering
+        """
+        import pyvista as pv
+
+        meshes = []
+
+        # Determine node color based on theme and classification
+        if theme == "dark":
+            node_color = "white"
+        else:
+            node_color = "black"
+
+        # Create a sphere for the node
+        sphere = pv.Sphere(center=(self.X, self.Y, self.Z), radius=0.2 * annotation_size)
+        meshes.append((sphere, node_color))
+
+        return meshes

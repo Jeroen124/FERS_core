@@ -49,7 +49,7 @@ class TranslationImperfection:
 
         # Resolve member sets
         ms_ids = as_list(
-            data.get("memberset") or data.get("membersets"),
+            data.get("memberset") or data.get("membersets") or data.get("memberset_ids"),
             "memberset",
         )
         if not ms_ids:

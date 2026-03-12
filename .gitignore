@@ -36,3 +36,5 @@ venv/
 .env
 launch.json
 settings.json
+
+.github/agents/

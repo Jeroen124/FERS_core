@@ -3,7 +3,8 @@ matplotlib==3.9.2
 ujson==5.10.0
 sectionproperties==3.7.0
 pyvista==0.44.2
-fers_calculations==0.1.68
+fers_calculations==0.1.72
 pydantic==2.10.4
 scipy==1.14.1
 pre_commit==4.0.0
+ezdxf>=1.3.0

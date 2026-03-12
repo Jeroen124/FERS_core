@@ -73,7 +73,7 @@ Mz_fers = result_loadcase.reaction_nodes["1"].nodal_forces.mz  # Reaction moment
 F = 1000  # Force in Newtons
 L = 5  # Length of the beam in meters
 E = 210e9  # Modulus of elasticity in Pascals
-I = 10.63e-6  # Moment of inertia in m^4
+I = 13.21e-6  # Moment of inertia in m^4
 x = L  # Distance to the free end for max deflection and slope
 
 # Calculate analytical solutions for deflection and moment
@@ -106,6 +106,6 @@ print("\nAll results validated successfully!")
 # 2. It validates the FERS results against analytical solutions for deflection and moment.
 # 3. Run this script as-is to learn
 
-calculation_1.show_results_3d(loadcase=1)
+calculation_1.plot_results_3d(loadcase=1)
 # Alternatively you can do:
-# calculation_1.show_results_3d(loadcase='End Load')
+# calculation_1.plot_results_3d(loadcase='End Load')

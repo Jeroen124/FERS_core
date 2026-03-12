@@ -17,13 +17,13 @@ def build_steel_s235() -> Material:
 
 
 def build_ipe180(material: Material) -> Section:
-    # Keep alignment with your examples: strong axis inertia = 10.63e-6
+    # Keep alignment with your examples: strong axis inertia = 13.21e-6
     # (Your example files put this in i_z; we keep those values to match FERS expectations.)
     return Section(
         name="IPE 180 Beam Section",
         material=material,
-        i_y=0.819e-6,  # m^4  (weak)
-        i_z=10.63e-6,  # m^4  (strong)
+        i_y=1.01e-6,  # m^4  (weak)
+        i_z=13.21e-6,  # m^4  (strong)
         j=0.027e-6,  # m^4
         area=0.00196,  # m^2
     )

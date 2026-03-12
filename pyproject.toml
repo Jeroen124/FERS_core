@@ -2,44 +2,53 @@
 requires = ["setuptools>=42", "wheel"]
 build-backend = "setuptools.build_meta"
 
-[tool.ruff]
-# Exclude directories
-exclude = [
-    ".bzr",
-    ".direnv",
-    ".eggs",
-    ".git",
-    ".hg",
-    ".mypy_cache",
-    ".nox",
-    ".pants.d",
-    ".pytype",
-    ".ruff_cache",
-    ".svn",
-    ".tox",
-    ".venv",
-    "__pypackages__",
-    "_build",
-    "buck-out",
-    "build",
-    "dist",
-    "node_modules",
-    "venv",
+[project]
+name = "FERS"
+version = "0.1.51"
+description = "Finite Element Method library written in Rust with Python interface"
+readme = "README.md"
+requires-python = ">=3.12"
+authors = [
+    {name = "Jeroen Hermsen", email = "info@ferscloud.com"},
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Rust",
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "numpy>=2.1.0",
+    "matplotlib>=3.7.0",
+    "ujson>=5.10.0",
+    "sectionproperties>=3.7.0",
+    "pyvista>=0.44.0",
+    "fers_calculations>=0.1.75",
+    "pydantic>=2.10.0",
+    "scipy>=1.14.0",
+    "ezdxf>=1.3.0",
 ]
 
+[tool.setuptools.packages.find]
+include = ["fers_core*"]
+
+[tool.setuptools.package-data]
+fers_core = ["examples/*"]
+
+[tool.ruff]
+exclude = [
+    ".bzr", ".direnv", ".eggs", ".git", ".hg", ".mypy_cache", ".nox",
+    ".pants.d", ".pytype", ".ruff_cache", ".svn", ".tox", ".venv",
+    "__pypackages__", "_build", "buck-out", "build", "dist", "node_modules", "venv",
+]
 line-length = 110
 target-version = "py311"
 
 [tool.ruff.lint]
-# Enable pycodestyle ('E') and Pyflakes ('F') codes by default. E501 is line length.
-select = ["E", "F", "E501"]  
-ignore = ["A001", "E741"]  # Disable ambiguous variable name warnings
-
-# Allow autofix for all enabled rules (when `--fix`) is provided.
+select = ["E", "F", "E501"]
+ignore = ["A001", "E741"]
 fixable = ["A", "B", "C", "D", "E", "F", "G", "I", "N", "Q", "S", "T", "W", "ANN", "ARG", "BLE", "COM", "DJ", "DTZ", "EM", "ERA", "EXE", "FBT", "ICN", "INP", "ISC", "NPY", "PD", "PGH", "PIE", "PL", "PT", "PTH", "PYI", "RET", "RSE", "RUF", "SIM", "SLF", "TCH", "TID", "TRY", "UP", "YTT"]
 unfixable = []
-
-# Allow unused variables when underscore-prefixed.
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 
 [tool.ruff.lint.mccabe]
