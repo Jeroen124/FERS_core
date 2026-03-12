@@ -22,9 +22,9 @@ calculation_1 = FERS()
 
 # Create nodes
 node1 = Node(0, 0, 0)  # Fixed end
-node2 = Node(5, 0, 0)  # Free end
+node2 = Node(5, 0, 0)  # Fixed end
 node3 = Node(5, 5, 0)  # Free end
-node4 = Node(5, 5, -1)  # Free end
+node4 = Node(5, 5, -1)  # Fixed end
 
 # Create material
 Steel_S235 = Material(name="Steel", e_mod=210e9, g_mod=80.769e9, density=7850, yield_stress=235e6)

@@ -177,7 +177,8 @@
                     "condition_type": "Free",
                     "stiffness": null
                 }
-            }
+            },
+            "warping_condition": null
         },
         {
             "id": 2,
@@ -209,7 +210,8 @@
                     "condition_type": "Free",
                     "stiffness": null
                 }
-            }
+            },
+            "warping_condition": null
         }
     ],
     "shape_paths": [],

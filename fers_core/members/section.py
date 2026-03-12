@@ -30,6 +30,12 @@ class Section:
         b: Optional[float] = None,
         id: Optional[int] = None,
         shape_path: Optional[ShapePath] = None,
+        i_w: Optional[float] = None,
+        y_s: Optional[float] = None,
+        z_s: Optional[float] = None,
+        wagner_coeff: Optional[float] = None,
+        a_sy: Optional[float] = None,
+        a_sz: Optional[float] = None,
     ):
         """
         Initializes a Section object representing a structural element.
@@ -43,8 +49,12 @@ class Section:
         area (float): Cross-sectional area of the section, relevant for load calculations.
         h (float, optional): Height of the section, if applicable.
         b (float, optional): Width of the section, if applicable.
-        t_w (float, optional): Thickness of the web, if applicable (default is None).
-        t_f (float, optional): Thickness of the flange, if applicable (default is None).
+        i_w (float, optional): Warping constant (m^6), for thin-walled open sections.
+        y_s (float, optional): Shear center Y-coordinate relative to centroid (m).
+        z_s (float, optional): Shear center Z-coordinate relative to centroid (m).
+        wagner_coeff (float, optional): Wagner coefficient for lateral-torsional buckling.
+        a_sy (float, optional): Effective shear area in Y-direction (m^2) for Timoshenko beam.
+        a_sz (float, optional): Effective shear area in Z-direction (m^2) for Timoshenko beam.
         """
         self.id = id or Section._section_counter
         if id is None:
@@ -58,13 +68,58 @@ class Section:
         self.j = j
         self.area = area
         self.shape_path = shape_path
+        self.i_w = i_w
+        self.y_s = y_s
+        self.z_s = z_s
+        self.wagner_coeff = wagner_coeff
+        self.a_sy = a_sy
+        self.a_sz = a_sz
 
     @classmethod
     def reset_counter(cls):
         cls._section_counter = 1
 
+    @staticmethod
+    def _extract_advanced_props(analysis_section) -> dict:
+        """Extract warping and shear properties from a sectionproperties analysis section.
+
+        Returns a dict with keys: i_w, y_s, z_s, wagner_coeff, a_sy, a_sz.
+        Any property that cannot be computed returns None.
+        """
+        props = {}
+        sp = analysis_section.section_props
+        try:
+            props["i_w"] = float(sp.gamma)
+        except (AttributeError, TypeError):
+            props["i_w"] = None
+        try:
+            props["y_s"] = float(sp.x_se)
+            props["z_s"] = float(sp.y_se)
+        except (AttributeError, TypeError):
+            props["y_s"] = None
+            props["z_s"] = None
+        # Wagner coefficient: polar radius of gyration about shear center squared
+        # ip_s² = (Iy + Iz)/A + ys² + zs²
+        try:
+            iy = float(sp.iyy_c)
+            iz = float(sp.ixx_c)
+            area = float(sp.area)
+            ys = props["y_s"] or 0.0
+            zs = props["z_s"] or 0.0
+            props["wagner_coeff"] = (iy + iz) / area + ys**2 + zs**2
+        except (AttributeError, TypeError, ZeroDivisionError):
+            props["wagner_coeff"] = None
+        try:
+            as_tuple = analysis_section.get_as()
+            props["a_sy"] = float(as_tuple[0])
+            props["a_sz"] = float(as_tuple[1])
+        except (AttributeError, TypeError, IndexError):
+            props["a_sy"] = None
+            props["a_sz"] = None
+        return props
+
     def to_dict(self):
-        return {
+        d = {
             "id": self.id,
             "name": self.name,
             "material": self.material.id,
@@ -76,6 +131,19 @@ class Section:
             "area": self.area,
             "shape_path": self.shape_path.id if self.shape_path else None,
         }
+        if self.i_w is not None:
+            d["i_w"] = self.i_w
+        if self.y_s is not None:
+            d["y_s"] = self.y_s
+        if self.z_s is not None:
+            d["z_s"] = self.z_s
+        if self.wagner_coeff is not None:
+            d["wagner_coeff"] = self.wagner_coeff
+        if self.a_sy is not None:
+            d["a_sy"] = self.a_sy
+        if self.a_sz is not None:
+            d["a_sz"] = self.a_sz
+        return d
 
     @classmethod
     def from_dict(
@@ -101,6 +169,12 @@ class Section:
             j=data["j"],
             area=data["area"],
             shape_path=shape_path,
+            i_w=data.get("i_w"),
+            y_s=data.get("y_s"),
+            z_s=data.get("z_s"),
+            wagner_coeff=data.get("wagner_coeff"),
+            a_sy=data.get("a_sy"),
+            a_sz=data.get("a_sz"),
         )
 
     @staticmethod
@@ -137,6 +211,7 @@ class Section:
         analysis_section = SP_section(ipe_geometry, time_info=False)
         analysis_section.calculate_geometric_properties()
         analysis_section.calculate_warping_properties()
+        adv = Section._extract_advanced_props(analysis_section)
 
         return Section(
             name=name,
@@ -148,6 +223,7 @@ class Section:
             h=h,
             b=b,
             shape_path=shape_path,
+            **adv,
         )
 
     @staticmethod
@@ -192,6 +268,7 @@ class Section:
         analysis_section = SP_section(u_geometry, time_info=False)
         analysis_section.calculate_geometric_properties()
         analysis_section.calculate_warping_properties()
+        adv = Section._extract_advanced_props(analysis_section)
 
         return Section(
             name=name,
@@ -203,6 +280,7 @@ class Section:
             h=h,
             b=b,
             shape_path=shape_path,
+            **adv,
         )
 
     @staticmethod
@@ -244,6 +322,7 @@ class Section:
         analysis_section = SP_section(chs_geometry, time_info=False)
         analysis_section.calculate_geometric_properties()
         analysis_section.calculate_warping_properties()
+        adv = Section._extract_advanced_props(analysis_section)
 
         return Section(
             name=name,
@@ -255,6 +334,7 @@ class Section:
             h=float(diameter),
             b=float(diameter),
             shape_path=shape_path,
+            **adv,
         )
 
     @staticmethod
@@ -309,6 +389,7 @@ class Section:
         analysis_section = SP_section(he_geometry, time_info=False)
         analysis_section.calculate_geometric_properties()
         analysis_section.calculate_warping_properties()
+        adv = Section._extract_advanced_props(analysis_section)
 
         return Section(
             name=name,
@@ -320,6 +401,7 @@ class Section:
             h=h,
             b=b,
             shape_path=shape_path,
+            **adv,
         )
 
     def plot(self, show_nodes: bool = True):
@@ -379,6 +461,7 @@ class Section:
         analysis_section = SP_section(rhs_geometry, time_info=False)
         analysis_section.calculate_geometric_properties()
         analysis_section.calculate_warping_properties()
+        adv = Section._extract_advanced_props(analysis_section)
 
         return Section(
             name=name,
@@ -390,6 +473,7 @@ class Section:
             h=h,
             b=b,
             shape_path=shape_path,
+            **adv,
         )
 
     @staticmethod
@@ -464,6 +548,7 @@ class Section:
         analysis_section = SP_section(angle_geometry, time_info=False)
         analysis_section.calculate_geometric_properties()
         analysis_section.calculate_warping_properties()
+        adv = Section._extract_advanced_props(analysis_section)
 
         return Section(
             name=name,
@@ -475,6 +560,7 @@ class Section:
             h=h,
             b=b,
             shape_path=shape_path,
+            **adv,
         )
 
     @staticmethod
@@ -521,6 +607,7 @@ class Section:
         analysis_section = SP_section(welded_geometry, time_info=False)
         analysis_section.calculate_geometric_properties()
         analysis_section.calculate_warping_properties()
+        adv = Section._extract_advanced_props(analysis_section)
 
         return Section(
             name=name,
@@ -532,6 +619,7 @@ class Section:
             h=h,
             b=b,
             shape_path=shape_path,
+            **adv,
         )
 
     @staticmethod
@@ -581,6 +669,7 @@ class Section:
         analysis_section = SP_section(cfs_geometry, time_info=False)
         analysis_section.calculate_geometric_properties()
         analysis_section.calculate_warping_properties()
+        adv = Section._extract_advanced_props(analysis_section)
 
         return Section(
             name=name,
@@ -592,6 +681,7 @@ class Section:
             h=h,
             b=b,
             shape_path=shape_path,
+            **adv,
         )
 
     @staticmethod
@@ -645,6 +735,7 @@ class Section:
         analysis_section = SP_section(zed_geometry, time_info=False)
         analysis_section.calculate_geometric_properties()
         analysis_section.calculate_warping_properties()
+        adv = Section._extract_advanced_props(analysis_section)
 
         return Section(
             name=name,
@@ -656,6 +747,7 @@ class Section:
             h=h,
             b=max(b_top, b_bot),
             shape_path=shape_path,
+            **adv,
         )
 
     @staticmethod

@@ -19,6 +19,7 @@ class NodeDisplacement:
     rx: float = 0.0
     ry: float = 0.0
     rz: float = 0.0
+    warp: float = 0.0
 
     @classmethod
     def from_pydantic(cls, source) -> "NodeDisplacement":
@@ -29,6 +30,7 @@ class NodeDisplacement:
         instance.rx = float(getattr(source, "rx", 0.0))
         instance.ry = float(getattr(source, "ry", 0.0))
         instance.rz = float(getattr(source, "rz", 0.0))
+        instance.warp = float(getattr(source, "warp", 0.0))
         return instance
 
     def to_dict(self) -> Dict[str, float]:
@@ -39,6 +41,7 @@ class NodeDisplacement:
             "rx": self.rx,
             "ry": self.ry,
             "rz": self.rz,
+            "warp": self.warp,
         }
 
     def as_translation(self) -> "np.ndarray":
@@ -86,6 +89,7 @@ class NodeForces:
     mx: float = 0.0
     my: float = 0.0
     mz: float = 0.0
+    bw: float = 0.0
 
     @classmethod
     def from_pydantic(cls, pyd_object: Any) -> "NodeForces":
@@ -96,6 +100,7 @@ class NodeForces:
         instance.mx = float(getattr(pyd_object, "mx", 0.0))
         instance.my = float(getattr(pyd_object, "my", 0.0))
         instance.mz = float(getattr(pyd_object, "mz", 0.0))
+        instance.bw = float(getattr(pyd_object, "bw", 0.0))
         return instance
 
     def to_dict(self) -> Dict[str, float]:
@@ -106,6 +111,7 @@ class NodeForces:
             "mx": self.mx,
             "my": self.my,
             "mz": self.mz,
+            "bw": self.bw,
         }
 
     def get_value(self, component: str) -> float:
@@ -113,7 +119,7 @@ class NodeForces:
 
         Args:
             component: One of 'N'/'fx', 'Vy'/'fy', 'Vz'/'fz',
-                       'T'/'mx', 'My'/'my', 'Mz'/'mz'.
+                       'T'/'mx', 'My'/'my', 'Mz'/'mz', 'bw'/'bimoment'.
 
         Returns:
             The scalar value for the requested component.
@@ -129,6 +135,8 @@ class NodeForces:
             "mx": self.mx,
             "my": self.my,
             "mz": self.mz,
+            "bw": self.bw,
+            "bimoment": self.bw,
         }
         key = component.lower()
         if key not in mapping:

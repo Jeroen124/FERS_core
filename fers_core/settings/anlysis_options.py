@@ -16,6 +16,8 @@ class AnalysisOptions:
         order: Optional[AnalysisOrder] = AnalysisOrder.NONLINEAR,
         rigid_strategy: Optional[RigidStrategy] = RigidStrategy.RIGID_MEMBER,
         axial_slack: Optional[float] = 500,
+        include_shear_deformation: Optional[bool] = True,
+        include_warping: Optional[bool] = True,
     ):
         self.analysis_options_id = id or AnalysisOptions._analysis_options_counter
         if id is None:
@@ -28,6 +30,8 @@ class AnalysisOptions:
         self.order = order
         self.rigid_strategy = rigid_strategy
         self.axial_slack = axial_slack
+        self.include_shear_deformation = include_shear_deformation
+        self.include_warping = include_warping
 
     def to_dict(self):
         return {
@@ -40,6 +44,8 @@ class AnalysisOptions:
             "order": self.order.value,
             "rigid_strategy": self.rigid_strategy.value,
             "axial_slack": self.axial_slack,
+            "include_shear_deformation": self.include_shear_deformation,
+            "include_warping": self.include_warping,
         }
 
     @classmethod
@@ -100,4 +106,6 @@ class AnalysisOptions:
             order=order,
             rigid_strategy=rigid_strategy,
             axial_slack=data.get("axial_slack", 500),
+            include_shear_deformation=data.get("include_shear_deformation", True),
+            include_warping=data.get("include_warping", True),
         )
