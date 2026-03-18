@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Dict, Any, List, Optional, Tuple, TYPE_CHECKING
 
-from fers_core.results.nodes import NodeForces, SectionForce
+from fers_core.results.nodes import NodeDisplacement, NodeForces, SectionForce
 
 if TYPE_CHECKING:
     import numpy as np
@@ -18,6 +18,10 @@ class MemberResult:
         minimums: Optional[NodeForces] = None,
         local_start_forces: Optional[NodeForces] = None,
         local_end_forces: Optional[NodeForces] = None,
+        local_maximums: Optional[NodeForces] = None,
+        local_minimums: Optional[NodeForces] = None,
+        local_displacement_start_node: Optional[NodeDisplacement] = None,
+        local_displacement_end_node: Optional[NodeDisplacement] = None,
         section_forces: Optional[List[SectionForce]] = None,
     ) -> None:
         self.start_node_forces = start_node_forces if start_node_forces is not None else NodeForces()
@@ -26,6 +30,14 @@ class MemberResult:
         self.minimums = minimums if minimums is not None else NodeForces()
         self.local_start_forces = local_start_forces if local_start_forces is not None else NodeForces()
         self.local_end_forces = local_end_forces if local_end_forces is not None else NodeForces()
+        self.local_maximums = local_maximums if local_maximums is not None else NodeForces()
+        self.local_minimums = local_minimums if local_minimums is not None else NodeForces()
+        self.local_displacement_start_node = (
+            local_displacement_start_node if local_displacement_start_node is not None else NodeDisplacement()
+        )
+        self.local_displacement_end_node = (
+            local_displacement_end_node if local_displacement_end_node is not None else NodeDisplacement()
+        )
         self.section_forces: List[SectionForce] = section_forces if section_forces is not None else []
 
     @classmethod
@@ -44,6 +56,18 @@ class MemberResult:
             minimums=NodeForces.from_pydantic(getattr(model_object, "minimums", None)),
             local_start_forces=NodeForces.from_pydantic(getattr(model_object, "local_start_forces", None)),
             local_end_forces=NodeForces.from_pydantic(getattr(model_object, "local_end_forces", None)),
+            local_maximums=NodeForces.from_pydantic(getattr(model_object, "local_maximums", None)),
+            local_minimums=NodeForces.from_pydantic(getattr(model_object, "local_minimums", None)),
+            local_displacement_start_node=NodeDisplacement.from_pydantic(
+                getattr(model_object, "local_displacement_start_node", None)
+            )
+            if getattr(model_object, "local_displacement_start_node", None) is not None
+            else None,
+            local_displacement_end_node=NodeDisplacement.from_pydantic(
+                getattr(model_object, "local_displacement_end_node", None)
+            )
+            if getattr(model_object, "local_displacement_end_node", None) is not None
+            else None,
             section_forces=section_forces,
         )
 
@@ -55,6 +79,10 @@ class MemberResult:
             "minimums": self.minimums.to_dict(),
             "local_start_forces": self.local_start_forces.to_dict(),
             "local_end_forces": self.local_end_forces.to_dict(),
+            "local_maximums": self.local_maximums.to_dict(),
+            "local_minimums": self.local_minimums.to_dict(),
+            "local_displacement_start_node": self.local_displacement_start_node.to_dict(),
+            "local_displacement_end_node": self.local_displacement_end_node.to_dict(),
             "section_forces": [sf.to_dict() for sf in self.section_forces],
         }
 
