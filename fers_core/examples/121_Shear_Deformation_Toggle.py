@@ -31,8 +31,8 @@ from fers_core.settings.anlysis_options import AnalysisOptions
 # =============================================================================
 # Parameters
 # =============================================================================
-L = 2.0  # Beam length [m]  — short beam so shear matters
-P = 10_000.0  # End load [N] (10 kN, downward → negative Y)
+L = 1.0  # Beam length [m]  — short beam so shear matters
+P = 100_000.0  # End load [N] (10 kN, downward → negative Y)
 
 # Material: Steel S355
 steel = Material(name="S355", e_mod=210e9, g_mod=81e9, density=7850, yield_stress=355e6)

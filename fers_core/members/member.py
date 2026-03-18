@@ -280,7 +280,7 @@ class Member:
         Returns unit vectors (local_x, local_y, local_z) forming a right-handed local frame.
         local_x is along the member (start -> end).
         local_y and local_z are orthonormal and derived from a global reference direction.
-        Applies rotation_angle as a roll about local_x (if non-zero).
+        Applies rotation_angle (in degrees) as a roll about local_x (if non-zero).
         """
         dx = self.end_node.X - self.start_node.X
         dy = self.end_node.Y - self.start_node.Y
@@ -312,7 +312,7 @@ class Member:
             raise ValueError("Cannot define a valid local_y axis.")
         local_y /= norm_y
 
-        phi = float(self.rotation_angle or 0.0)
+        phi = np.radians(float(self.rotation_angle or 0.0))
         if abs(phi) > 0.0:
             c = np.cos(phi)
             s = np.sin(phi)

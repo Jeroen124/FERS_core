@@ -1,7 +1,6 @@
 import os
 from fers_core import Node, Member, FERS, Material, Section, MemberSet, NodalSupport, NodalLoad
 from fers_core.supports.supportcondition import SupportCondition
-import math
 
 # =============================================================================
 # Creating a cantilever with an end_load
@@ -32,7 +31,7 @@ ipe_section = Section.create_ipe_section(
 
 # Create member
 beam1 = Member(start_node=node1, end_node=node2, section=ipe_section)
-beam2 = Member(start_node=node2, end_node=node3, section=ipe_section, rotation_angle=math.pi / 2)
+beam2 = Member(start_node=node2, end_node=node3, section=ipe_section, rotation_angle=90)
 
 # Creating a boundary conditions (by default all 6 d.o.f. are constraint)
 wall_support = NodalSupport()
