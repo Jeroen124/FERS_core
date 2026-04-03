@@ -1,3 +1,10 @@
+from __future__ import annotations
+
+from typing import Optional
+
+from ..supports.stiffness_curve import StiffnessCurveConfig
+
+
 class MemberHinge:
     _hinge_counter = 1
 
@@ -19,25 +26,39 @@ class MemberHinge:
         max_moment_my: float = None,
         max_moment_mz: float = None,
         max_bimoment_warp: float = None,
+        stiffness_curve_vx: Optional[StiffnessCurveConfig] = None,
+        stiffness_curve_vy: Optional[StiffnessCurveConfig] = None,
+        stiffness_curve_vz: Optional[StiffnessCurveConfig] = None,
+        stiffness_curve_mx: Optional[StiffnessCurveConfig] = None,
+        stiffness_curve_my: Optional[StiffnessCurveConfig] = None,
+        stiffness_curve_mz: Optional[StiffnessCurveConfig] = None,
     ):
-        """
-        Initialize a new Member Hinge instance with optional parameters for
-        translational and rotational releases, as well as maximal tension and moment
-        capacities in each principal direction.
+        """Initialize a new Member Hinge instance.
+
+        Supports translational/rotational releases, maximal tension/moment
+        capacities, and optional non-linear stiffness curves per DOF.
 
         Args:
-            translational_release_vx (float, optional): Translational Spring Constant X.
-            translational_release_vy (float, optional): Translational Spring Constant Y.
-            translational_release_vz (float, optional): Translational Spring Constant Z.
-            rotational_release_mx (float, optional): Rotational Spring Constant X.
-            rotational_release_my (float, optional): Rotational Spring Constant Y.
-            rotational_release_mz (float, optional): Rotational Spring Constant Z.
-            max_tension_vx (float, optional): Maximum Tension Capacity X.
-            max_tension_vy (float, optional): Maximum Tension Capacity Y.
-            max_tension_vz (float, optional): Maximum Tension Capacity Z.
-            max_moment_mx (float, optional): Maximum Moment Capacity X.
-            max_moment_my (float, optional): Maximum Moment Capacity Y.
-            max_moment_mz (float, optional): Maximum Moment Capacity Z.
+            translational_release_vx: Translational Spring Constant X.
+            translational_release_vy: Translational Spring Constant Y.
+            translational_release_vz: Translational Spring Constant Z.
+            rotational_release_mx: Rotational Spring Constant X.
+            rotational_release_my: Rotational Spring Constant Y.
+            rotational_release_mz: Rotational Spring Constant Z.
+            rotational_release_warp: Warping Spring Constant.
+            max_tension_vx: Maximum Tension Capacity X.
+            max_tension_vy: Maximum Tension Capacity Y.
+            max_tension_vz: Maximum Tension Capacity Z.
+            max_moment_mx: Maximum Moment Capacity X.
+            max_moment_my: Maximum Moment Capacity Y.
+            max_moment_mz: Maximum Moment Capacity Z.
+            max_bimoment_warp: Maximum Bimoment Capacity (warping).
+            stiffness_curve_vx: Non-linear stiffness curve for translational X.
+            stiffness_curve_vy: Non-linear stiffness curve for translational Y.
+            stiffness_curve_vz: Non-linear stiffness curve for translational Z.
+            stiffness_curve_mx: Non-linear stiffness curve for rotational X.
+            stiffness_curve_my: Non-linear stiffness curve for rotational Y.
+            stiffness_curve_mz: Non-linear stiffness curve for rotational Z.
         """
 
         # Handle hinge numbering with an optional hinge_type
@@ -62,6 +83,12 @@ class MemberHinge:
         self.max_moment_my = max_moment_my
         self.max_moment_mz = max_moment_mz
         self.max_bimoment_warp = max_bimoment_warp
+        self.stiffness_curve_vx = stiffness_curve_vx
+        self.stiffness_curve_vy = stiffness_curve_vy
+        self.stiffness_curve_vz = stiffness_curve_vz
+        self.stiffness_curve_mx = stiffness_curve_mx
+        self.stiffness_curve_my = stiffness_curve_my
+        self.stiffness_curve_mz = stiffness_curve_mz
 
     @classmethod
     def reset_counter(cls):
@@ -85,6 +112,12 @@ class MemberHinge:
             "max_moment_my": self.max_moment_my,
             "max_moment_mz": self.max_moment_mz,
             "max_bimoment_warp": self.max_bimoment_warp,
+            "stiffness_curve_vx": self.stiffness_curve_vx.to_dict() if self.stiffness_curve_vx else None,
+            "stiffness_curve_vy": self.stiffness_curve_vy.to_dict() if self.stiffness_curve_vy else None,
+            "stiffness_curve_vz": self.stiffness_curve_vz.to_dict() if self.stiffness_curve_vz else None,
+            "stiffness_curve_mx": self.stiffness_curve_mx.to_dict() if self.stiffness_curve_mx else None,
+            "stiffness_curve_my": self.stiffness_curve_my.to_dict() if self.stiffness_curve_my else None,
+            "stiffness_curve_mz": self.stiffness_curve_mz.to_dict() if self.stiffness_curve_mz else None,
         }
 
     @classmethod
@@ -106,4 +139,10 @@ class MemberHinge:
             max_moment_my=data.get("max_moment_my"),
             max_moment_mz=data.get("max_moment_mz"),
             max_bimoment_warp=data.get("max_bimoment_warp"),
+            stiffness_curve_vx=StiffnessCurveConfig.from_dict(data.get("stiffness_curve_vx")),
+            stiffness_curve_vy=StiffnessCurveConfig.from_dict(data.get("stiffness_curve_vy")),
+            stiffness_curve_vz=StiffnessCurveConfig.from_dict(data.get("stiffness_curve_vz")),
+            stiffness_curve_mx=StiffnessCurveConfig.from_dict(data.get("stiffness_curve_mx")),
+            stiffness_curve_my=StiffnessCurveConfig.from_dict(data.get("stiffness_curve_my")),
+            stiffness_curve_mz=StiffnessCurveConfig.from_dict(data.get("stiffness_curve_mz")),
         )

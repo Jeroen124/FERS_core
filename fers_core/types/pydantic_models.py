@@ -35,6 +35,20 @@ class DistributedLoad(BaseModel):
     start_frac: float
 
 
+class ForceComponent(Enum):
+    N = "N"
+    Vy = "Vy"
+    Vz = "Vz"
+    Mx = "Mx"
+    My = "My"
+    Mz = "Mz"
+
+
+class StiffnessCurveConfig(BaseModel):
+    depends_on: ForceComponent
+    points: list[list[float]]
+
+
 class ForceUnit(Enum):
     N = "N"
     kN = "kN"
@@ -97,6 +111,12 @@ class MemberHinge(BaseModel):
     rotational_release_my: float | None = None
     rotational_release_mz: float | None = None
     rotational_release_warp: float | None = None
+    stiffness_curve_mx: StiffnessCurveConfig | None = None
+    stiffness_curve_my: StiffnessCurveConfig | None = None
+    stiffness_curve_mz: StiffnessCurveConfig | None = None
+    stiffness_curve_vx: StiffnessCurveConfig | None = None
+    stiffness_curve_vy: StiffnessCurveConfig | None = None
+    stiffness_curve_vz: StiffnessCurveConfig | None = None
     translational_release_vx: float | None = None
     translational_release_vy: float | None = None
     translational_release_vz: float | None = None
@@ -407,6 +427,7 @@ class Settings(BaseModel):
 class SupportCondition(BaseModel):
     condition_type: SupportConditionType
     stiffness: float | None = None
+    stiffness_curve: StiffnessCurveConfig | None = None
 
 
 class NodalSupport(BaseModel):
