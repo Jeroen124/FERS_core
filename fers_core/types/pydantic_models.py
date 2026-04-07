@@ -248,6 +248,21 @@ class Section(BaseModel):
     i_y: float
     i_z: float
     id: conint(ge=0)
+    principal_axis_angle: float | None = Field(
+        None,
+        description=(
+            "Angle (degrees) from centroidal to principal axes. "
+            "When i_y/i_z are principal MOIs and the section has non-zero Iyz, "
+            "this rotates the member local y-z axes to align with principal directions."
+        ),
+    )
+    i_yz: float | None = Field(
+        None,
+        description=(
+            "Product of inertia about centroidal axes (mm⁴ in JSON, "
+            "scaled to m⁴ by solver). Non-zero for asymmetric sections."
+        ),
+    )
     j: float
     material: conint(ge=0)
     name: str
@@ -370,6 +385,7 @@ class Member(BaseModel):
     end_node: Node
     id: conint(ge=0)
     member_type: MemberType
+    mirror: bool = False
     reference_member: conint(ge=0) | None = None
     reference_node: conint(ge=0) | None = None
     rotation_angle: float

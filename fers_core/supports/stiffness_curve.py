@@ -8,14 +8,24 @@ class ForceComponent(Enum):
     """Force/moment component that a stiffness curve depends on.
 
     Maps 1:1 to the Rust ``ForceComponent`` enum used by the solver.
+
+    Member-local variants (N, Vy, Vz) are used for member hinges.
+    Global-axis aliases (Fx, Fy, Fz) are intended for support stiffness
+    curves where forces are in global coordinates.
     """
 
+    # Member-local
     N = "N"
     Vy = "Vy"
     Vz = "Vz"
     Mx = "Mx"
     My = "My"
     Mz = "Mz"
+
+    # Global-axis aliases (same indices as N/Vy/Vz in the solver)
+    Fx = "Fx"
+    Fy = "Fy"
+    Fz = "Fz"
 
 
 class StiffnessCurveConfig:
