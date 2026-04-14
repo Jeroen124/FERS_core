@@ -7,7 +7,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Any, Dict, Optional, Union
 
-from pydantic import BaseModel, Field, conint
+from pydantic import BaseModel, Field, RootModel, conint
 
 
 class AnalysisOrder(Enum):
@@ -191,8 +191,8 @@ class ResultType2(BaseModel):
     Loadcombination: conint(ge=0)
 
 
-class ResultType(BaseModel):
-    __root__: Union[ResultType1, ResultType2]
+class ResultType(RootModel):
+    root: Union[ResultType1, ResultType2]
 
 
 class ResultsSummary(BaseModel):
@@ -352,7 +352,13 @@ class AnalysisOptions(BaseModel):
     )
     include_warping: Optional[bool] = Field(
         None,
-        description="When false, ignores warping constant Iw and uses pure GJ/L torsion for all elements.",
+        description="When false, ignores warping constant Iw " "and uses pure GJ/L torsion for all elements.",
+    )
+    include_shear_center_coupling: Optional[bool] = Field(
+        None,
+        description="When false, suppresses shear-center "
+        "eccentricity coupling (T^T·K·T) by "
+        "clearing y_s/z_s for all sections.",
     )
     max_iterations: Optional[conint(ge=0)] = None
     nonlinear_method: Optional[NonlinearMethod] = Field(
