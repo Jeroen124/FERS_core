@@ -26,6 +26,7 @@ class Member:
         end_hinge: Optional[MemberHinge] = None,
         classification: str = "",
         rotation_angle: float = 0.0,
+        mirror: bool = False,
         weight: Optional[float] = None,
         chi: Optional[float] = None,
         reference_member: Optional["Member"] = None,
@@ -49,6 +50,7 @@ class Member:
         self.end_node = end_node
         self.section = section
         self.rotation_angle = float(rotation_angle)
+        self.mirror = bool(mirror)
         self.start_hinge = start_hinge
         self.end_hinge = end_hinge
         self.classification = classification
@@ -141,6 +143,7 @@ class Member:
             "end_node": self.end_node.to_dict(),
             "section": self.section.id if self.section is not None else None,
             "rotation_angle": self.rotation_angle,
+            "mirror": self.mirror,
             "start_hinge": self.start_hinge.id if self.start_hinge else None,
             "end_hinge": self.end_hinge.id if self.end_hinge else None,
             "classification": self.classification,
@@ -263,6 +266,7 @@ class Member:
             end_hinge=end_hinge,
             classification=data.get("classification", "") or "",
             rotation_angle=float(data.get("rotation_angle", 0.0) or 0.0),
+            mirror=bool(data.get("mirror", False)),
             weight=data.get("weight"),
             chi=data.get("chi"),
             reference_member=reference_member,

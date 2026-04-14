@@ -75,7 +75,10 @@ class RotationImperfection:
         for ms_id in ms_ids:
             ms = membersets_by_id.get(ms_id)
             if ms is None:
-                raise KeyError(f"RotationImperfection.from_dict: MemberSet with id={ms_id} not found.")
+                # Skip member sets that don't exist in this model configuration.
+                # This happens when imperfection cases reference member sets from a
+                # larger config variant (e.g. 10-bay) but the current model is smaller.
+                continue
             membersets.append(ms)
 
         magnitude = float(data.get("magnitude", 0.0))

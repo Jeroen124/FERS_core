@@ -93,6 +93,9 @@ class ShapePath:
 
         commands: List[ShapeCommand] = []
 
+        # Collect raw LINE segments separately so they can be chained.
+        raw_lines: List[tuple] = []  # (x0, y0, x1, y1)
+
         for entity in msp:
             if layer is not None and entity.dxf.layer != layer:
                 continue
@@ -102,8 +105,7 @@ class ShapePath:
             if dxftype == "LINE":
                 sx, sy = entity.dxf.start.x, entity.dxf.start.y
                 ex, ey = entity.dxf.end.x, entity.dxf.end.y
-                commands.append(ShapeCommand("moveTo", z=sx, y=sy))
-                commands.append(ShapeCommand("lineTo", z=ex, y=ey))
+                raw_lines.append((sx, sy, ex, ey))
 
             elif dxftype == "LWPOLYLINE":
                 points = list(entity.get_points(format="xyseb"))  # x, y, start_width, end_width, bulge
@@ -185,6 +187,41 @@ class ShapePath:
                 commands.extend(
                     ShapePath.arc_center_angles(cy, cx, r_arc, math.pi / 2, math.pi / 2 - 2 * math.pi)
                 )
+
+        # Chain collected LINE segments into connected polylines and emit commands.
+        if raw_lines:
+            tol = 1e-6
+            remaining = list(raw_lines)
+            while remaining:
+                # Seed a new chain with the first unused segment.
+                x0, y0, x1, y1 = remaining.pop(0)
+                chain = [(x0, y0), (x1, y1)]
+
+                # Greedily extend the chain by matching endpoints.
+                extended = True
+                while extended:
+                    extended = False
+                    for i, seg in enumerate(remaining):
+                        sx0, sy0, sx1, sy1 = seg
+                        ex, ey = chain[-1]
+                        if math.hypot(sx0 - ex, sy0 - ey) < tol:
+                            chain.append((sx1, sy1))
+                            remaining.pop(i)
+                            extended = True
+                            break
+                        elif math.hypot(sx1 - ex, sy1 - ey) < tol:
+                            chain.append((sx0, sy0))
+                            remaining.pop(i)
+                            extended = True
+                            break
+
+                commands.append(ShapeCommand("moveTo", z=chain[0][0], y=chain[0][1]))
+                for pt in chain[1:]:
+                    commands.append(ShapeCommand("lineTo", z=pt[0], y=pt[1]))
+
+                # Close the path if the last point meets the first.
+                if math.hypot(chain[-1][0] - chain[0][0], chain[-1][1] - chain[0][1]) < tol:
+                    commands.append(ShapeCommand("closePath"))
 
         return ShapePath(name=name, shape_commands=commands)
 

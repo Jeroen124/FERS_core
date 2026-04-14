@@ -64,7 +64,14 @@ def format_support_short(nodal_support) -> str:
     """
     Compact string: U[Fx,Fr,k] R[Fr,Fr,Fx].
     """
-    mapping = {"fixed": "Fx", "free": "Fr", "spring": "k", "positive-only": "+", "negative-only": "-"}
+    mapping = {
+        "fixed": "Fx",
+        "free": "Fr",
+        "spring": "k",
+        "positive-only": "+",
+        "negative-only": "-",
+        "stiffnesscurve": "SC",
+    }
 
     def trio(conditions_dict: dict) -> list[str]:
         out = []
@@ -99,7 +106,7 @@ def choose_marker(nodal_support) -> str:
 
     if all(t == "fixed" for t in types):
         return "s"
-    if any(t == "spring" for t in types):
+    if any(t in ("spring", "stiffnesscurve") for t in types):
         return "D"
     if all(t == "free" for t in types):
         return "o"
@@ -118,7 +125,7 @@ def translational_summary(nodal_support) -> str:
         return "all_fixed"
     if all(t == "free" for t in types):
         return "all_free"
-    if any(t == "spring" for t in types):
+    if any(t in ("spring", "stiffnesscurve") for t in types):
         return "any_spring"
     return "mixed"
 
@@ -133,11 +140,19 @@ def color_for_condition_type(condition_type: str) -> str:
         "free": "lightgray",
         "positive-only": "green",
         "negative-only": "purple",
+        "stiffnesscurve": "darkorange",
     }.get(condition_type, "black")
 
 
 def format_support_label(nodal_support) -> str:
-    mapping = {"fixed": "F", "free": "R", "spring": "S", "positive-only": "+", "negative-only": "-"}
+    mapping = {
+        "fixed": "F",
+        "free": "R",
+        "spring": "S",
+        "positive-only": "+",
+        "negative-only": "-",
+        "stiffnesscurve": "C",
+    }
 
     def trio(conds: dict) -> list[str]:
         out = []

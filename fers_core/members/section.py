@@ -36,6 +36,10 @@ class Section:
         wagner_coeff: Optional[float] = None,
         a_sy: Optional[float] = None,
         a_sz: Optional[float] = None,
+        principal_axis_angle: Optional[float] = None,
+        i_yz: Optional[float] = None,
+        centroid_y: Optional[float] = None,
+        centroid_z: Optional[float] = None,
     ):
         """
         Initializes a Section object representing a structural element.
@@ -55,6 +59,12 @@ class Section:
         wagner_coeff (float, optional): Wagner coefficient for lateral-torsional buckling.
         a_sy (float, optional): Effective shear area in Y-direction (m^2) for Timoshenko beam.
         a_sz (float, optional): Effective shear area in Z-direction (m^2) for Timoshenko beam.
+        principal_axis_angle (float, optional): Angle (degrees) from centroidal to principal
+            axes.  When i_y/i_z are principal MOIs and the section has non-zero Iyz,
+            this rotates the member's local y-z axes to align with principal directions.
+        i_yz (float, optional): Product of inertia about centroidal axes (mm^4).
+        centroid_y (float, optional): Centroid Y-coordinate in shape path coords (mm).
+        centroid_z (float, optional): Centroid Z-coordinate in shape path coords (mm).
         """
         self.id = id or Section._section_counter
         if id is None:
@@ -74,6 +84,10 @@ class Section:
         self.wagner_coeff = wagner_coeff
         self.a_sy = a_sy
         self.a_sz = a_sz
+        self.principal_axis_angle = principal_axis_angle
+        self.i_yz = i_yz
+        self.centroid_y = centroid_y
+        self.centroid_z = centroid_z
 
     @classmethod
     def reset_counter(cls):
@@ -116,6 +130,28 @@ class Section:
         except (AttributeError, TypeError, IndexError):
             props["a_sy"] = None
             props["a_sz"] = None
+        # Principal axis angle: rotation from centroidal to principal axes (degrees).
+        # Non-zero when the section has a product of inertia (Iyz ≠ 0).
+        try:
+            import math
+
+            phi_rad = float(sp.phi)  # sectionproperties stores angle in radians
+            props["principal_axis_angle"] = math.degrees(phi_rad) if abs(phi_rad) > 1e-10 else None
+        except (AttributeError, TypeError):
+            props["principal_axis_angle"] = None
+        # Product of inertia about centroidal axes
+        try:
+            ixy_c = float(sp.ixy_c)
+            props["i_yz"] = ixy_c if abs(ixy_c) > 1e-10 else None
+        except (AttributeError, TypeError):
+            props["i_yz"] = None
+        # Centroid coordinates within the shape path coordinate system
+        try:
+            props["centroid_y"] = float(sp.cx)
+            props["centroid_z"] = float(sp.cy)
+        except (AttributeError, TypeError):
+            props["centroid_y"] = None
+            props["centroid_z"] = None
         return props
 
     def to_dict(self):
@@ -143,6 +179,14 @@ class Section:
             d["a_sy"] = self.a_sy
         if self.a_sz is not None:
             d["a_sz"] = self.a_sz
+        if self.principal_axis_angle is not None:
+            d["principal_axis_angle"] = self.principal_axis_angle
+        if self.i_yz is not None:
+            d["i_yz"] = self.i_yz
+        if self.centroid_y is not None:
+            d["centroid_y"] = self.centroid_y
+        if self.centroid_z is not None:
+            d["centroid_z"] = self.centroid_z
         return d
 
     @classmethod
@@ -175,6 +219,10 @@ class Section:
             wagner_coeff=data.get("wagner_coeff"),
             a_sy=data.get("a_sy"),
             a_sz=data.get("a_sz"),
+            principal_axis_angle=data.get("principal_axis_angle"),
+            i_yz=data.get("i_yz"),
+            centroid_y=data.get("centroid_y"),
+            centroid_z=data.get("centroid_z"),
         )
 
     @staticmethod

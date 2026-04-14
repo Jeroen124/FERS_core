@@ -18,6 +18,7 @@ class AnalysisOptions:
         axial_slack: Optional[float] = 500,
         include_shear_deformation: Optional[bool] = True,
         include_warping: Optional[bool] = True,
+        include_shear_center_coupling: Optional[bool] = True,
     ):
         self.analysis_options_id = id or AnalysisOptions._analysis_options_counter
         if id is None:
@@ -32,6 +33,7 @@ class AnalysisOptions:
         self.axial_slack = axial_slack
         self.include_shear_deformation = include_shear_deformation
         self.include_warping = include_warping
+        self.include_shear_center_coupling = include_shear_center_coupling
 
     def to_dict(self):
         return {
@@ -46,6 +48,7 @@ class AnalysisOptions:
             "axial_slack": self.axial_slack,
             "include_shear_deformation": self.include_shear_deformation,
             "include_warping": self.include_warping,
+            "include_shear_center_coupling": self.include_shear_center_coupling,
         }
 
     @classmethod
@@ -108,4 +111,5 @@ class AnalysisOptions:
             axial_slack=data.get("axial_slack", 500),
             include_shear_deformation=data.get("include_shear_deformation", True),
             include_warping=data.get("include_warping", True),
+            include_shear_center_coupling=data.get("include_shear_center_coupling", True),
         )

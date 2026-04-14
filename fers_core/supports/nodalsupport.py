@@ -15,8 +15,8 @@ class NodalSupport:
         self,
         id: Optional[int] = None,
         classification: Optional[str] = None,
-        displacement_conditions: Optional[Dict[str, Union[SupportCondition, int, float, str]]] = None,
-        rotation_conditions: Optional[Dict[str, Union[SupportCondition, int, float, str]]] = None,
+        displacement_conditions: Optional[Dict[str, Union[SupportCondition, int, float, str, list]]] = None,
+        rotation_conditions: Optional[Dict[str, Union[SupportCondition, int, float, str, list]]] = None,
         warping_condition: Optional[SupportCondition] = None,
     ):
         self.id = id if id is not None else NodalSupport.id
@@ -46,7 +46,7 @@ class NodalSupport:
 
     def _normalize_conditions(
         self,
-        conditions: Dict[str, Union[SupportCondition, int, float, str]],
+        conditions: Dict[str, Union[SupportCondition, int, float, str, list]],
     ) -> Dict[str, SupportCondition]:
         """
         Normalize input dict to have all X,Y,Z with SupportCondition.
@@ -73,10 +73,15 @@ class NodalSupport:
         return normalized
 
     def _coerce_condition(
-        self, value: Union[SupportCondition, int, float, str], direction: str
+        self, value: Union[SupportCondition, int, float, str, list], direction: str
     ) -> SupportCondition:
         if isinstance(value, SupportCondition):
             return value
+        if isinstance(value, list):
+            # List of [force_value, stiffness] pairs → Spring with curve (Vz default)
+            from .stiffness_curve import ForceComponent
+
+            return SupportCondition.spring_curve(ForceComponent.Vz, value)
         if isinstance(value, (int, float)):
             # Convenience: numeric means spring with that stiffness
             return SupportCondition.spring(float(value))
@@ -87,6 +92,19 @@ class NodalSupport:
                     f"Direction '{direction}': 'Spring' is ambiguous without stiffness. "
                     f"Use a numeric stiffness or SupportCondition.spring(k)."
                 )
+            if name in (
+                "stiffnesscurve",
+                "stiffness-curve",
+                "stiffness_curve",
+                "spring_curve",
+                "springcurve",
+                "spring-curve",
+            ):
+                raise ValueError(
+                    f"Direction '{direction}': stiffness curve requires data. "
+                    f"Use SupportCondition.spring_curve(depends_on, points) "
+                    f"or pass a list of [force_value, stiffness] pairs."
+                )
             mapping = {
                 "fixed": SupportCondition.fixed(),
                 "free": SupportCondition.free(),
@@ -96,7 +114,8 @@ class NodalSupport:
             if name not in mapping:
                 raise ValueError(
                     f"Direction '{direction}': unknown condition string '{value}'. "
-                    f"Supported: Fixed, Free, Positive-only, Negative-only, numeric stiffness"
+                    f"Supported: Fixed, Free, Positive-only, Negative-only, "
+                    f"numeric stiffness, list (spring_curve)"
                 )
             return mapping[name]
         raise TypeError(f"Unsupported condition type for '{direction}': {type(value)}")

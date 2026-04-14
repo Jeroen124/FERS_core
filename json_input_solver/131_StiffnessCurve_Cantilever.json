@@ -1,0 +1,469 @@
+{
+    "member_sets": [
+        {
+            "id": 1,
+            "l_y": null,
+            "l_z": null,
+            "classification": null,
+            "members": [
+                {
+                    "id": 1,
+                    "start_node": {
+                        "id": 1,
+                        "classification": "",
+                        "X": 0,
+                        "Y": 0,
+                        "Z": 0,
+                        "nodal_support": 1
+                    },
+                    "end_node": {
+                        "id": 2,
+                        "classification": "",
+                        "X": 0,
+                        "Y": 0,
+                        "Z": 5.0,
+                        "nodal_support": null
+                    },
+                    "section": 1,
+                    "rotation_angle": 0.0,
+                    "start_hinge": null,
+                    "end_hinge": null,
+                    "classification": "",
+                    "weight": 306.5425,
+                    "chi": null,
+                    "reference_member": null,
+                    "reference_node": null,
+                    "member_type": "Normal"
+                }
+            ]
+        }
+    ],
+    "load_cases": [
+        {
+            "id": 1,
+            "name": "N=0kN",
+            "nodal_loads": [
+                {
+                    "id": 1,
+                    "node": 2,
+                    "load_case": 1,
+                    "magnitude": 1000.0,
+                    "direction": [
+                        1,
+                        0,
+                        0
+                    ],
+                    "load_type": "force"
+                }
+            ],
+            "nodal_moments": [],
+            "distributed_loads": [],
+            "rotation_imperfections": [],
+            "translation_imperfections": []
+        },
+        {
+            "id": 2,
+            "name": "N=10kN",
+            "nodal_loads": [
+                {
+                    "id": 2,
+                    "node": 2,
+                    "load_case": 2,
+                    "magnitude": 1000.0,
+                    "direction": [
+                        1,
+                        0,
+                        0
+                    ],
+                    "load_type": "force"
+                },
+                {
+                    "id": 3,
+                    "node": 2,
+                    "load_case": 2,
+                    "magnitude": 10000,
+                    "direction": [
+                        0,
+                        0,
+                        -1
+                    ],
+                    "load_type": "force"
+                }
+            ],
+            "nodal_moments": [],
+            "distributed_loads": [],
+            "rotation_imperfections": [],
+            "translation_imperfections": []
+        },
+        {
+            "id": 3,
+            "name": "N=20kN",
+            "nodal_loads": [
+                {
+                    "id": 4,
+                    "node": 2,
+                    "load_case": 3,
+                    "magnitude": 1000.0,
+                    "direction": [
+                        1,
+                        0,
+                        0
+                    ],
+                    "load_type": "force"
+                },
+                {
+                    "id": 5,
+                    "node": 2,
+                    "load_case": 3,
+                    "magnitude": 20000,
+                    "direction": [
+                        0,
+                        0,
+                        -1
+                    ],
+                    "load_type": "force"
+                }
+            ],
+            "nodal_moments": [],
+            "distributed_loads": [],
+            "rotation_imperfections": [],
+            "translation_imperfections": []
+        },
+        {
+            "id": 4,
+            "name": "N=30kN",
+            "nodal_loads": [
+                {
+                    "id": 6,
+                    "node": 2,
+                    "load_case": 4,
+                    "magnitude": 1000.0,
+                    "direction": [
+                        1,
+                        0,
+                        0
+                    ],
+                    "load_type": "force"
+                },
+                {
+                    "id": 7,
+                    "node": 2,
+                    "load_case": 4,
+                    "magnitude": 30000,
+                    "direction": [
+                        0,
+                        0,
+                        -1
+                    ],
+                    "load_type": "force"
+                }
+            ],
+            "nodal_moments": [],
+            "distributed_loads": [],
+            "rotation_imperfections": [],
+            "translation_imperfections": []
+        },
+        {
+            "id": 5,
+            "name": "N=40kN",
+            "nodal_loads": [
+                {
+                    "id": 8,
+                    "node": 2,
+                    "load_case": 5,
+                    "magnitude": 1000.0,
+                    "direction": [
+                        1,
+                        0,
+                        0
+                    ],
+                    "load_type": "force"
+                },
+                {
+                    "id": 9,
+                    "node": 2,
+                    "load_case": 5,
+                    "magnitude": 40000,
+                    "direction": [
+                        0,
+                        0,
+                        -1
+                    ],
+                    "load_type": "force"
+                }
+            ],
+            "nodal_moments": [],
+            "distributed_loads": [],
+            "rotation_imperfections": [],
+            "translation_imperfections": []
+        },
+        {
+            "id": 6,
+            "name": "N=50kN",
+            "nodal_loads": [
+                {
+                    "id": 10,
+                    "node": 2,
+                    "load_case": 6,
+                    "magnitude": 1000.0,
+                    "direction": [
+                        1,
+                        0,
+                        0
+                    ],
+                    "load_type": "force"
+                },
+                {
+                    "id": 11,
+                    "node": 2,
+                    "load_case": 6,
+                    "magnitude": 50000,
+                    "direction": [
+                        0,
+                        0,
+                        -1
+                    ],
+                    "load_type": "force"
+                }
+            ],
+            "nodal_moments": [],
+            "distributed_loads": [],
+            "rotation_imperfections": [],
+            "translation_imperfections": []
+        },
+        {
+            "id": 7,
+            "name": "N=60kN",
+            "nodal_loads": [
+                {
+                    "id": 12,
+                    "node": 2,
+                    "load_case": 7,
+                    "magnitude": 1000.0,
+                    "direction": [
+                        1,
+                        0,
+                        0
+                    ],
+                    "load_type": "force"
+                },
+                {
+                    "id": 13,
+                    "node": 2,
+                    "load_case": 7,
+                    "magnitude": 60000,
+                    "direction": [
+                        0,
+                        0,
+                        -1
+                    ],
+                    "load_type": "force"
+                }
+            ],
+            "nodal_moments": [],
+            "distributed_loads": [],
+            "rotation_imperfections": [],
+            "translation_imperfections": []
+        },
+        {
+            "id": 8,
+            "name": "N=70kN",
+            "nodal_loads": [
+                {
+                    "id": 14,
+                    "node": 2,
+                    "load_case": 8,
+                    "magnitude": 1000.0,
+                    "direction": [
+                        1,
+                        0,
+                        0
+                    ],
+                    "load_type": "force"
+                },
+                {
+                    "id": 15,
+                    "node": 2,
+                    "load_case": 8,
+                    "magnitude": 70000,
+                    "direction": [
+                        0,
+                        0,
+                        -1
+                    ],
+                    "load_type": "force"
+                }
+            ],
+            "nodal_moments": [],
+            "distributed_loads": [],
+            "rotation_imperfections": [],
+            "translation_imperfections": []
+        },
+        {
+            "id": 9,
+            "name": "N=80kN",
+            "nodal_loads": [
+                {
+                    "id": 16,
+                    "node": 2,
+                    "load_case": 9,
+                    "magnitude": 1000.0,
+                    "direction": [
+                        1,
+                        0,
+                        0
+                    ],
+                    "load_type": "force"
+                },
+                {
+                    "id": 17,
+                    "node": 2,
+                    "load_case": 9,
+                    "magnitude": 80000,
+                    "direction": [
+                        0,
+                        0,
+                        -1
+                    ],
+                    "load_type": "force"
+                }
+            ],
+            "nodal_moments": [],
+            "distributed_loads": [],
+            "rotation_imperfections": [],
+            "translation_imperfections": []
+        }
+    ],
+    "load_combinations": [],
+    "imperfection_cases": [],
+    "settings": {
+        "id": 1,
+        "analysis_options": {
+            "id": 1,
+            "solve_loadcases": true,
+            "solver": "newton_raphson",
+            "tolerance": 0.001,
+            "max_iterations": 50,
+            "dimensionality": "3D",
+            "order": "Nonlinear",
+            "rigid_strategy": "Rigid_Member",
+            "axial_slack": 500,
+            "include_shear_deformation": true,
+            "include_warping": true
+        },
+        "unit_settings": {
+            "system": "metric",
+            "lengthUnit": "m",
+            "forceUnit": "N",
+            "densityUnit": "kg\/m3",
+            "weightUnit": "kg",
+            "pressureUnit": "Pa",
+            "temperatureUnit": "celsius"
+        },
+        "general_info": {
+            "project_name": "Unnamed Project",
+            "author": "Unknown",
+            "version": "1.0"
+        }
+    },
+    "memberhinges": [],
+    "materials": [
+        {
+            "id": 23,
+            "name": "Steel S235",
+            "e_mod": 210000000000.0,
+            "g_mod": 80769000000.0,
+            "density": 7850,
+            "yield_stress": 235000000.0
+        }
+    ],
+    "sections": [
+        {
+            "id": 1,
+            "name": "HEB 200",
+            "material": 23,
+            "h": null,
+            "b": null,
+            "i_y": 2.003e-5,
+            "i_z": 5.696e-5,
+            "j": 5.92e-7,
+            "area": 0.00781,
+            "shape_path": null
+        }
+    ],
+    "nodal_supports": [
+        {
+            "id": 1,
+            "classification": null,
+            "displacement_conditions": {
+                "X": {
+                    "condition_type": "Fixed",
+                    "stiffness": null
+                },
+                "Y": {
+                    "condition_type": "Fixed",
+                    "stiffness": null
+                },
+                "Z": {
+                    "condition_type": "Fixed",
+                    "stiffness": null
+                }
+            },
+            "rotation_conditions": {
+                "X": {
+                    "condition_type": "Fixed",
+                    "stiffness": null
+                },
+                "Y": {
+                    "condition_type": "StiffnessCurve",
+                    "stiffness": null,
+                    "stiffness_curve": [
+                        [
+                            -80000,
+                            6250000
+                        ],
+                        [
+                            -60000,
+                            5000000
+                        ],
+                        [
+                            -40000,
+                            3750000
+                        ],
+                        [
+                            -20000,
+                            2500000
+                        ],
+                        [
+                            0,
+                            2500000
+                        ],
+                        [
+                            20000,
+                            2500000
+                        ],
+                        [
+                            40000,
+                            3750000
+                        ],
+                        [
+                            60000,
+                            5000000
+                        ],
+                        [
+                            80000,
+                            6250000
+                        ]
+                    ]
+                },
+                "Z": {
+                    "condition_type": "Fixed",
+                    "stiffness": null
+                }
+            },
+            "warping_condition": null
+        }
+    ],
+    "shape_paths": [],
+    "resultsbundle": null
+}

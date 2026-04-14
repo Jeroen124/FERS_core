@@ -18,6 +18,7 @@ from .imperfections.translationimperfection import TranslationImperfection
 from .loads.distributionshape import DistributionShape
 from .supports.supportcondition import SupportCondition
 from .supports.supportcondition import SupportConditionType
+from .supports.stiffness_curve import ForceComponent, StiffnessCurveConfig
 from .settings.anlysis_options import AnalysisOrder, Dimensionality, RigidStrategy
 from .members.memberhinge import MemberHinge
 from .results.resultsbundle import ResultsBundle
@@ -35,6 +36,7 @@ __all__ = [
     "DistributionShape",
     "FERS",
     "FersCloudClient",
+    "ForceComponent",
     "ImperfectionCase",
     "LoadCase",
     "LoadCombination",
@@ -61,6 +63,7 @@ __all__ = [
     "resolve_section",
     "ShapePath",
     "SingleResults",
+    "StiffnessCurveConfig",
     "SupportCondition",
     "SupportConditionType",
     "TranslationImperfection",
