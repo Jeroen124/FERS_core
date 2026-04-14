@@ -8,6 +8,7 @@ from fers_core import (
     DistributedLoad,
     SupportCondition,
 )
+from fers_core.settings.enums import AnalysisOrder
 
 from tests.common_functions import (
     build_steel_s235,
@@ -142,6 +143,7 @@ def test_003_Cantilever_with_Uniform_Distributed_Load():
         member=member, load_case=lc, magnitude=load_intensity_in_newton_per_meter, direction=(0.0, -1.0, 0.0)
     )
 
+    calculation.settings.analysis_options.order = AnalysisOrder.LINEAR
     calculation.run_analysis()
     res = calculation.resultsbundle.loadcases["Uniform Load"]
 
@@ -393,6 +395,7 @@ def test_011_Simply_Supported_with_Center_Load():
     lc = calculation.create_load_case(name="Center Load")
     NodalLoad(node=n_mid, load_case=lc, magnitude=force_in_newton, direction=(0.0, -1.0, 0.0))
 
+    calculation.settings.analysis_options.order = AnalysisOrder.LINEAR
     calculation.run_analysis()
     res = calculation.resultsbundle.loadcases["Center Load"]
 
@@ -445,6 +448,7 @@ def test_012_Simply_Supported_with_Intermediate_Load():
     lc = calculation.create_load_case(name="Intermediate Load")
     NodalLoad(node=n_load, load_case=lc, magnitude=force_in_newton, direction=(0.0, -1.0, 0.0))
 
+    calculation.settings.analysis_options.order = AnalysisOrder.LINEAR
     calculation.run_analysis()
     res = calculation.resultsbundle.loadcases["Intermediate Load"]
 
@@ -500,6 +504,7 @@ def test_013_Simply_Supported_with_Double_symmetric_Load():
     NodalLoad(node=n_a, load_case=lc, magnitude=force_per_point_in_newton, direction=(0.0, -1.0, 0.0))
     NodalLoad(node=n_b, load_case=lc, magnitude=force_per_point_in_newton, direction=(0.0, -1.0, 0.0))
 
+    calculation.settings.analysis_options.order = AnalysisOrder.LINEAR
     calculation.run_analysis()
     res = calculation.resultsbundle.loadcases["Double symmetric Load"]
 
