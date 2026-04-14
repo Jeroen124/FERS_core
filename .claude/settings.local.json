@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(python export_shapepath_jsons.py)",
-      "Bash(python -c \":*)"
+      "Bash(python -c \":*)",
+      "Bash(python -m pytest --tb=short)",
+      "Bash(python:*)"
     ]
   }
 }
