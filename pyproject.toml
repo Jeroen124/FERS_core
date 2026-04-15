@@ -4,10 +4,10 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "FERS"
-version = "0.1.54"
+version = "0.1.55"
 description = "Finite Element Method library written in Rust with Python interface"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.11"
 authors = [
     {name = "Jeroen Hermsen", email = "info@ferscloud.com"},
 ]
