@@ -6,6 +6,8 @@ import fers_calculations
 
 if TYPE_CHECKING:
     from fers_core.cloud import FersCloudClient
+    from fers_core.visualization.model_renderer import ModelRenderer
+    from fers_core.visualization.result_renderer import ResultRenderer
 import ujson
 
 import numpy as np
