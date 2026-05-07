@@ -25,9 +25,21 @@ from .results.resultsbundle import ResultsBundle
 from .results.singleresults import SingleResults
 from .results.member import MemberResult
 from .results.nodes import NodeDisplacement, NodeForces, ReactionNodeResult
-from .visualization import ModelRenderer, ResultRenderer
 from .cloud import FersCloudClient
 from .sections.steel_sections_en import resolve_section, list_sections
+
+
+def __getattr__(name: str):
+    if name == "ModelRenderer":
+        from .visualization.model_renderer import ModelRenderer
+        globals()["ModelRenderer"] = ModelRenderer
+        return ModelRenderer
+    if name == "ResultRenderer":
+        from .visualization.result_renderer import ResultRenderer
+        globals()["ResultRenderer"] = ResultRenderer
+        return ResultRenderer
+    raise AttributeError(f"module 'fers_core' has no attribute {name!r}")
+
 
 __all__ = [
     "AnalysisOrder",

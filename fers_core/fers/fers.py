@@ -10,7 +10,6 @@ import ujson
 
 import numpy as np
 import matplotlib.pyplot as plt
-import pyvista as pv
 
 from fers_core.fers.deformation_utils import (
     centerline_path_points,
@@ -24,9 +23,6 @@ from fers_core.supports.support_utils import (
     translational_summary,
 )
 from fers_core.types.list_utils import as_list
-from fers_core.visualization.model_renderer import ModelRenderer
-from fers_core.visualization.result_renderer import ResultRenderer
-
 
 from ..imperfections.imperfectioncase import ImperfectionCase
 from ..loads.loadcase import LoadCase
@@ -800,6 +796,8 @@ class FERS:
         - show_support_base_for_fixed: If True, draw a flat square (plate) for
         all-fixed translational supports.
         """
+        import pyvista as pv
+
         # Build plot
         plotter = pv.Plotter()
 
@@ -1794,6 +1792,8 @@ class FERS:
         # ---------------------------
         # Plotter + global scales
         # ---------------------------
+        import pyvista as pv
+
         plotter = pv.Plotter()
         plotter.add_axes()
 
@@ -3369,6 +3369,8 @@ class FERS:
             >>> renderer.render_supports = True
             >>> renderer.show()
         """
+        from fers_core.visualization.model_renderer import ModelRenderer
+
         return ModelRenderer(self)
 
     def get_result_renderer(self) -> ResultRenderer:
@@ -3387,6 +3389,8 @@ class FERS:
             >>> renderer.member_diagrams = 'My'
             >>> renderer.show()
         """
+        from fers_core.visualization.result_renderer import ResultRenderer
+
         return ResultRenderer(self)
 
     # ── FersCloud integration ───────────────────────────
