@@ -4,6 +4,7 @@ from dataclasses import field
 from typing import Dict, Any, Optional
 
 from fers_core.results.member import MemberResult
+from fers_core.results.plate import PlateResult
 from fers_core.results.nodes import NodeDisplacement, ReactionNodeResult
 from fers_core.results.resultssummary import ResultsSummary
 
@@ -13,6 +14,7 @@ class SingleResults:
     displacement_nodes: Dict[str, NodeDisplacement] = field(default_factory=dict)
     reaction_nodes: Dict[str, ReactionNodeResult] = field(default_factory=dict)
     member_results: Dict[str, MemberResult] = field(default_factory=dict)
+    plate_results: Dict[str, PlateResult] = field(default_factory=dict)
     summary: Optional[ResultsSummary] = None
     result_type: Optional[Dict[str, Any]] = None
     unity_checks: Optional[Dict[str, Any]] = None
@@ -31,6 +33,10 @@ class SingleResults:
         member_map: Dict[str, MemberResult] = {}
         for key, value in (getattr(pyd_results, "member_results", {}) or {}).items():
             member_map[str(key)] = MemberResult.from_pydantic(value)
+
+        plate_map: Dict[str, PlateResult] = {}
+        for key, value in (getattr(pyd_results, "plate_results", {}) or {}).items():
+            plate_map[str(key)] = PlateResult.from_pydantic(value)
 
         summary_pyd = getattr(pyd_results, "summary", None)
         summary_ = ResultsSummary.from_pydantic(summary_pyd) if summary_pyd else None
@@ -60,6 +66,7 @@ class SingleResults:
         instance.displacement_nodes = displacement_map
         instance.reaction_nodes = reaction_map
         instance.member_results = member_map
+        instance.plate_results = plate_map
         instance.summary = summary_
         instance.result_type = result_type_dict
         instance.unity_checks = unity_checks_value
@@ -71,6 +78,7 @@ class SingleResults:
             "displacement_nodes": {k: v.to_dict() for k, v in self.displacement_nodes.items()},
             "reaction_nodes": {k: v.to_dict() for k, v in self.reaction_nodes.items()},
             "member_results": {k: v.to_dict() for k, v in self.member_results.items()},
+            "plate_results": {k: v.to_dict() for k, v in self.plate_results.items()},
             "summary": self.summary.to_dict() if self.summary else None,
             "result_type": self.result_type,
             "unity_checks": self.unity_checks,

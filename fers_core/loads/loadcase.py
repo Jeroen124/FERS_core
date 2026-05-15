@@ -14,6 +14,7 @@ class LoadCase:
         nodal_loads: Optional[list] = None,
         nodal_moments: Optional[list] = None,
         distributed_loads: Optional[list] = None,
+        surface_loads: Optional[list] = None,
         rotation_imperfections: Optional[list] = None,
         translation_imperfections: Optional[list] = None,
     ):
@@ -28,6 +29,7 @@ class LoadCase:
         self.nodal_loads = nodal_loads if nodal_loads is not None else []
         self.nodal_moments = nodal_moments if nodal_moments is not None else []
         self.distributed_loads = distributed_loads if distributed_loads is not None else []
+        self.surface_loads = surface_loads if surface_loads is not None else []
         self.rotation_imperfections = rotation_imperfections if rotation_imperfections is not None else []
         self.translation_imperfections = (
             translation_imperfections if translation_imperfections is not None else []
@@ -43,6 +45,9 @@ class LoadCase:
 
     def add_distributed_load(self, distributed_loads):
         self.distributed_loads.append(distributed_loads)
+
+    def add_surface_load(self, surface_load):
+        self.surface_loads.append(surface_load)
 
     def add_rotation_imperfection(self, rotation_imperfection):
         self.rotation_imperfections.append(rotation_imperfection)
@@ -76,6 +81,7 @@ class LoadCase:
             "nodal_loads": [nl.to_dict() for nl in self.nodal_loads],
             "nodal_moments": [nm.to_dict() for nm in self.nodal_moments],
             "distributed_loads": [dl.to_dict() for dl in self.distributed_loads],
+            "surface_loads": [sl.to_dict() for sl in self.surface_loads],
             "rotation_imperfections": [ri.id for ri in self.rotation_imperfections],
             "translation_imperfections": [ti.id for ti in self.translation_imperfections],
         }
@@ -98,6 +104,7 @@ class LoadCase:
             "nodal_loads": [ ... ],
             "nodal_moments": [ ... ],
             "distributed_loads": [ ... ],
+            "surface_loads": [ ... ],
             "rotation_imperfections": [ids or dicts],
             "translation_imperfections": [ids or dicts],
         }
@@ -111,6 +118,7 @@ class LoadCase:
         except ImportError:  # if you don't have a separate class
             NodalMoment = NodalLoad  # type: ignore
         from ..loads.distributedload import DistributedLoad
+        from ..loads.surfaceload import SurfaceLoad
         from ..imperfections.rotationimperfection import RotationImperfection
         from ..imperfections.translationimperfection import TranslationImperfection
 
@@ -127,6 +135,7 @@ class LoadCase:
             nodal_loads=[],
             nodal_moments=[],
             distributed_loads=[],
+            surface_loads=[],
             rotation_imperfections=[],
             translation_imperfections=[],
         )
@@ -137,31 +146,32 @@ class LoadCase:
 
         # --- Nodal loads ---
         for nl_data in data.get("nodal_loads", []):
-            nl = NodalLoad.from_dict(nl_data, nodes=nodes, load_case=load_case)
-
-            load_case.add_nodal_load(nl)
+            NodalLoad.from_dict(nl_data, nodes=nodes, load_case=load_case)
 
         # --- Nodal moments ---
         for nm_data in data.get("nodal_moments", []):
             if isinstance(nm_data, dict):
-                nm = NodalMoment.from_dict(nm_data, nodes=nodes, load_case=load_case)
-                load_case.add_nodal_moment(nm)
+                NodalMoment.from_dict(nm_data, nodes=nodes, load_case=load_case)
 
         # --- Distributed loads ---
         for dl_data in data.get("distributed_loads", []):
             if isinstance(dl_data, dict):
                 if hasattr(DistributedLoad, "from_dict"):
-                    dl = DistributedLoad.from_dict(dl_data, members=members, load_case=load_case)
+                    DistributedLoad.from_dict(dl_data, members=members, load_case=load_case)
                 else:
                     member_id = dl_data.get("member_id") or dl_data.get("member")
                     member = members.get(member_id)
                     kwargs = {
                         k: v
                         for k, v in dl_data.items()
-                        if k not in {"id", "member", "member_id", "load_case"}
+                            if k not in {"id", "member", "member_id", "load_case"}
                     }
-                    dl = DistributedLoad(member=member, load_case=load_case, **kwargs)
-                load_case.add_distributed_load(dl)
+                    DistributedLoad(member=member, load_case=load_case, **kwargs)
+
+        # --- Surface loads ---
+        for sl_data in data.get("surface_loads", []):
+            if isinstance(sl_data, dict):
+                SurfaceLoad.from_dict(sl_data, load_case=load_case)
 
         # --- Rotation imperfections (optional, usually handled via ImperfectionCase) ---
         for ri_data in data.get("rotation_imperfections", []):

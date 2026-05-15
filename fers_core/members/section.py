@@ -1,18 +1,36 @@
 from typing import Optional
 from ..members.material import Material
 from ..members.shapepath import ShapePath
-from sectionproperties.pre.library.steel_sections import (
-    i_section,
-    channel_section,
-    circular_hollow_section,
-    rectangular_hollow_section,
-    angle_section,
-    cee_section,
-    zed_section,
-)
-from sectionproperties.analysis.section import Section as SP_section
+try:
+    from sectionproperties.pre.library.steel_sections import (
+        i_section,
+        channel_section,
+        circular_hollow_section,
+        rectangular_hollow_section,
+        angle_section,
+        cee_section,
+        zed_section,
+    )
+    from sectionproperties.analysis.section import Section as SP_section
+except ImportError:  # pragma: no cover - optional dependency for section generators
+    i_section = None
+    channel_section = None
+    circular_hollow_section = None
+    rectangular_hollow_section = None
+    angle_section = None
+    cee_section = None
+    zed_section = None
+    SP_section = None
 
 import matplotlib.pyplot as plt
+
+
+def _require_sectionproperties() -> None:
+    if SP_section is None:
+        raise ImportError(
+            "sectionproperties is required for generated section geometry. "
+            "Install the FERS_core section-generation dependencies to use these helpers."
+        )
 
 
 class Section:

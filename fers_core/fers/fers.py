@@ -27,9 +27,14 @@ from fers_core.supports.support_utils import (
 from fers_core.types.list_utils import as_list
 
 from ..imperfections.imperfectioncase import ImperfectionCase
+from ..loads.distributedload import DistributedLoad
 from ..loads.loadcase import LoadCase
 from ..loads.loadcombination import LoadCombination
 from ..loads.nodalload import NodalLoad
+from ..loads.nodalmoment import NodalMoment
+from ..loads.surfaceload import SurfaceLoad
+from ..plates.plate import Plate
+from ..plates.platesurface import PlateSurface
 from ..members.material import Material
 from ..members.member import Member
 from ..members.section import Section
@@ -47,6 +52,8 @@ class FERS:
         if reset_counters:
             self.reset_counters()
         self.member_sets = []
+        self.plate_surfaces = []
+        self.plates = []
         self.load_cases = []
         self.load_combinations = []
         self.imperfection_cases = []
@@ -123,6 +130,8 @@ class FERS:
     def to_dict(self, include_results: bool = True) -> dict[str, Any]:
         data: dict[str, Any] = {
             "member_sets": [member_set.to_dict() for member_set in self.member_sets],
+            "plate_surfaces": [plate_surface.to_dict() for plate_surface in self.plate_surfaces],
+            "plates": [plate.to_dict() for plate in self.plates],
             "load_cases": [load_case.to_dict() for load_case in self.load_cases],
             "load_combinations": [load_comb.to_dict() for load_comb in self.load_combinations],
             "imperfection_cases": [imp_case.to_dict() for imp_case in self.imperfection_cases],
@@ -198,6 +207,7 @@ class FERS:
 
         id_to_node: dict[int, Node] = {}
         id_to_member: dict[int, Member] = {}
+        id_to_plate_surface: dict[int, PlateSurface] = {}
 
         # member sets + members
         for ms_data in data.get("member_sets", []):
@@ -223,6 +233,21 @@ class FERS:
             )
             fers.add_member_set(member_set)
 
+        for plate_surface_data in as_list(data.get("plate_surfaces"), "plate_surfaces"):
+            plate_surface = PlateSurface.from_dict(plate_surface_data, materials_by_id=id_to_material)
+            id_to_plate_surface[plate_surface.id] = plate_surface
+            fers.add_plate_surface(plate_surface)
+
+        for plate_data in as_list(data.get("plates"), "plates"):
+            plate = Plate.from_dict(
+                plate_data,
+                nodes_by_id=id_to_node,
+                materials_by_id=id_to_material,
+                nodal_supports_by_id=id_to_support,
+                source_surfaces_by_id=id_to_plate_surface,
+            )
+            fers.add_plate(plate)
+
         # NO second loop with resolve_member here. Delete that block.
 
         # load cases
@@ -247,6 +272,8 @@ class FERS:
 
         # results
         res_data = data.get("results")
+        if res_data is None:
+            res_data = data.get("resultsbundle")
         if res_data:
             validated = ResultsBundleSchema(**res_data)
             fers.resultsbundle = ResultsBundle.from_pydantic(validated)
@@ -273,6 +300,14 @@ class FERS:
     def add_load_case(self, load_case):
         self.load_cases.append(load_case)
 
+    def add_plate_surface(self, *plate_surfaces):
+        for plate_surface in plate_surfaces:
+            self.plate_surfaces.append(plate_surface)
+
+    def add_plate(self, *plates):
+        for plate in plates:
+            self.plates.append(plate)
+
     def add_load_combination(self, load_combination):
         self.load_combinations.append(load_combination)
 
@@ -284,8 +319,8 @@ class FERS:
         self.imperfection_cases.append(imperfection_case)
 
     def number_of_elements(self):
-        """Returns the total number of unique members in the model."""
-        return len(self.get_all_members())
+        """Returns the total number of unique members and plates in the model."""
+        return len(self.get_all_members()) + len(self.get_all_plates())
 
     def number_of_nodes(self):
         """Returns the total number of unique nodes in the model."""
@@ -301,6 +336,11 @@ class FERS:
         Node.reset_counter()
         NodalSupport.reset_counter()
         NodalLoad.reset_counter()
+        NodalMoment.reset_counter()
+        DistributedLoad.reset_counter()
+        SurfaceLoad.reset_counter()
+        PlateSurface.reset_counter()
+        Plate.reset_counter()
         Section.reset_counter()
         Material.reset_counter()
         ShapePath.reset_counter()
@@ -555,6 +595,15 @@ class FERS:
 
         return members
 
+    def get_all_plates(self):
+        plates = []
+        plate_ids = set()
+        for plate in self.plates:
+            if plate.id not in plate_ids:
+                plates.append(plate)
+                plate_ids.add(plate.id)
+        return plates
+
     def find_members_by_first_node(self, node):
         """
         Finds all members whose start node matches the given node.
@@ -585,6 +634,12 @@ class FERS:
                     nodes.append(member.end_node)
                     node_ids.add(member.end_node.id)
 
+        for plate in self.plates:
+            for node in plate.nodes:
+                if node.id not in node_ids:
+                    nodes.append(node)
+                    node_ids.add(node.id)
+
         return nodes
 
     def get_node_by_pk(self, pk):
@@ -606,6 +661,10 @@ class FERS:
                 if material is None:
                     continue
                 by_id[material.id] = material
+        for plate_surface in self.plate_surfaces:
+            by_id[plate_surface.material.id] = plate_surface.material
+        for plate in self.plates:
+            by_id[plate.material.id] = plate.material
         return list(by_id.keys()) if ids_only else list(by_id.values())
 
     def get_unique_shape_paths_from_all_member_sets(self, ids_only: bool = False):
@@ -645,6 +704,11 @@ class FERS:
                         # Store unique nodal supports by ID
                         unique_nodal_supports[node.nodal_support.id] = node.nodal_support
 
+        for plate in self.plates:
+            for node in plate.nodes:
+                if node.nodal_support and node.nodal_support.id not in unique_nodal_supports:
+                    unique_nodal_supports[node.nodal_support.id] = node.nodal_support
+
         # Return only the IDs if ids_only is True
         return list(unique_nodal_supports.keys()) if ids_only else list(unique_nodal_supports.values())
 
@@ -675,6 +739,22 @@ class FERS:
                     continue
                 by_id[hinge.id] = hinge
         return list(by_id.keys()) if ids_only else list(by_id.values())
+
+    def generate_plate_meshes(self) -> list[Plate]:
+        retained_plates = [plate for plate in self.plates if plate.source_surface_id is None]
+        next_plate_id = max([plate.id for plate in retained_plates], default=0) + 1
+        next_node_id = max([node.id for node in self.get_all_nodes()], default=0) + 1
+
+        generated_plates: list[Plate] = []
+        for plate_surface in self.plate_surfaces:
+            plates, next_plate_id, next_node_id = plate_surface.generate_plates(
+                next_plate_id=next_plate_id,
+                next_node_id=next_node_id,
+            )
+            generated_plates.extend(plates)
+
+        self.plates = retained_plates + generated_plates
+        return generated_plates
 
     def get_unique_situations(self):
         """
