@@ -4,6 +4,7 @@ from dataclasses import field
 from typing import Dict, Any, Mapping, Optional
 
 from fers_core.results.member import MemberResult
+from fers_core.results.plate import PlateResult
 from fers_core.results.nodes import NodeDisplacement, NodeLocation, ReactionNodeResult, NodeForces
 from fers_core.results.resultssummary import ResultsSummary
 from fers_core.results.singleresults import SingleResults
@@ -65,6 +66,10 @@ class ResultsBundle:
                     )
                     for k, v in (value.get("member_results") or {}).items()
                 },
+                plate_results={
+                    str(k): PlateResult.from_dict(v)
+                    for k, v in (value.get("plate_results") or {}).items()
+                },
                 summary=ResultsSummary(**(value.get("summary") or {})) if value.get("summary") else None,
                 result_type=value.get("result_type"),
                 unity_checks=value.get("unity_checks"),
@@ -93,6 +98,10 @@ class ResultsBundle:
                         minimums=NodeForces(**v.get("minimums", {})),
                     )
                     for k, v in (value.get("member_results") or {}).items()
+                },
+                plate_results={
+                    str(k): PlateResult.from_dict(v)
+                    for k, v in (value.get("plate_results") or {}).items()
                 },
                 summary=ResultsSummary(**(value.get("summary") or {})) if value.get("summary") else None,
                 result_type=value.get("result_type"),

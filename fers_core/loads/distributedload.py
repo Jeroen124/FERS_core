@@ -27,6 +27,10 @@ class DistributedLoad:
 
     _distributed_load_counter = 1
 
+    @classmethod
+    def reset_counter(cls) -> None:
+        cls._distributed_load_counter = 1
+
     def __init__(
         self,
         member: Member,

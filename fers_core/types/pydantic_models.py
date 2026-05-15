@@ -35,6 +35,49 @@ class DistributedLoad(BaseModel):
     start_frac: float
 
 
+class SurfaceLoadVertex(BaseModel):
+    x: float
+    y: float
+    z: float
+
+
+class SurfaceLoad(BaseModel):
+    direction: list[Any]
+    distribution_direction: list[Any] | None = None
+    id: conint(ge=0)
+    load_case: conint(ge=0)
+    magnitude: float
+    polygon: list[SurfaceLoadVertex]
+
+
+class PlateVertex(BaseModel):
+    x: float
+    y: float
+    z: float
+
+
+class PlateSurface(BaseModel):
+    classification: str = ""
+    generated_plate_ids: list[conint(ge=0)] = []
+    id: conint(ge=0)
+    local_x_direction: list[Any] | None = None
+    material: conint(ge=0)
+    mesh_size: float | None = None
+    name: str = ""
+    polygon: list[PlateVertex]
+    thickness: float
+
+
+class Plate(BaseModel):
+    classification: str = ""
+    id: conint(ge=0)
+    local_x_direction: list[Any] | None = None
+    material: conint(ge=0)
+    nodes: list[Node]
+    source_surface: conint(ge=0) | None = None
+    thickness: float
+
+
 class ForceComponent(Enum):
     N = "N"
     Vy = "Vy"
@@ -155,6 +198,26 @@ class NodeLocation(BaseModel):
     Z: float
 
 
+class PlateResultants(BaseModel):
+    mx: float
+    mxy: float
+    my: float
+    nx: float
+    nxy: float
+    ny: float
+    qx: float
+    qy: float
+
+
+class PlateResult(BaseModel):
+    centroid: NodeLocation
+    centroid_displacement_global: NodeDisplacement
+    centroid_displacement_local: NodeDisplacement
+    nodal_forces_global: dict[str, NodeForces]
+    plate_id: conint(ge=0)
+    resultants: PlateResultants
+
+
 class NonlinearMethod(Enum):
     P_DELTA = "P_DELTA"
     COROTATIONAL = "COROTATIONAL"
@@ -198,6 +261,7 @@ class ResultType(RootModel[ResultType1 | ResultType2]):
 class ResultsSummary(BaseModel):
     total_displacements: conint(ge=0)
     total_member_forces: conint(ge=0)
+    total_plate_forces: conint(ge=0) = 0
     total_reaction_forces: conint(ge=0)
 
 
@@ -444,6 +508,7 @@ class LoadCase(BaseModel):
     nodal_loads: list[NodalLoad]
     nodal_moments: list[NodalMoment]
     rotation_imperfections: list[RotationImperfection]
+    surface_loads: list[SurfaceLoad]
     translation_imperfections: list[TranslationImperfection]
 
 
@@ -522,6 +587,7 @@ class Results(BaseModel):
     displacement_nodes: dict[str, NodeDisplacement]
     member_results: dict[str, MemberResult]
     name: str
+    plate_results: dict[str, PlateResult] = {}
     reaction_nodes: dict[str, ReactionNodeResult]
     result_type: ResultType
     summary: ResultsSummary
@@ -563,6 +629,8 @@ class FERS(BaseModel):
     member_sets: list[MemberSet]
     memberhinges: list[MemberHinge] | None = None
     nodal_supports: list[NodalSupport]
+    plate_surfaces: list[PlateSurface] = []
+    plates: list[Plate] = []
     results: ResultsBundle | None = None
     sections: list[Section]
     settings: Settings

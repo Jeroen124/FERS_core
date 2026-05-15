@@ -12,6 +12,9 @@ from .loads.loadcombination import LoadCombination
 from .loads.nodalload import NodalLoad
 from .loads.nodalmoment import NodalMoment
 from .loads.distributedload import DistributedLoad
+from .loads.surfaceload import SurfaceLoad, SurfaceLoadVertex
+from .plates.plate import Plate
+from .plates.platesurface import PlateSurface, PlateVertex
 from .imperfections.imperfectioncase import ImperfectionCase
 from .imperfections.rotationimperfection import RotationImperfection
 from .imperfections.translationimperfection import TranslationImperfection
@@ -60,6 +63,9 @@ __all__ = [
     "MemberSet",
     "ModelRenderer",
     "Node",
+    "Plate",
+    "PlateSurface",
+    "PlateVertex",
     "NodeDisplacement",
     "NodeForces",
     "NodalLoad",
@@ -71,6 +77,8 @@ __all__ = [
     "RigidStrategy",
     "RotationImperfection",
     "Section",
+    "SurfaceLoad",
+    "SurfaceLoadVertex",
     "list_sections",
     "resolve_section",
     "ShapePath",

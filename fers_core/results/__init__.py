@@ -7,6 +7,7 @@ from .resultsbundle import ResultsBundle
 from .singleresults import SingleResults
 from .member import MemberResult
 from .nodes import NodeDisplacement, NodeForces, NodeLocation, ReactionNodeResult, SectionForce
+from .plate import PlateResult, PlateResultants
 from .resultssummary import ResultsSummary
 
 __all__ = [
@@ -14,6 +15,8 @@ __all__ = [
     "NodeDisplacement",
     "NodeForces",
     "NodeLocation",
+    "PlateResult",
+    "PlateResultants",
     "ReactionNodeResult",
     "SectionForce",
     "ResultsBundle",
