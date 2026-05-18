@@ -144,7 +144,10 @@ def _ear_clip(vertices: list[Point2]) -> list[tuple[int, int, int]]:
             break
 
         if not ear_found:
-            raise ValueError("PlateSurface polygon could not be triangulated. Use a simple non-self-intersecting polygon.")
+            raise ValueError(
+                "PlateSurface polygon could not be triangulated. "
+                "Use a simple non-self-intersecting polygon."
+            )
 
     triangles.append((indices[0], indices[1], indices[2]))
     return triangles

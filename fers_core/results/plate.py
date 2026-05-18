@@ -95,7 +95,9 @@ class PlateResult:
     def from_dict(cls, data: Dict[str, Any]) -> "PlateResult":
         instance = cls()
         instance.plate_id = int(data.get("plate_id", 0) or 0)
-        instance.centroid = NodeLocation.from_pydantic(type("NodeLocationProxy", (), data.get("centroid", {}))())
+        instance.centroid = NodeLocation.from_pydantic(
+            type("NodeLocationProxy", (), data.get("centroid", {}))()
+        )
         instance.centroid_displacement_global = NodeDisplacement.from_pydantic(
             type("NodeDispProxy", (), data.get("centroid_displacement_global", {}))()
         )
