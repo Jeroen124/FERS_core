@@ -26,6 +26,7 @@
                     },
                     "section": 1,
                     "rotation_angle": 0.0,
+                    "mirror": false,
                     "start_hinge": null,
                     "end_hinge": null,
                     "classification": "",
@@ -63,6 +64,7 @@
                     },
                     "section": 1,
                     "rotation_angle": 0.0,
+                    "mirror": false,
                     "start_hinge": null,
                     "end_hinge": null,
                     "classification": "",
@@ -100,6 +102,7 @@
                     },
                     "section": 1,
                     "rotation_angle": 0.0,
+                    "mirror": false,
                     "start_hinge": null,
                     "end_hinge": null,
                     "classification": "",
@@ -112,6 +115,8 @@
             ]
         }
     ],
+    "plate_surfaces": [],
+    "plates": [],
     "load_cases": [
         {
             "id": 1,
@@ -132,6 +137,7 @@
             ],
             "nodal_moments": [],
             "distributed_loads": [],
+            "surface_loads": [],
             "rotation_imperfections": [],
             "translation_imperfections": []
         }
@@ -151,7 +157,8 @@
             "rigid_strategy": "Rigid_Member",
             "axial_slack": 500,
             "include_shear_deformation": true,
-            "include_warping": true
+            "include_warping": true,
+            "include_shear_center_coupling": true
         },
         "unit_settings": {
             "system": "metric",

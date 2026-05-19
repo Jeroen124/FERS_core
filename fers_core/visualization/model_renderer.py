@@ -234,8 +234,22 @@ class ModelRenderer:
         color = "green"
         size = self.annotation_size
 
+        from ..supports.supportcondition import SupportConditionType
+
+        def is_restrained(condition) -> bool:
+            return condition.condition_type != SupportConditionType.FREE
+
+        dc = support.displacement_conditions
+        rc = support.rotation_conditions
+        tx = is_restrained(dc["X"])
+        ty = is_restrained(dc["Y"])
+        tz = is_restrained(dc["Z"])
+        rx = is_restrained(rc["X"])
+        ry = is_restrained(rc["Y"])
+        rz = is_restrained(rc["Z"])
+
         # Check for fixed support (all DOFs restrained)
-        if all([support.Tx, support.Ty, support.Tz, support.Rx, support.Ry, support.Rz]):
+        if all([tx, ty, tz, rx, ry, rz]):
             # Fixed support: cube
             cube = pv.Cube(
                 center=(node.X, node.Y - size, node.Z),
@@ -246,7 +260,7 @@ class ModelRenderer:
             self.plotter.add_mesh(cube, color=color)
 
         # Check for pinned support (translations only)
-        elif all([support.Tx, support.Ty, support.Tz]) and not any([support.Rx, support.Ry, support.Rz]):
+        elif all([tx, ty, tz]) and not any([rx, ry, rz]):
             # Pinned support: cone
             cone = pv.Cone(
                 center=(node.X, node.Y - size, node.Z), direction=(0, 1, 0), height=size * 2, radius=size * 2
@@ -256,7 +270,7 @@ class ModelRenderer:
         # Other support conditions: render individual restraints
         else:
             # Translation X
-            if support.Tx:
+            if tx:
                 line = pv.Line((node.X - size, node.Y, node.Z), (node.X + size, node.Y, node.Z))
                 self.plotter.add_mesh(line, color=color, line_width=3)
 
@@ -277,7 +291,7 @@ class ModelRenderer:
                 self.plotter.add_mesh(cone2, color=color)
 
             # Translation Y
-            if support.Ty:
+            if ty:
                 line = pv.Line((node.X, node.Y - size, node.Z), (node.X, node.Y + size, node.Z))
                 self.plotter.add_mesh(line, color=color, line_width=3)
 
@@ -297,7 +311,7 @@ class ModelRenderer:
                 self.plotter.add_mesh(cone2, color=color)
 
             # Translation Z
-            if support.Tz:
+            if tz:
                 line = pv.Line((node.X, node.Y, node.Z - size), (node.X, node.Y, node.Z + size))
                 self.plotter.add_mesh(line, color=color, line_width=3)
 
@@ -336,8 +350,15 @@ class ModelRenderer:
         Args:
             filename: Path to save the screenshot
         """
+        # Swap to an off-screen plotter, render, screenshot, then restore
+        original = self.plotter
+        self.plotter = pv.Plotter(off_screen=True)
+        self.plotter.set_background("white")
         self.update()
+        self.plotter.show(auto_close=False)
         self.plotter.screenshot(filename)
+        self.plotter.close()
+        self.plotter = original
 
     def close(self) -> None:
         """Close the plotter."""

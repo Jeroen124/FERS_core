@@ -26,6 +26,7 @@
           },
           "section": 1,
           "rotation_angle": 0.0,
+          "mirror": false,
           "start_hinge": null,
           "end_hinge": null,
           "classification": "",
@@ -55,6 +56,7 @@
           },
           "section": 1,
           "rotation_angle": 0.0,
+          "mirror": false,
           "start_hinge": null,
           "end_hinge": null,
           "classification": "",
@@ -67,6 +69,8 @@
       ]
     }
   ],
+  "plate_surfaces": [],
+  "plates": [],
   "load_cases": [
     {
       "id": 1,
@@ -87,6 +91,7 @@
       ],
       "nodal_moments": [],
       "distributed_loads": [],
+      "surface_loads": [],
       "rotation_imperfections": [],
       "translation_imperfections": []
     }
@@ -104,7 +109,10 @@
       "dimensionality": "3D",
       "order": "Nonlinear",
       "rigid_strategy": "Rigid_Member",
-      "axial_slack": 500
+      "axial_slack": 500,
+      "include_shear_deformation": true,
+      "include_warping": true,
+      "include_shear_center_coupling": true
     },
     "unit_settings": {
       "system": "metric",
@@ -141,9 +149,17 @@
       "b": 0.1,
       "i_y": 1.423736918537007e-6,
       "i_z": 1.9437968291787006e-5,
-      "j": 6.910636270811944e-8,
+      "j": 6.910636270810589e-8,
       "area": 0.002849237038684799,
-      "shape_path": 1
+      "shape_path": 1,
+      "i_w": 1.2745319110904426e-8,
+      "y_s": -8.12745428487046e-9,
+      "z_s": 3.190937163000897e-8,
+      "wagner_coeff": 0.007321856667972003,
+      "a_sy": 0.0015878831095982662,
+      "a_sz": 0.0010965545696019834,
+      "centroid_y": -2.972841275590355e-19,
+      "centroid_z": 1.783704765354213e-18
     }
   ],
   "nodal_supports": [
@@ -177,7 +193,8 @@
           "condition_type": "Fixed",
           "stiffness": null
         }
-      }
+      },
+      "warping_condition": null
     },
     {
       "id": 2,
@@ -209,7 +226,8 @@
           "condition_type": "Fixed",
           "stiffness": null
         }
-      }
+      },
+      "warping_condition": null
     }
   ],
   "shape_paths": [

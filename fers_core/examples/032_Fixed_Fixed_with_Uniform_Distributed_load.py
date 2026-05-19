@@ -1,5 +1,5 @@
 import os
-from fers_core import (
+from fers_core import ( AnalysisOrder,
     Node,
     Member,
     FERS,
@@ -19,6 +19,7 @@ from fers_core.loads.distributedload import DistributedLoad
 # -------------------------
 # Create the main FERS object that will manage the analysis
 calculation_1 = FERS()
+calculation_1.settings.analysis_options.order = AnalysisOrder.LINEAR
 
 # Define the geometry of the beam
 node1 = Node(0, 0, 0)  # Simply supported side of the beam at x=0

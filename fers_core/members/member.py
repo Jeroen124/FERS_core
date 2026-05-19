@@ -346,10 +346,10 @@ class Member:
         if self.member_type == MemberType.RIGID:
             member_color = "red" if theme == "default" else "orange"
             line_width = 3
-        elif self.member_type == MemberType.TENSION_ONLY:
+        elif self.member_type == MemberType.TENSION:
             member_color = "green" if theme == "default" else "lightgreen"
             line_width = 2
-        elif self.member_type == MemberType.COMPRESSION_ONLY:
+        elif self.member_type == MemberType.COMPRESSION:
             member_color = "purple" if theme == "default" else "violet"
             line_width = 2
         else:

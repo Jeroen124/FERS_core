@@ -1,5 +1,5 @@
 import os
-from fers_core import (
+from fers_core import ( AnalysisOrder,
     Node,
     Member,
     FERS,
@@ -27,6 +27,7 @@ from fers_core import (
 # Step 1: Set up the model
 # ------------------------
 calculation_1 = FERS()
+calculation_1.settings.analysis_options.order = AnalysisOrder.LINEAR
 
 # Geometry
 node1 = Node(0.0, 0.0, 0.0)  # support end

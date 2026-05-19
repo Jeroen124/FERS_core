@@ -1,5 +1,5 @@
 import os
-from fers_core import Node, Member, FERS, Material, Section, MemberSet, NodalSupport, NodalLoad
+from fers_core import Node, Member, FERS, Material, Section, MemberSet, NodalSupport, NodalLoad, AnalysisOrder
 
 
 # =============================================================================
@@ -7,6 +7,7 @@ from fers_core import Node, Member, FERS, Material, Section, MemberSet, NodalSup
 # =============================================================================
 # Create analysis object
 calculation_1 = FERS()
+calculation_1.settings.analysis_options.order = AnalysisOrder.LINEAR
 
 
 # Create nodes

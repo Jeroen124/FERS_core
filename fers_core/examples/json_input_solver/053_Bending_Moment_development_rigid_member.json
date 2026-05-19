@@ -26,6 +26,7 @@
                     },
                     "section": 1,
                     "rotation_angle": 0.0,
+                    "mirror": false,
                     "start_hinge": null,
                     "end_hinge": null,
                     "classification": "",
@@ -55,6 +56,7 @@
                     },
                     "section": null,
                     "rotation_angle": 0.0,
+                    "mirror": false,
                     "start_hinge": null,
                     "end_hinge": null,
                     "classification": "",
@@ -84,6 +86,7 @@
                     },
                     "section": 1,
                     "rotation_angle": 0.0,
+                    "mirror": false,
                     "start_hinge": 1,
                     "end_hinge": null,
                     "classification": "",
@@ -96,6 +99,8 @@
             ]
         }
     ],
+    "plate_surfaces": [],
+    "plates": [],
     "load_cases": [
         {
             "id": 1,
@@ -116,6 +121,7 @@
             ],
             "nodal_moments": [],
             "distributed_loads": [],
+            "surface_loads": [],
             "rotation_imperfections": [],
             "translation_imperfections": []
         }
@@ -131,9 +137,12 @@
             "tolerance": 0.01,
             "max_iterations": 30,
             "dimensionality": "3D",
-            "order": "Nonlinear",
+            "order": "Linear",
             "rigid_strategy": "Rigid_Member",
-            "axial_slack": 500
+            "axial_slack": 500,
+            "include_shear_deformation": true,
+            "include_warping": true,
+            "include_shear_center_coupling": true
         },
         "unit_settings": {
             "system": "metric",
@@ -160,12 +169,20 @@
             "rotational_release_mx": null,
             "rotational_release_my": null,
             "rotational_release_mz": 250000.0,
+            "rotational_release_warp": null,
             "max_tension_vx": null,
             "max_tension_vy": null,
             "max_tension_vz": null,
             "max_moment_mx": null,
             "max_moment_my": null,
-            "max_moment_mz": null
+            "max_moment_mz": null,
+            "max_bimoment_warp": null,
+            "stiffness_curve_vx": null,
+            "stiffness_curve_vy": null,
+            "stiffness_curve_vz": null,
+            "stiffness_curve_mx": null,
+            "stiffness_curve_my": null,
+            "stiffness_curve_mz": null
         }
     ],
     "materials": [
@@ -185,8 +202,8 @@
             "material": 1,
             "h": null,
             "b": null,
-            "i_y": 8.19e-7,
-            "i_z": 1.063e-5,
+            "i_y": 1.01e-6,
+            "i_z": 1.321e-5,
             "j": 2.7e-8,
             "area": 0.00196,
             "shape_path": null
@@ -223,7 +240,8 @@
                     "condition_type": "Fixed",
                     "stiffness": null
                 }
-            }
+            },
+            "warping_condition": null
         }
     ],
     "shape_paths": [],
