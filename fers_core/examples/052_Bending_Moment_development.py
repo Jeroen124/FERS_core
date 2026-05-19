@@ -1,5 +1,5 @@
 import os
-from fers_core import Node, Member, FERS, Material, MemberHinge, Section, MemberSet, NodalSupport, NodalLoad
+from fers_core import Node, Member, FERS, Material, MemberHinge, Section, MemberSet, NodalSupport, NodalLoad, AnalysisOrder
 
 
 def print_displacements_for_loadcase(results_for_loadcase):
@@ -109,6 +109,7 @@ def print_shear_forces_for_loadcase(results_for_loadcase):
 # Step 1: Set up the model
 # ------------------------
 calculation_1 = FERS()
+calculation_1.settings.analysis_options.order = AnalysisOrder.LINEAR
 
 # Geometry
 node1 = Node(0.0, 0.0, 0.0)  # support end

@@ -82,36 +82,13 @@
     "load_cases": [
         {
             "id": 1,
-            "name": "End Load 1",
+            "name": "End Load",
             "nodal_loads": [
                 {
                     "id": 1,
                     "node": 3,
                     "load_case": 1,
-                    "magnitude": -100,
-                    "direction": [
-                        1,
-                        0,
-                        0
-                    ],
-                    "load_type": "force"
-                }
-            ],
-            "nodal_moments": [],
-            "distributed_loads": [],
-            "surface_loads": [],
-            "rotation_imperfections": [],
-            "translation_imperfections": []
-        },
-        {
-            "id": 2,
-            "name": "End Load 2",
-            "nodal_loads": [
-                {
-                    "id": 2,
-                    "node": 3,
-                    "load_case": 2,
-                    "magnitude": -100,
+                    "magnitude": -1000,
                     "direction": [
                         1,
                         0,
@@ -127,19 +104,7 @@
             "translation_imperfections": []
         }
     ],
-    "load_combinations": [
-        {
-            "id": 1,
-            "name": "A simple combination",
-            "load_cases_factors": {
-                "1": 1,
-                "2": 2
-            },
-            "situation": "SLS",
-            "check": "ALL",
-            "limit_state": null
-        }
-    ],
+    "load_combinations": [],
     "imperfection_cases": [],
     "settings": {
         "id": 1,
@@ -150,7 +115,7 @@
             "tolerance": 0.01,
             "max_iterations": 30,
             "dimensionality": "3D",
-            "order": "Linear",
+            "order": "Nonlinear",
             "rigid_strategy": "Rigid_Member",
             "axial_slack": 500,
             "include_shear_deformation": true,

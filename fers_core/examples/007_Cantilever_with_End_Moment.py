@@ -1,5 +1,5 @@
 import os
-from fers_core import Node, Member, FERS, Material, Section, MemberSet, NodalSupport
+from fers_core import Node, Member, FERS, Material, Section, MemberSet, NodalSupport, AnalysisOrder
 
 from fers_core.loads.nodalmoment import NodalMoment
 
@@ -11,6 +11,7 @@ from fers_core.loads.nodalmoment import NodalMoment
 # -------------------------
 # Create the main FERS object that will manage the analysis
 calculation_1 = FERS()
+calculation_1.settings.analysis_options.order = AnalysisOrder.LINEAR
 
 # Define the geometry of the beam
 node1 = Node(0, 0, 0)  # Fixed end of the beam

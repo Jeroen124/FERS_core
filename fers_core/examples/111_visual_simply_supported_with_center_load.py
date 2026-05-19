@@ -1,5 +1,5 @@
 import os
-from fers_core import Node, Member, FERS, Material, Section, MemberSet, NodalSupport, NodalLoad
+from fers_core import Node, Member, FERS, Material, Section, MemberSet, NodalSupport, NodalLoad, AnalysisOrder, SupportCondition
 
 
 # =============================================================================
@@ -10,6 +10,7 @@ from fers_core import Node, Member, FERS, Material, Section, MemberSet, NodalSup
 # -------------------------
 # Create the main FERS object that will manage the analysis
 calculation_1 = FERS()
+calculation_1.settings.analysis_options.order = AnalysisOrder.LINEAR
 
 # Define the geometry of the beam
 node1 = Node(0, 0, 0)  # Left support
@@ -35,23 +36,21 @@ beam = Member(start_node=node1, end_node=node2, section=ipe_section)
 # Apply supports:
 # Left support — pinned (fixed translations, free rotations)
 pinned_support = NodalSupport(
-    ux=True,
-    uy=True,
-    uz=True,
-    rx=False,
-    ry=False,
-    rz=False,
+    rotation_conditions={
+        "X": SupportCondition.fixed(),
+        "Y": SupportCondition.free(),
+        "Z": SupportCondition.free(),
+    }
 )
 node1.nodal_support = pinned_support
 
 # Right support — roller (free in X, fixed in Y and Z, free rotations)
 roller_support = NodalSupport(
-    ux=False,
-    uy=True,
-    uz=True,
-    rx=False,
-    ry=False,
-    rz=False,
+    rotation_conditions={
+        "X": SupportCondition.free(),
+        "Y": SupportCondition.fixed(),
+        "Z": SupportCondition.fixed(),
+    }
 )
 node2.nodal_support = roller_support
 

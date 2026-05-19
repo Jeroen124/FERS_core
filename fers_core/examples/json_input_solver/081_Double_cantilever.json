@@ -22,10 +22,11 @@
                         "X": 5,
                         "Y": 0,
                         "Z": 0,
-                        "nodal_support": 2
+                        "nodal_support": null
                     },
                     "section": 1,
                     "rotation_angle": 0.0,
+                    "mirror": false,
                     "start_hinge": null,
                     "end_hinge": null,
                     "classification": "",
@@ -51,7 +52,7 @@
                         "X": 5,
                         "Y": 0,
                         "Z": 0,
-                        "nodal_support": 2
+                        "nodal_support": null
                     },
                     "end_node": {
                         "id": 3,
@@ -59,10 +60,11 @@
                         "X": 5,
                         "Y": 5,
                         "Z": 0,
-                        "nodal_support": 2
+                        "nodal_support": null
                     },
                     "section": 1,
                     "rotation_angle": 0.0,
+                    "mirror": false,
                     "start_hinge": null,
                     "end_hinge": null,
                     "classification": "",
@@ -75,6 +77,8 @@
             ]
         }
     ],
+    "plate_surfaces": [],
+    "plates": [],
     "load_cases": [
         {
             "id": 1,
@@ -86,15 +90,16 @@
                     "load_case": 1,
                     "magnitude": -1000,
                     "direction": [
-                        1,
                         0,
-                        0
+                        0,
+                        1
                     ],
                     "load_type": "force"
                 }
             ],
             "nodal_moments": [],
             "distributed_loads": [],
+            "surface_loads": [],
             "rotation_imperfections": [],
             "translation_imperfections": []
         }
@@ -110,9 +115,12 @@
             "tolerance": 0.01,
             "max_iterations": 30,
             "dimensionality": "3D",
-            "order": "Nonlinear",
+            "order": "Linear",
             "rigid_strategy": "Rigid_Member",
-            "axial_slack": 500
+            "axial_slack": 500,
+            "include_shear_deformation": true,
+            "include_warping": true,
+            "include_shear_center_coupling": true
         },
         "unit_settings": {
             "system": "metric",
@@ -147,8 +155,8 @@
             "material": 1,
             "h": null,
             "b": null,
-            "i_y": 8.19e-7,
-            "i_z": 1.063e-5,
+            "i_y": 1.01e-6,
+            "i_z": 1.321e-5,
             "j": 2.7e-8,
             "area": 0.00196,
             "shape_path": null
@@ -185,39 +193,8 @@
                     "condition_type": "Fixed",
                     "stiffness": null
                 }
-            }
-        },
-        {
-            "id": 2,
-            "classification": null,
-            "displacement_conditions": {
-                "X": {
-                    "condition_type": "Free",
-                    "stiffness": null
-                },
-                "Y": {
-                    "condition_type": "Free",
-                    "stiffness": null
-                },
-                "Z": {
-                    "condition_type": "Fixed",
-                    "stiffness": null
-                }
             },
-            "rotation_conditions": {
-                "X": {
-                    "condition_type": "Free",
-                    "stiffness": null
-                },
-                "Y": {
-                    "condition_type": "Free",
-                    "stiffness": null
-                },
-                "Z": {
-                    "condition_type": "Free",
-                    "stiffness": null
-                }
-            }
+            "warping_condition": null
         }
     ],
     "shape_paths": [],

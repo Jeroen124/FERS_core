@@ -25,7 +25,7 @@ from fers_core import (
     NodalLoad,
 )
 from fers_core.settings.settings import Settings
-from fers_core.settings.anlysis_options import AnalysisOptions
+from fers_core.settings.anlysis_options import AnalysisOptions, AnalysisOrder
 
 
 # =============================================================================
@@ -55,7 +55,7 @@ print("=" * 72)
 
 def run_cantilever(include_shear: bool, label: str):
     """Build and analyse a cantilever, return tip deflection dy."""
-    options = AnalysisOptions(include_shear_deformation=include_shear)
+    options = AnalysisOptions(include_shear_deformation=include_shear, order=AnalysisOrder.LINEAR)
     settings = Settings(analysis_options=options)
     model = FERS(settings=settings)
 

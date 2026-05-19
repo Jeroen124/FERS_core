@@ -1,0 +1,836 @@
+{
+    "member_sets": [],
+    "plate_surfaces": [
+        {
+            "id": 1,
+            "name": "Rectangular Slab",
+            "polygon": [
+                {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "z": 0.0
+                },
+                {
+                    "x": 2.0,
+                    "y": 0.0,
+                    "z": 0.0
+                },
+                {
+                    "x": 2.0,
+                    "y": 1.0,
+                    "z": 0.0
+                },
+                {
+                    "x": 0.0,
+                    "y": 1.0,
+                    "z": 0.0
+                }
+            ],
+            "material": 1,
+            "thickness": 0.12,
+            "classification": "",
+            "generated_plate_ids": [
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                18,
+                19,
+                20,
+                21,
+                22
+            ],
+            "mesh_size": 0.25
+        }
+    ],
+    "plates": [
+        {
+            "id": 1,
+            "nodes": [
+                {
+                    "id": 1,
+                    "classification": "",
+                    "X": 0.0,
+                    "Y": 0.25,
+                    "Z": 0.0,
+                    "nodal_support": null
+                },
+                {
+                    "id": 2,
+                    "classification": "",
+                    "X": 0.0,
+                    "Y": 0.0,
+                    "Z": 0.0,
+                    "nodal_support": null
+                },
+                {
+                    "id": 3,
+                    "classification": "",
+                    "X": 0.25,
+                    "Y": 0.0,
+                    "Z": 0.0,
+                    "nodal_support": null
+                }
+            ],
+            "material": 1,
+            "thickness": 0.12,
+            "classification": "",
+            "source_surface": 1
+        },
+        {
+            "id": 2,
+            "nodes": [
+                {
+                    "id": 1,
+                    "classification": "",
+                    "X": 0.0,
+                    "Y": 0.25,
+                    "Z": 0.0,
+                    "nodal_support": null
+                },
+                {
+                    "id": 3,
+                    "classification": "",
+                    "X": 0.25,
+                    "Y": 0.0,
+                    "Z": 0.0,
+                    "nodal_support": null
+                },
+                {
+                    "id": 4,
+                    "classification": "",
+                    "X": 0.5,
+                    "Y": 0.0,
+                    "Z": 0.0,
+                    "nodal_support": null
+                }
+            ],
+            "material": 1,
+            "thickness": 0.12,
+            "classification": "",
+            "source_surface": 1
+        },
+        {
+            "id": 3,
+            "nodes": [
+                {
+                    "id": 1,
+                    "classification": "",
+                    "X": 0.0,
+                    "Y": 0.25,
+                    "Z": 0.0,
+                    "nodal_support": null
+                },
+                {
+                    "id": 4,
+                    "classification": "",
+                    "X": 0.5,
+                    "Y": 0.0,
+                    "Z": 0.0,
+                    "nodal_support": null
+                },
+                {
+                    "id": 5,
+                    "classification": "",
+                    "X": 0.75,
+                    "Y": 0.0,
+                    "Z": 0.0,
+                    "nodal_support": null
+                }
+            ],
+            "material": 1,
+            "thickness": 0.12,
+            "classification": "",
+            "source_surface": 1
+        },
+        {
+            "id": 4,
+            "nodes": [
+                {
+                    "id": 1,
+                    "classification": "",
+                    "X": 0.0,
+                    "Y": 0.25,
+                    "Z": 0.0,
+                    "nodal_support": null
+                },
+                {
+                    "id": 5,
+                    "classification": "",
+                    "X": 0.75,
+                    "Y": 0.0,
+                    "Z": 0.0,
+                    "nodal_support": null
+                },
+                {
+                    "id": 6,
+                    "classification": "",
+                    "X": 1.0,
+                    "Y": 0.0,
+                    "Z": 0.0,
+                    "nodal_support": null
+                }
+            ],
+            "material": 1,
+            "thickness": 0.12,
+            "classification": "",
+            "source_surface": 1
+        },
+        {
+            "id": 5,
+            "nodes": [
+                {
+                    "id": 1,
+                    "classification": "",
+                    "X": 0.0,
+                    "Y": 0.25,
+                    "Z": 0.0,
+                    "nodal_support": null
+                },
+                {
+                    "id": 6,
+                    "classification": "",
+                    "X": 1.0,
+                    "Y": 0.0,
+                    "Z": 0.0,
+                    "nodal_support": null
+                },
+                {
+                    "id": 7,
+                    "classification": "",
+                    "X": 1.25,
+                    "Y": 0.0,
+                    "Z": 0.0,
+                    "nodal_support": null
+                }
+            ],
+            "material": 1,
+            "thickness": 0.12,
+            "classification": "",
+            "source_surface": 1
+        },
+        {
+            "id": 6,
+            "nodes": [
+                {
+                    "id": 1,
+                    "classification": "",
+                    "X": 0.0,
+                    "Y": 0.25,
+                    "Z": 0.0,
+                    "nodal_support": null
+                },
+                {
+                    "id": 7,
+                    "classification": "",
+                    "X": 1.25,
+                    "Y": 0.0,
+                    "Z": 0.0,
+                    "nodal_support": null
+                },
+                {
+                    "id": 8,
+                    "classification": "",
+                    "X": 1.5,
+                    "Y": 0.0,
+                    "Z": 0.0,
+                    "nodal_support": null
+                }
+            ],
+            "material": 1,
+            "thickness": 0.12,
+            "classification": "",
+            "source_surface": 1
+        },
+        {
+            "id": 7,
+            "nodes": [
+                {
+                    "id": 1,
+                    "classification": "",
+                    "X": 0.0,
+                    "Y": 0.25,
+                    "Z": 0.0,
+                    "nodal_support": null
+                },
+                {
+                    "id": 8,
+                    "classification": "",
+                    "X": 1.5,
+                    "Y": 0.0,
+                    "Z": 0.0,
+                    "nodal_support": null
+                },
+                {
+                    "id": 9,
+                    "classification": "",
+                    "X": 1.75,
+                    "Y": 0.0,
+                    "Z": 0.0,
+                    "nodal_support": null
+                }
+            ],
+            "material": 1,
+            "thickness": 0.12,
+            "classification": "",
+            "source_surface": 1
+        },
+        {
+            "id": 8,
+            "nodes": [
+                {
+                    "id": 1,
+                    "classification": "",
+                    "X": 0.0,
+                    "Y": 0.25,
+                    "Z": 0.0,
+                    "nodal_support": null
+                },
+                {
+                    "id": 9,
+                    "classification": "",
+                    "X": 1.75,
+                    "Y": 0.0,
+                    "Z": 0.0,
+                    "nodal_support": null
+                },
+                {
+                    "id": 10,
+                    "classification": "",
+                    "X": 2.0,
+                    "Y": 0.0,
+                    "Z": 0.0,
+                    "nodal_support": null
+                }
+            ],
+            "material": 1,
+            "thickness": 0.12,
+            "classification": "",
+            "source_surface": 1
+        },
+        {
+            "id": 9,
+            "nodes": [
+                {
+                    "id": 1,
+                    "classification": "",
+                    "X": 0.0,
+                    "Y": 0.25,
+                    "Z": 0.0,
+                    "nodal_support": null
+                },
+                {
+                    "id": 10,
+                    "classification": "",
+                    "X": 2.0,
+                    "Y": 0.0,
+                    "Z": 0.0,
+                    "nodal_support": null
+                },
+                {
+                    "id": 11,
+                    "classification": "",
+                    "X": 2.0,
+                    "Y": 0.25,
+                    "Z": 0.0,
+                    "nodal_support": null
+                }
+            ],
+            "material": 1,
+            "thickness": 0.12,
+            "classification": "",
+            "source_surface": 1
+        },
+        {
+            "id": 10,
+            "nodes": [
+                {
+                    "id": 1,
+                    "classification": "",
+                    "X": 0.0,
+                    "Y": 0.25,
+                    "Z": 0.0,
+                    "nodal_support": null
+                },
+                {
+                    "id": 11,
+                    "classification": "",
+                    "X": 2.0,
+                    "Y": 0.25,
+                    "Z": 0.0,
+                    "nodal_support": null
+                },
+                {
+                    "id": 12,
+                    "classification": "",
+                    "X": 2.0,
+                    "Y": 0.5,
+                    "Z": 0.0,
+                    "nodal_support": null
+                }
+            ],
+            "material": 1,
+            "thickness": 0.12,
+            "classification": "",
+            "source_surface": 1
+        },
+        {
+            "id": 11,
+            "nodes": [
+                {
+                    "id": 1,
+                    "classification": "",
+                    "X": 0.0,
+                    "Y": 0.25,
+                    "Z": 0.0,
+                    "nodal_support": null
+                },
+                {
+                    "id": 12,
+                    "classification": "",
+                    "X": 2.0,
+                    "Y": 0.5,
+                    "Z": 0.0,
+                    "nodal_support": null
+                },
+                {
+                    "id": 13,
+                    "classification": "",
+                    "X": 2.0,
+                    "Y": 0.75,
+                    "Z": 0.0,
+                    "nodal_support": null
+                }
+            ],
+            "material": 1,
+            "thickness": 0.12,
+            "classification": "",
+            "source_surface": 1
+        },
+        {
+            "id": 12,
+            "nodes": [
+                {
+                    "id": 1,
+                    "classification": "",
+                    "X": 0.0,
+                    "Y": 0.25,
+                    "Z": 0.0,
+                    "nodal_support": null
+                },
+                {
+                    "id": 13,
+                    "classification": "",
+                    "X": 2.0,
+                    "Y": 0.75,
+                    "Z": 0.0,
+                    "nodal_support": null
+                },
+                {
+                    "id": 14,
+                    "classification": "",
+                    "X": 2.0,
+                    "Y": 1.0,
+                    "Z": 0.0,
+                    "nodal_support": null
+                }
+            ],
+            "material": 1,
+            "thickness": 0.12,
+            "classification": "",
+            "source_surface": 1
+        },
+        {
+            "id": 13,
+            "nodes": [
+                {
+                    "id": 1,
+                    "classification": "",
+                    "X": 0.0,
+                    "Y": 0.25,
+                    "Z": 0.0,
+                    "nodal_support": null
+                },
+                {
+                    "id": 14,
+                    "classification": "",
+                    "X": 2.0,
+                    "Y": 1.0,
+                    "Z": 0.0,
+                    "nodal_support": null
+                },
+                {
+                    "id": 15,
+                    "classification": "",
+                    "X": 1.75,
+                    "Y": 1.0,
+                    "Z": 0.0,
+                    "nodal_support": null
+                }
+            ],
+            "material": 1,
+            "thickness": 0.12,
+            "classification": "",
+            "source_surface": 1
+        },
+        {
+            "id": 14,
+            "nodes": [
+                {
+                    "id": 1,
+                    "classification": "",
+                    "X": 0.0,
+                    "Y": 0.25,
+                    "Z": 0.0,
+                    "nodal_support": null
+                },
+                {
+                    "id": 15,
+                    "classification": "",
+                    "X": 1.75,
+                    "Y": 1.0,
+                    "Z": 0.0,
+                    "nodal_support": null
+                },
+                {
+                    "id": 16,
+                    "classification": "",
+                    "X": 1.5,
+                    "Y": 1.0,
+                    "Z": 0.0,
+                    "nodal_support": null
+                }
+            ],
+            "material": 1,
+            "thickness": 0.12,
+            "classification": "",
+            "source_surface": 1
+        },
+        {
+            "id": 15,
+            "nodes": [
+                {
+                    "id": 1,
+                    "classification": "",
+                    "X": 0.0,
+                    "Y": 0.25,
+                    "Z": 0.0,
+                    "nodal_support": null
+                },
+                {
+                    "id": 16,
+                    "classification": "",
+                    "X": 1.5,
+                    "Y": 1.0,
+                    "Z": 0.0,
+                    "nodal_support": null
+                },
+                {
+                    "id": 17,
+                    "classification": "",
+                    "X": 1.25,
+                    "Y": 1.0,
+                    "Z": 0.0,
+                    "nodal_support": null
+                }
+            ],
+            "material": 1,
+            "thickness": 0.12,
+            "classification": "",
+            "source_surface": 1
+        },
+        {
+            "id": 16,
+            "nodes": [
+                {
+                    "id": 1,
+                    "classification": "",
+                    "X": 0.0,
+                    "Y": 0.25,
+                    "Z": 0.0,
+                    "nodal_support": null
+                },
+                {
+                    "id": 17,
+                    "classification": "",
+                    "X": 1.25,
+                    "Y": 1.0,
+                    "Z": 0.0,
+                    "nodal_support": null
+                },
+                {
+                    "id": 18,
+                    "classification": "",
+                    "X": 1.0,
+                    "Y": 1.0,
+                    "Z": 0.0,
+                    "nodal_support": null
+                }
+            ],
+            "material": 1,
+            "thickness": 0.12,
+            "classification": "",
+            "source_surface": 1
+        },
+        {
+            "id": 17,
+            "nodes": [
+                {
+                    "id": 1,
+                    "classification": "",
+                    "X": 0.0,
+                    "Y": 0.25,
+                    "Z": 0.0,
+                    "nodal_support": null
+                },
+                {
+                    "id": 18,
+                    "classification": "",
+                    "X": 1.0,
+                    "Y": 1.0,
+                    "Z": 0.0,
+                    "nodal_support": null
+                },
+                {
+                    "id": 19,
+                    "classification": "",
+                    "X": 0.75,
+                    "Y": 1.0,
+                    "Z": 0.0,
+                    "nodal_support": null
+                }
+            ],
+            "material": 1,
+            "thickness": 0.12,
+            "classification": "",
+            "source_surface": 1
+        },
+        {
+            "id": 18,
+            "nodes": [
+                {
+                    "id": 1,
+                    "classification": "",
+                    "X": 0.0,
+                    "Y": 0.25,
+                    "Z": 0.0,
+                    "nodal_support": null
+                },
+                {
+                    "id": 19,
+                    "classification": "",
+                    "X": 0.75,
+                    "Y": 1.0,
+                    "Z": 0.0,
+                    "nodal_support": null
+                },
+                {
+                    "id": 20,
+                    "classification": "",
+                    "X": 0.5,
+                    "Y": 1.0,
+                    "Z": 0.0,
+                    "nodal_support": null
+                }
+            ],
+            "material": 1,
+            "thickness": 0.12,
+            "classification": "",
+            "source_surface": 1
+        },
+        {
+            "id": 19,
+            "nodes": [
+                {
+                    "id": 1,
+                    "classification": "",
+                    "X": 0.0,
+                    "Y": 0.25,
+                    "Z": 0.0,
+                    "nodal_support": null
+                },
+                {
+                    "id": 20,
+                    "classification": "",
+                    "X": 0.5,
+                    "Y": 1.0,
+                    "Z": 0.0,
+                    "nodal_support": null
+                },
+                {
+                    "id": 21,
+                    "classification": "",
+                    "X": 0.25,
+                    "Y": 1.0,
+                    "Z": 0.0,
+                    "nodal_support": null
+                }
+            ],
+            "material": 1,
+            "thickness": 0.12,
+            "classification": "",
+            "source_surface": 1
+        },
+        {
+            "id": 20,
+            "nodes": [
+                {
+                    "id": 21,
+                    "classification": "",
+                    "X": 0.25,
+                    "Y": 1.0,
+                    "Z": 0.0,
+                    "nodal_support": null
+                },
+                {
+                    "id": 22,
+                    "classification": "",
+                    "X": 0.0,
+                    "Y": 1.0,
+                    "Z": 0.0,
+                    "nodal_support": null
+                },
+                {
+                    "id": 23,
+                    "classification": "",
+                    "X": 0.0,
+                    "Y": 0.75,
+                    "Z": 0.0,
+                    "nodal_support": null
+                }
+            ],
+            "material": 1,
+            "thickness": 0.12,
+            "classification": "",
+            "source_surface": 1
+        },
+        {
+            "id": 21,
+            "nodes": [
+                {
+                    "id": 21,
+                    "classification": "",
+                    "X": 0.25,
+                    "Y": 1.0,
+                    "Z": 0.0,
+                    "nodal_support": null
+                },
+                {
+                    "id": 23,
+                    "classification": "",
+                    "X": 0.0,
+                    "Y": 0.75,
+                    "Z": 0.0,
+                    "nodal_support": null
+                },
+                {
+                    "id": 24,
+                    "classification": "",
+                    "X": 0.0,
+                    "Y": 0.5,
+                    "Z": 0.0,
+                    "nodal_support": null
+                }
+            ],
+            "material": 1,
+            "thickness": 0.12,
+            "classification": "",
+            "source_surface": 1
+        },
+        {
+            "id": 22,
+            "nodes": [
+                {
+                    "id": 21,
+                    "classification": "",
+                    "X": 0.25,
+                    "Y": 1.0,
+                    "Z": 0.0,
+                    "nodal_support": null
+                },
+                {
+                    "id": 24,
+                    "classification": "",
+                    "X": 0.0,
+                    "Y": 0.5,
+                    "Z": 0.0,
+                    "nodal_support": null
+                },
+                {
+                    "id": 1,
+                    "classification": "",
+                    "X": 0.0,
+                    "Y": 0.25,
+                    "Z": 0.0,
+                    "nodal_support": null
+                }
+            ],
+            "material": 1,
+            "thickness": 0.12,
+            "classification": "",
+            "source_surface": 1
+        }
+    ],
+    "load_cases": [],
+    "load_combinations": [],
+    "imperfection_cases": [],
+    "settings": {
+        "id": 1,
+        "analysis_options": {
+            "id": 1,
+            "solve_loadcases": true,
+            "solver": "newton_raphson",
+            "tolerance": 0.01,
+            "max_iterations": 30,
+            "dimensionality": "3D",
+            "order": "Linear",
+            "rigid_strategy": "Rigid_Member",
+            "axial_slack": 500,
+            "include_shear_deformation": true,
+            "include_warping": true,
+            "include_shear_center_coupling": true
+        },
+        "unit_settings": {
+            "system": "metric",
+            "lengthUnit": "m",
+            "forceUnit": "N",
+            "densityUnit": "kg\/m3",
+            "weightUnit": "kg",
+            "pressureUnit": "Pa",
+            "temperatureUnit": "celsius"
+        },
+        "general_info": {
+            "project_name": "Unnamed Project",
+            "author": "Unknown",
+            "version": "1.0"
+        }
+    },
+    "memberhinges": [],
+    "materials": [
+        {
+            "id": 1,
+            "name": "Concrete C30",
+            "e_mod": 33000000000.0,
+            "g_mod": 13750000000.0,
+            "density": 2500,
+            "yield_stress": 30000000.0
+        }
+    ],
+    "sections": [],
+    "nodal_supports": [],
+    "shape_paths": [],
+    "resultsbundle": null
+}

@@ -25,7 +25,8 @@ def create_simple_model() -> FERS:
         name="Steel",
         e_mod=210000.0,  # MPa
         density=7850e-9,  # kg/mm³
-        poisson=0.3,
+        g_mod=80.769e3,  # MPa
+        yield_stress=235e6,
     )
 
     # Create section
@@ -35,12 +36,11 @@ def create_simple_model() -> FERS:
         area=7808.0,  # mm²
         i_y=5696e4,  # mm⁴
         i_z=2003e4,  # mm⁴
-        w_y=569600.0,  # mm³
-        w_z=200300.0,  # mm³
+        j=1234.0,  # mm⁴
     )
 
     # Create support
-    fixed_support = NodalSupport(Tx=True, Ty=True, Tz=True, Rx=True, Ry=True, Rz=True, name="Fixed")
+    fixed_support = NodalSupport()
 
     # Create nodes
     node1 = Node(X=0.0, Y=0.0, Z=0.0, nodal_support=fixed_support)

@@ -30,7 +30,7 @@ from fers_core import (
     SupportCondition,
 )
 from fers_core.settings.settings import Settings
-from fers_core.settings.anlysis_options import AnalysisOptions
+from fers_core.settings.anlysis_options import AnalysisOptions, AnalysisOrder
 
 
 # =============================================================================
@@ -62,7 +62,7 @@ def run_torsion_cantilever(include_warping: bool, label: str, n_elements: int = 
     Uses multiple elements for Vlasov convergence.
     Fixed end has warping restrained (θ' = 0).
     """
-    options = AnalysisOptions(include_warping=include_warping)
+    options = AnalysisOptions(include_warping=include_warping, order=AnalysisOrder.LINEAR)
     settings = Settings(analysis_options=options)
     model = FERS(settings=settings)
 

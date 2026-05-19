@@ -1,5 +1,5 @@
 import os
-from fers_core import Node, Member, FERS, Material, Section, MemberSet, NodalSupport, NodalLoad
+from fers_core import Node, Member, FERS, Material, Section, MemberSet, NodalSupport, NodalLoad, AnalysisOrder
 
 
 # =============================================================================
@@ -10,6 +10,9 @@ from fers_core import Node, Member, FERS, Material, Section, MemberSet, NodalSup
 # -------------------------
 # Create the main FERS object that will manage the analysis
 calculation_1 = FERS()
+calculation_1.settings.analysis_options.order = AnalysisOrder.LINEAR
+calculation_1.settings.analysis_options.include_shear_deformation = False
+calculation_1.settings.analysis_options.include_warping = False
 
 # Define the geometry of the beam
 node1 = Node(0, 0, 0)  # Fixed end of the beam
