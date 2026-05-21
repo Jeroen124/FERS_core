@@ -4,7 +4,9 @@
       "Bash(python export_shapepath_jsons.py)",
       "Bash(python -c \":*)",
       "Bash(python -m pytest --tb=short)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(ruff check *)",
+      "PowerShell(python -m ruff check . 2>&1 | Select-Object -First 50)"
     ]
   }
 }

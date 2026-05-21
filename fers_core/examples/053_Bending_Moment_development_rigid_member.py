@@ -1,5 +1,7 @@
 import os
-from fers_core import Node, Member, FERS, Material, MemberHinge, Section, MemberSet, NodalSupport, NodalLoad, AnalysisOrder
+from fers_core import (
+    Node, Member, FERS, Material, MemberHinge, Section, MemberSet, NodalSupport, NodalLoad, AnalysisOrder
+)
 
 
 def print_displacements_for_loadcase(results_for_loadcase):

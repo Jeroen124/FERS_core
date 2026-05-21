@@ -138,7 +138,7 @@ tip_dz_analytical = -q * LENGTH**4 / (8 * E * I)
 
 total_load = PRESSURE * LENGTH * WIDTH  # N
 
-print(f"\nPlate strip results")
+print("\nPlate strip results")
 print(f"  Elements             : {len(model.plates)}")
 print(f"  Total applied load   : {total_load:.1f} N")
 print(f"  Total reaction Fz    : {abs(total_reaction_fz):.1f} N")
