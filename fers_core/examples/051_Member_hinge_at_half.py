@@ -1,5 +1,7 @@
 import os
-from fers_core import Node, Member, FERS, Material, MemberHinge, Section, MemberSet, NodalSupport, NodalLoad, AnalysisOrder
+from fers_core import (
+    Node, Member, FERS, Material, MemberHinge, Section, MemberSet, NodalSupport, NodalLoad, AnalysisOrder
+)
 
 # =============================================================================
 # Example and Validation: Cantilever With Root Rotational Spring (via MemberHinge)
