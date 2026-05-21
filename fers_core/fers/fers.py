@@ -3594,37 +3594,35 @@ class FERS:
             description=description,
         )
 
-    @classmethod
     def cloud_load(
-        cls,
+        self,
         model_id: str,
-        cloud_client: "FersCloudClient",
+        cloud_client: "FersCloudClient | None" = None,
     ) -> "FERS":
         """Load a FERS model from FersCloud by its ID.
 
         Parameters
         ----------
         model_id : str
-            The cloud model ID.
-        cloud_client : FersCloudClient
-            An authenticated ``FersCloudClient`` instance.  You can obtain
-            one from an existing FERS instance via ``model._cloud_client``
-            or by creating one directly.
+            The cloud model ID returned by ``cloud_save`` or ``cloud_list``.
+        cloud_client : FersCloudClient, optional
+            An authenticated client.  Defaults to the client stored on this
+            instance (set by ``cloud_connect`` / ``cloud_login``).
 
         Returns
         -------
         FERS
-            A fully reconstructed FERS instance.
+            A fully reconstructed FERS instance with the cloud client attached.
 
         Example
         -------
-        >>> cloud = FersCloudClient("http://localhost:3000")
-        >>> cloud.login("you@example.com", "s3cret")
-        >>> model = FERS.cloud_load("clx123abc", cloud)
+        >>> model.cloud_connect(api_key)
+        >>> reloaded = model.cloud_load("clx123abc")
         """
+        if cloud_client is None:
+            cloud_client = self._ensure_cloud()
         data = cloud_client.load_model(model_id)
-        model_dict = data["model"]
-        instance = cls.from_dict(model_dict)
+        instance = type(self).from_dict(data["model"])
         instance._cloud_client = cloud_client
         return instance
 
