@@ -6,6 +6,7 @@ of the FERS structural-analysis library.  Examples are grouped by number range:
 
   0xx  –  Basic Beam Validation Tests
   1xx  –  Visual / 3-D Rendering Examples
+  2xx  –  Real-World Structural Application Examples
   8xx  –  Utility & Functionality Examples  (sections, I/O, cloud, DXF …)
   9xx  –  Experimental / Scratch
 
@@ -63,6 +64,19 @@ of the FERS structural-analysis library.  Examples are grouped by number range:
 
 
 ──────────────────────────────────────────────────────────────────
+2xx – Real-World Structural Application Examples
+──────────────────────────────────────────────────────────────────
+201  Simple Shed                  – 3-D gable portal-frame shed (6x8 m) with
+                                    HEA140 columns, IPE160 rafters, IPE120 purlins,
+                                    snow and wind load combinations (EN 1990/1991),
+                                    saved to FERS Cloud.
+202  Solar Rail                   – Ballasted flat-roof 2x2 solar panel mounting
+                                    frame in aluminium RHS/SHS sections, with
+                                    gravity, snow, and wind-uplift load combinations
+                                    (EN 1990/1991), saved to FERS Cloud.
+
+
+──────────────────────────────────────────────────────────────────
 8xx – Utility & Functionality Examples
 ──────────────────────────────────────────────────────────────────
 801  Section Library Lookup       – Use from_name() to pick standard steel
@@ -81,6 +95,8 @@ of the FERS structural-analysis library.  Examples are grouped by number range:
                                     from_json(), to_dict(), from_dict().
 806  Cloud Save / Load            – Upload and retrieve models via FERS Cloud
                                     (requires an account and API key).
+807  Custom Line Stroke           – Customise member visualisation stroke styles.
+808  Default Materials            – Inspect and use the built-in material library.
 
 
 ──────────────────────────────────────────────────────────────────
