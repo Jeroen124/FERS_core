@@ -33,6 +33,8 @@ from ..loads.loadcombination import LoadCombination
 from ..loads.nodalload import NodalLoad
 from ..loads.nodalmoment import NodalMoment
 from ..loads.surfaceload import SurfaceLoad
+from ..loads.memberpointload import MemberPointLoad
+from ..loads.memberpointmoment import MemberPointMoment
 from ..plates.plate import Plate
 from ..plates.platesurface import PlateSurface
 from ..members.material import Material
@@ -129,6 +131,7 @@ class FERS:
 
     def to_dict(self, include_results: bool = True) -> dict[str, Any]:
         data: dict[str, Any] = {
+            "nodes": [node.to_dict() for node in self.get_all_nodes()],
             "member_sets": [member_set.to_dict() for member_set in self.member_sets],
             "plate_surfaces": [plate_surface.to_dict() for plate_surface in self.plate_surfaces],
             "plates": [plate.to_dict() for plate in self.plates],
@@ -208,6 +211,17 @@ class FERS:
         id_to_node: dict[int, Node] = {}
         id_to_member: dict[int, Member] = {}
         id_to_plate_surface: dict[int, PlateSurface] = {}
+
+        # Top-level nodes (new schema: members/plates reference nodes by id only).
+        # Load these first so id-based lookups succeed. Legacy models that embed
+        # nodes inside members/plates simply have an empty/absent "nodes" list and
+        # still work via get_or_create_from_dict.
+        for node_data in as_list(data.get("nodes"), "nodes"):
+            Node.get_or_create_from_dict(
+                node_data,
+                nodes_by_id=id_to_node,
+                nodal_supports_by_id=id_to_support,
+            )
 
         # member sets + members
         for ms_data in data.get("member_sets", []):
@@ -339,6 +353,8 @@ class FERS:
         NodalMoment.reset_counter()
         DistributedLoad.reset_counter()
         SurfaceLoad.reset_counter()
+        MemberPointLoad.reset_counter()
+        MemberPointMoment.reset_counter()
         PlateSurface.reset_counter()
         Plate.reset_counter()
         Section.reset_counter()
@@ -633,6 +649,11 @@ class FERS:
                 if member.end_node.id not in node_ids:
                     nodes.append(member.end_node)
                     node_ids.add(member.end_node.id)
+
+                ref_node = member.reference_node
+                if ref_node is not None and ref_node.id not in node_ids:
+                    nodes.append(ref_node)
+                    node_ids.add(ref_node.id)
 
         for plate in self.plates:
             for node in plate.nodes:

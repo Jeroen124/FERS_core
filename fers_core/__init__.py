@@ -13,6 +13,8 @@ from .loads.nodalload import NodalLoad
 from .loads.nodalmoment import NodalMoment
 from .loads.distributedload import DistributedLoad
 from .loads.surfaceload import SurfaceLoad, SurfaceLoadVertex
+from .loads.memberpointload import MemberPointLoad
+from .loads.memberpointmoment import MemberPointMoment
 from .plates.plate import Plate
 from .plates.platesurface import PlateSurface, PlateVertex
 from .imperfections.imperfectioncase import ImperfectionCase
@@ -59,6 +61,8 @@ __all__ = [
     "MaterialLibrary",
     "Member",
     "MemberHinge",
+    "MemberPointLoad",
+    "MemberPointMoment",
     "MemberResult",
     "MemberSet",
     "ModelRenderer",

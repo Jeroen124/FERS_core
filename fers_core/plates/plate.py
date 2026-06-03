@@ -51,7 +51,7 @@ class Plate:
     def to_dict(self) -> Dict:
         data = {
             "id": self.id,
-            "nodes": [node.to_dict() for node in self.nodes],
+            "node_ids": [node.id for node in self.nodes],
             "material": self.material.id,
             "thickness": self.thickness,
             "classification": self.classification,
@@ -72,14 +72,18 @@ class Plate:
         nodal_supports_by_id: dict[int, object] | None = None,
         source_surfaces_by_id: dict[int, "PlateSurface"] | None = None,
     ) -> "Plate":
-        plate_nodes = [
-            Node.get_or_create_from_dict(
-                node_data,
-                nodes_by_id=nodes_by_id,
-                nodal_supports_by_id=nodal_supports_by_id,
-            )
-            for node_data in data.get("nodes", [])
-        ]
+        if data.get("node_ids") is not None:
+            plate_nodes = [nodes_by_id[node_id] for node_id in data["node_ids"]]
+        else:
+            # Legacy format: nodes embedded as full dicts.
+            plate_nodes = [
+                Node.get_or_create_from_dict(
+                    node_data,
+                    nodes_by_id=nodes_by_id,
+                    nodal_supports_by_id=nodal_supports_by_id,
+                )
+                for node_data in data.get("nodes", [])
+            ]
 
         material_id = data.get("material")
         if material_id is None:

@@ -32,6 +32,8 @@ class Member:
         reference_member: Optional["Member"] = None,
         reference_node: Optional["Node"] = None,
         member_type: Union[MemberType, str] = MemberType.NORMAL,
+        start_offset: Optional[dict] = None,
+        end_offset: Optional[dict] = None,
     ):
         self.id = id or Member._member_counter
         if id is None:
@@ -57,11 +59,35 @@ class Member:
         self.chi = chi
         self.reference_member = reference_member
         self.reference_node = reference_node
+        self.start_offset = self._normalize_offset(start_offset)
+        self.end_offset = self._normalize_offset(end_offset)
 
         self.weight = float(weight) if weight is not None else self.weight()
 
         # Keep registry if you use it elsewhere
         Member._all_members.append(self)
+
+    @staticmethod
+    def _normalize_offset(offset):
+        """Coerce an end-offset into a {x, y, z} dict (or None when absent/all-zero)."""
+        if offset is None:
+            return None
+        if isinstance(offset, (tuple, list)):
+            x, y, z = (list(offset) + [0.0, 0.0, 0.0])[:3]
+        elif isinstance(offset, dict):
+            x = offset.get("x")
+            y = offset.get("y")
+            z = offset.get("z")
+        else:
+            raise TypeError(f"Member offset must be dict, tuple or None, got {type(offset).__name__}")
+
+        def f(v):
+            return float(v) if v is not None else None
+
+        x, y, z = f(x), f(y), f(z)
+        if all(v in (None, 0.0) for v in (x, y, z)):
+            return None
+        return {"x": x, "y": y, "z": z}
 
     @classmethod
     def reset_counter(cls):
@@ -139,8 +165,10 @@ class Member:
     def to_dict(self):
         return {
             "id": self.id,
-            "start_node": self.start_node.to_dict(),
-            "end_node": self.end_node.to_dict(),
+            "start_node_id": self.start_node.id,
+            "end_node_id": self.end_node.id,
+            "start_offset": self.start_offset,
+            "end_offset": self.end_offset,
             "section": self.section.id if self.section is not None else None,
             "rotation_angle": self.rotation_angle,
             "mirror": self.mirror,
@@ -272,6 +300,8 @@ class Member:
             reference_member=reference_member,
             reference_node=reference_node,
             member_type=data.get("member_type", MemberType.NORMAL),
+            start_offset=data.get("start_offset"),
+            end_offset=data.get("end_offset"),
         )
 
         if member_id is not None:
