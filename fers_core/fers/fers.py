@@ -36,7 +36,7 @@ from ..loads.surfaceload import SurfaceLoad
 from ..loads.memberpointload import MemberPointLoad
 from ..loads.memberpointmoment import MemberPointMoment
 from ..loads.platepressure import PlatePressure
-from ..plates.plate import Plate, PlateElement
+from ..plates.plate import PlateElement
 from ..plates.platesurface import PlateSurface
 from ..plates.components import PlateOpening
 from ..geometry.workaxis import WorkAxis
