@@ -6,10 +6,13 @@ from typing import Any, Dict, Iterable, List, Optional, Union, TYPE_CHECKING
 from ..members.material import Material
 from ..nodes.node import Node
 from .components import (
+    PlaneState,
     PlateBehavior,
     PlateMeshSettings,
     PlateOpening,
     PlateStiffnessModifiers,
+    PlateTheory,
+    _normalize_enum,
     normalize_plate_behavior,
 )
 from .mesh import triangulate_surface_polygon
@@ -52,6 +55,8 @@ class PlateSurface:
         thickness: float,
         *,
         behavior: Union[PlateBehavior, str, None] = None,
+        theory: Union[PlateTheory, str, None] = None,
+        plane_state: Union[PlaneState, str, None] = None,
         mesh: Optional[PlateMeshSettings] = None,
         openings: Optional[List[PlateOpening]] = None,
         offset: Optional[float] = None,
@@ -59,6 +64,7 @@ class PlateSurface:
         name: Optional[str] = None,
         classification: Optional[str] = None,
         local_x_direction: Optional[tuple[float, float, float]] = None,
+        mesh_group_id: Optional[int] = None,
         generated_plate_element_ids: Optional[list[int]] = None,
         id: Optional[int] = None,
     ) -> None:
@@ -76,6 +82,8 @@ class PlateSurface:
         self.material = material
         self.thickness = float(thickness)
         self.behavior = normalize_plate_behavior(behavior)
+        self.theory = _normalize_enum(PlateTheory, theory)
+        self.plane_state = _normalize_enum(PlaneState, plane_state)
         self.mesh = mesh
         self.openings = list(openings) if openings is not None else None
         self.offset = float(offset) if offset is not None else None
@@ -83,6 +91,7 @@ class PlateSurface:
         self.name = name
         self.classification = classification
         self.local_x_direction = local_x_direction
+        self.mesh_group_id = mesh_group_id
         self.generated_plate_element_ids = (
             generated_plate_element_ids[:] if generated_plate_element_ids is not None else []
         )
@@ -105,10 +114,16 @@ class PlateSurface:
             data["name"] = self.name
         if self.behavior is not None:
             data["behavior"] = self.behavior.value
+        if self.theory is not None:
+            data["theory"] = self.theory.value
+        if self.plane_state is not None:
+            data["plane_state"] = self.plane_state.value
         if self.classification is not None:
             data["classification"] = self.classification
         if self.offset is not None:
             data["offset"] = self.offset
+        if self.mesh_group_id is not None:
+            data["mesh_group_id"] = self.mesh_group_id
         if self.mesh is not None:
             data["mesh"] = self.mesh.to_dict()
         if self.openings is not None:
@@ -147,6 +162,8 @@ class PlateSurface:
             material=material,
             thickness=float(data["thickness"]),
             behavior=data.get("behavior"),
+            theory=data.get("theory"),
+            plane_state=data.get("plane_state"),
             mesh=PlateMeshSettings.from_dict(data.get("mesh")),
             openings=openings,
             offset=data.get("offset"),
@@ -155,6 +172,7 @@ class PlateSurface:
             local_x_direction=tuple(data["local_x_direction"])
             if data.get("local_x_direction") is not None
             else None,
+            mesh_group_id=data.get("mesh_group_id"),
             generated_plate_element_ids=[int(v) for v in data.get("generated_plate_element_ids", [])],
         )
         return surface
@@ -206,6 +224,8 @@ class PlateSurface:
                 source_surface=self,
                 local_x_direction=self.local_x_direction,
                 behavior=self.behavior,
+                theory=self.theory,
+                plane_state=self.plane_state,
                 offset=self.offset,
                 stiffness_modifiers=self.stiffness_modifiers,
             )

@@ -5,8 +5,11 @@ from typing import Dict, Optional, TYPE_CHECKING, Union
 from ..members.material import Material
 from ..nodes.node import Node
 from .components import (
+    PlaneState,
     PlateBehavior,
     PlateStiffnessModifiers,
+    PlateTheory,
+    _normalize_enum,
     normalize_plate_behavior,
 )
 
@@ -35,6 +38,8 @@ class PlateElement:
         source_surface_id: Optional[int] = None,
         local_x_direction: Optional[tuple[float, float, float]] = None,
         behavior: Union[PlateBehavior, str, None] = None,
+        theory: Union[PlateTheory, str, None] = None,
+        plane_state: Union[PlaneState, str, None] = None,
         offset: Optional[float] = None,
         stiffness_modifiers: Optional[PlateStiffnessModifiers] = None,
     ) -> None:
@@ -59,6 +64,8 @@ class PlateElement:
         )
         self.local_x_direction = local_x_direction
         self.behavior = normalize_plate_behavior(behavior)
+        self.theory = _normalize_enum(PlateTheory, theory)
+        self.plane_state = _normalize_enum(PlaneState, plane_state)
         self.offset = float(offset) if offset is not None else None
         self.stiffness_modifiers = stiffness_modifiers
 
@@ -77,6 +84,10 @@ class PlateElement:
         }
         if self.behavior is not None:
             data["behavior"] = self.behavior.value
+        if self.theory is not None:
+            data["theory"] = self.theory.value
+        if self.plane_state is not None:
+            data["plane_state"] = self.plane_state.value
         if self.offset is not None:
             data["offset"] = self.offset
         if self.source_surface_id is not None:
@@ -123,6 +134,8 @@ class PlateElement:
             if data.get("local_x_direction") is not None
             else None,
             behavior=data.get("behavior"),
+            theory=data.get("theory"),
+            plane_state=data.get("plane_state"),
             offset=data.get("offset"),
             stiffness_modifiers=PlateStiffnessModifiers.from_dict(data.get("stiffness_modifiers")),
         )

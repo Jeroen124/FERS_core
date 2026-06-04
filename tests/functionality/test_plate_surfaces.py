@@ -38,14 +38,14 @@ def test_plate_surface_serializes_boundary_node_ids():
 
     data = model.to_dict(include_results=False)
 
-    assert len(data["plate_surfaces"]) == 1
-    surface = data["plate_surfaces"][0]
+    assert len(data["model"]["plate_surfaces"]) == 1
+    surface = data["model"]["plate_surfaces"][0]
     assert surface["boundary_node_ids"] == [1, 2, 3, 4]
     assert surface["behavior"] == "Shell"
     assert surface["mesh"]["target_size"] == 10.0
     assert surface["stiffness_modifiers"]["bending"] == 0.9
     # Boundary nodes must appear in the top-level nodes array.
-    node_ids = {n["id"] for n in data["nodes"]}
+    node_ids = {n["id"] for n in data["model"]["nodes"]}
     assert {1, 2, 3, 4}.issubset(node_ids)
 
 
@@ -75,5 +75,5 @@ def test_plate_surface_local_mesh_generates_plate_elements():
     ]
 
     data = model.to_dict(include_results=False)
-    assert len(data["plate_elements"]) == 2
-    assert data["plate_elements"][0]["source_surface_id"] == data["plate_surfaces"][0]["id"]
+    assert len(data["model"]["plate_elements"]) == 2
+    assert data["model"]["plate_elements"][0]["source_surface_id"] == data["model"]["plate_surfaces"][0]["id"]

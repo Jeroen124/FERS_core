@@ -2,11 +2,12 @@ from .nodes.node import Node
 from .members.member import Member
 from .members.enums import MemberType
 from .fers.fers import FERS
-from .members.material import Material
+from .members.material import Material, OrthotropicPlateMaterial
 from .members.material_library import MaterialLibrary
 from .members.section import Section
 from .members.shapepath import ShapePath
 from .members.memberset import MemberSet
+from .members.bucklingrestraint import BucklingRestraint
 from .supports.nodalsupport import NodalSupport
 from .loads.loadcase import LoadCase
 from .loads.loadcombination import LoadCombination
@@ -23,8 +24,12 @@ from .plates.components import (
     PlateBehavior,
     PlateElementShape,
     PlateMeshSettings,
+    PlateMeshDivisions,
+    PlateMeshMethod,
     PlateOpening,
     PlateStiffnessModifiers,
+    PlateTheory,
+    PlaneState,
 )
 from .geometry.workaxis import WorkAxis
 from .geometry.workplane import WorkPlane
@@ -70,6 +75,7 @@ __all__ = [
     "LoadCase",
     "LoadCombination",
     "Material",
+    "OrthotropicPlateMaterial",
     "MaterialLibrary",
     "EntityGroup",
     "Member",
@@ -79,13 +85,18 @@ __all__ = [
     "MemberPointMoment",
     "MemberResult",
     "MemberSet",
+    "BucklingRestraint",
     "PlateElement",
     "PlatePressure",
     "PlateBehavior",
     "PlateElementShape",
     "PlateMeshSettings",
+    "PlateMeshDivisions",
+    "PlateMeshMethod",
     "PlateOpening",
     "PlateStiffnessModifiers",
+    "PlateTheory",
+    "PlaneState",
     "WorkAxis",
     "WorkPlane",
     "ModelRenderer",
