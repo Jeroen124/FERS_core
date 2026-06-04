@@ -34,6 +34,18 @@ class DistributedLoad(BaseModel):
     start_frac: float
 
 
+class EntityGroup(BaseModel):
+    id: conint(ge=0)
+    member_ids: list[conint(ge=0)] | None = None
+    member_set_ids: list[conint(ge=0)] | None = None
+    name: str | None = None
+    node_ids: list[conint(ge=0)] | None = None
+    plate_ids: list[conint(ge=0)] | None = None
+    support_ids: list[conint(ge=0)] | None = None
+    work_axis_ids: list[conint(ge=0)] | None = None
+    work_plane_ids: list[conint(ge=0)] | None = None
+
+
 class ForceComponent(Enum):
     N = "N"
     Vy = "Vy"
@@ -140,6 +152,7 @@ class MemberType(Enum):
     Tension = "Tension"
     Compression = "Compression"
     Rigid = "Rigid"
+    Cable = "Cable"
 
 
 class NodalLoad(BaseModel):
@@ -209,14 +222,45 @@ class PdeltaMode(Enum):
     IN_PLANE_ONLY = "IN_PLANE_ONLY"
 
 
-class Plate(BaseModel):
-    classification: str | None = None
+class PlateBehavior(Enum):
+    Shell = "Shell"
+    Membrane = "Membrane"
+
+
+class PlateElementShape(Enum):
+    Auto = "Auto"
+    Triangle = "Triangle"
+    Quad = "Quad"
+
+
+class PlateMeshSettings(BaseModel):
+    element_shape: PlateElementShape | None = None
+    target_size: float | None = Field(
+        None,
+        description="Target element edge length. `None` meshes the boundary as-is (no interior\nrefinement).",
+    )
+
+
+class PlateOpening(BaseModel):
+    boundary_node_ids: list[conint(ge=0)] | None = None
     id: conint(ge=0)
-    local_x_direction: list[float] | None = Field(None, max_length=3)
-    material: conint(ge=0)
-    node_ids: list[conint(ge=0)]
-    source_surface: conint(ge=0) | None = None
-    thickness: float
+
+
+class PlatePressure(BaseModel):
+    direction: list[float] = Field(..., max_length=3)
+    id: conint(ge=0)
+    load_case: conint(ge=0)
+    magnitude: float
+    plate_element_id: conint(ge=0) | None = Field(
+        None, description="Target a single generated plate element."
+    )
+    projected: bool | None = Field(
+        None,
+        description="When true the pressure acts on the area projected onto `direction`\n(e.g. snow), otherwise on the true element area.",
+    )
+    surface_id: conint(ge=0) | None = Field(
+        None, description="Target a whole surface (all its generated elements)."
+    )
 
 
 class PlateResultants(BaseModel):
@@ -230,10 +274,38 @@ class PlateResultants(BaseModel):
     qy: float
 
 
-class PlateVertex(BaseModel):
-    x: float
-    y: float
-    z: float
+class PlateStiffnessModifiers(BaseModel):
+    bending: float | None = None
+    membrane: float | None = None
+    shear: float | None = None
+
+
+class PlateSurface(BaseModel):
+    behavior: PlateBehavior | None = None
+    boundary_node_ids: list[conint(ge=0)] = Field(
+        ...,
+        description="Outer boundary, referencing existing model nodes (counter-clockwise).",
+    )
+    classification: str | None = None
+    generated_plate_element_ids: list[conint(ge=0)] | None = Field(
+        None,
+        description="Ids of the plate elements generated from this surface (populated by the\nmesher; input value is ignored).",
+    )
+    id: conint(ge=0)
+    local_x_direction: list[float] | None = Field(None, max_length=3)
+    material: conint(ge=0)
+    mesh: PlateMeshSettings | None = None
+    name: str | None = None
+    offset: float | None = Field(
+        None,
+        description="Distance from the reference surface along the local plate normal.",
+    )
+    openings: list[PlateOpening] | None = Field(
+        None,
+        description="Holes in the surface; the mesher generates elements around them.",
+    )
+    stiffness_modifiers: PlateStiffnessModifiers | None = None
+    thickness: float
 
 
 class PressureUnit(Enum):
@@ -424,6 +496,19 @@ class WorkPlane(BaseModel):
 class AnalysisOptions(BaseModel):
     axial_slack: float | None = None
     dimensionality: Dimensionality
+    enable_self_weight: bool | None = Field(
+        None,
+        description="When true, the engine generates self-weight (dead load) for every member\nfrom its material density and cross-sectional area, collected into a\nself-weight load case (see `self_weight_load_case_id`).  Cable members\ncarry their weight intrinsically in the catenary formulation and are\ntherefore excluded from the generated self-weight load.",
+    )
+    gravity_direction: list[float] | None = Field(
+        None,
+        description="Global gravity direction as a vector (normalized to a unit vector at use).\nDefault `(0, -1, 0)` — gravity acting in the negative Y direction.",
+        max_length=3,
+    )
+    gravity_factor: float | None = Field(
+        None,
+        description="Signed gravitational acceleration magnitude in length-units/s².\nDefault `-9.81` (m/s²).  Self-weight per unit length is\n`w = density · area · |gravity_factor|` applied along `gravity_direction`.",
+    )
     id: conint(ge=0)
     include_shear_center_coupling: bool | None = Field(
         None,
@@ -456,6 +541,10 @@ class AnalysisOptions(BaseModel):
         description='Global translational axes to exclude from P-Delta amplification.\n\nWhen a structure is near buckling in an out-of-plane direction,\nthe consistent P-Delta amplification can produce forces that differ\nsignificantly from commercial solvers which\ntypically only amplify in-plane sway.\n\nSet to `["Z"]` for in-plane racks/portal frames where Z is out-of-plane,\nor `["X","Z"]` to limit P-Delta to Y-sway only.  Empty (default) means\nall translational directions are amplified.\n\nMaps to global DOFs: "X"→0,7  "Y"→1,8  "Z"→2,9  per element.',
     )
     rigid_strategy: RigidStrategy
+    self_weight_load_case_id: conint(ge=0) | None = Field(
+        None,
+        description='Target load case id that generated self-weight loads are injected into.\nWhen set, the loads are added to that (typically empty "G") load case so\ncombinations can factor it (e.g. 1.35·G).  When `None` and self-weight is\nenabled, a new load case is created automatically.',
+    )
     solve_loadcases: bool
     solver: str
     tolerance: float
@@ -480,6 +569,10 @@ class Member(BaseModel):
         None,
         description="When true, the cross-section is mirrored: shear-center offsets y_s and\nz_s are negated, and the shape_path geometry is flipped.",
     )
+    pretension: float | None = Field(
+        None,
+        description="Initial cable tension (force units) for `Cable` members. Used to derive\nthe unstretched length when `unstretched_length` is not given directly:\n`L₀ = L_chord / (1 + pretension/EA)`.  Ignored for non-cable members.",
+    )
     reference_member: conint(ge=0) | None = None
     reference_node: conint(ge=0) | None = None
     rotation_angle: float
@@ -487,6 +580,10 @@ class Member(BaseModel):
     start_hinge: conint(ge=0) | None = None
     start_node_id: conint(ge=0)
     start_offset: MemberEndOffset | None = None
+    unstretched_length: float | None = Field(
+        None,
+        description="Explicit unstretched (natural) length L₀ (length units) for `Cable`\nmembers.  Takes precedence over `pretension`.  When neither is set, the\ncable's unstretched length defaults to the straight chord length.",
+    )
     weight: float
 
 
@@ -537,6 +634,23 @@ class MemberSet(BaseModel):
     members: list[Member]
 
 
+class PlateElement(BaseModel):
+    behavior: PlateBehavior | None = None
+    id: conint(ge=0)
+    local_x_direction: list[float] | None = Field(None, max_length=3)
+    material: conint(ge=0)
+    node_ids: list[conint(ge=0)]
+    offset: float | None = Field(
+        None,
+        description="Distance from the reference surface along the local plate normal.",
+    )
+    source_surface_id: conint(ge=0) | None = Field(
+        None, description="The `PlateSurface` this element was meshed from, if any."
+    )
+    stiffness_modifiers: PlateStiffnessModifiers | None = None
+    thickness: float
+
+
 class PlateResult(BaseModel):
     centroid: NodeLocation
     centroid_displacement_global: NodeDisplacement
@@ -544,18 +658,6 @@ class PlateResult(BaseModel):
     nodal_forces_global: dict[str, NodeForces]
     plate_id: conint(ge=0)
     resultants: PlateResultants
-
-
-class PlateSurface(BaseModel):
-    classification: str | None = None
-    generated_plate_ids: list[conint(ge=0)] | None = None
-    id: conint(ge=0)
-    local_x_direction: list[float] | None = Field(None, max_length=3)
-    material: conint(ge=0)
-    mesh_size: float | None = None
-    name: str | None = None
-    polygon: list[PlateVertex]
-    thickness: float
 
 
 class Results(BaseModel):
@@ -605,6 +707,7 @@ class LoadCase(BaseModel):
     name: str
     nodal_loads: list[NodalLoad]
     nodal_moments: list[NodalMoment]
+    plate_pressures: list[PlatePressure] | None = None
     rotation_imperfections: list[RotationImperfection]
     surface_loads: list[SurfaceLoad] | None = None
     translation_imperfections: list[TranslationImperfection]
@@ -619,6 +722,10 @@ class NodalSupport(BaseModel):
 
 
 class FERS(BaseModel):
+    entity_groups: list[EntityGroup] | None = Field(
+        None,
+        description="Generic, calculation-agnostic entity groups for UI/visualization.",
+    )
     imperfection_cases: list[ImperfectionCase]
     load_cases: list[LoadCase]
     load_combinations: list[LoadCombination]
@@ -627,8 +734,8 @@ class FERS(BaseModel):
     memberhinges: list[MemberHinge] | None = None
     nodal_supports: list[NodalSupport]
     nodes: list[Node] | None = None
+    plate_elements: list[PlateElement] | None = None
     plate_surfaces: list[PlateSurface] | None = None
-    plates: list[Plate] | None = None
     results: ResultsBundle | None = None
     sections: list[Section]
     settings: Settings

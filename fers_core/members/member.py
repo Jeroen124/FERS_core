@@ -34,6 +34,8 @@ class Member:
         member_type: Union[MemberType, str] = MemberType.NORMAL,
         start_offset: Optional[dict] = None,
         end_offset: Optional[dict] = None,
+        pretension: Optional[float] = None,
+        unstretched_length: Optional[float] = None,
     ):
         self.id = id or Member._member_counter
         if id is None:
@@ -61,6 +63,10 @@ class Member:
         self.reference_node = reference_node
         self.start_offset = self._normalize_offset(start_offset)
         self.end_offset = self._normalize_offset(end_offset)
+        self.pretension = float(pretension) if pretension is not None else None
+        self.unstretched_length = (
+            float(unstretched_length) if unstretched_length is not None else None
+        )
 
         self.weight = float(weight) if weight is not None else self.weight()
 
@@ -180,6 +186,8 @@ class Member:
             "reference_member": self.reference_member.id if self.reference_member else None,
             "reference_node": self.reference_node.id if self.reference_node else None,
             "member_type": self.member_type.value,
+            "pretension": self.pretension,
+            "unstretched_length": self.unstretched_length,
         }
 
     @classmethod
@@ -197,7 +205,7 @@ class Member:
         Construct a Member from its dict representation.
 
         Handles:
-        - start_node / end_node as dict or id
+        - start_node_id / end_node_id (resolved against nodes_by_id)
         - section as dict or id
         - start_hinge / end_hinge by id
         - member_type as enum or string
@@ -211,29 +219,9 @@ class Member:
 
         member_id = data.get("id")
 
-        # --- start node ---
-        start_node_data = data.get("start_node")
-        if isinstance(start_node_data, dict):
-            start_node = Node.get_or_create_from_dict(
-                start_node_data,
-                nodes_by_id=nodes_by_id,
-                nodal_supports_by_id=nodal_supports_by_id,
-            )
-        else:
-            start_node_id = data.get("start_node_id") or start_node_data
-            start_node = nodes_by_id[start_node_id]
-
-        # --- end node ---
-        end_node_data = data.get("end_node")
-        if isinstance(end_node_data, dict):
-            end_node = Node.get_or_create_from_dict(
-                end_node_data,
-                nodes_by_id=nodes_by_id,
-                nodal_supports_by_id=nodal_supports_by_id,
-            )
-        else:
-            end_node_id = data.get("end_node_id") or end_node_data
-            end_node = nodes_by_id[end_node_id]
+        # --- nodes (referenced by id) ---
+        start_node = nodes_by_id[data["start_node_id"]]
+        end_node = nodes_by_id[data["end_node_id"]]
 
         # --- section ---
         section = None
@@ -302,6 +290,8 @@ class Member:
             member_type=data.get("member_type", MemberType.NORMAL),
             start_offset=data.get("start_offset"),
             end_offset=data.get("end_offset"),
+            pretension=data.get("pretension"),
+            unstretched_length=data.get("unstretched_length"),
         )
 
         if member_id is not None:

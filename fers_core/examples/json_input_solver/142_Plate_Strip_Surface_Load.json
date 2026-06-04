@@ -1,38 +1,354 @@
 {
-    "member_sets": [],
-    "plate_surfaces": [],
-    "plates": [
+    "nodes": [
         {
             "id": 1,
-            "nodes": [
-                {
-                    "id": 1,
-                    "classification": "",
-                    "X": 0.0,
-                    "Y": 0.0,
-                    "Z": 0.0,
-                    "nodal_support": 1
-                },
-                {
-                    "id": 3,
-                    "classification": "",
-                    "X": 0.1,
-                    "Y": 0.0,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 4,
-                    "classification": "",
-                    "X": 0.1,
-                    "Y": 0.2,
-                    "Z": 0.0,
-                    "nodal_support": null
-                }
+            "classification": "",
+            "X": 0.0,
+            "Y": 0.0,
+            "Z": 0.0,
+            "nodal_support": 1
+        },
+        {
+            "id": 3,
+            "classification": "",
+            "X": 0.1,
+            "Y": 0.0,
+            "Z": 0.0,
+            "nodal_support": null
+        },
+        {
+            "id": 4,
+            "classification": "",
+            "X": 0.1,
+            "Y": 0.2,
+            "Z": 0.0,
+            "nodal_support": null
+        },
+        {
+            "id": 2,
+            "classification": "",
+            "X": 0.0,
+            "Y": 0.2,
+            "Z": 0.0,
+            "nodal_support": 1
+        },
+        {
+            "id": 5,
+            "classification": "",
+            "X": 0.2,
+            "Y": 0.0,
+            "Z": 0.0,
+            "nodal_support": null
+        },
+        {
+            "id": 6,
+            "classification": "",
+            "X": 0.2,
+            "Y": 0.2,
+            "Z": 0.0,
+            "nodal_support": null
+        },
+        {
+            "id": 7,
+            "classification": "",
+            "X": 0.3,
+            "Y": 0.0,
+            "Z": 0.0,
+            "nodal_support": null
+        },
+        {
+            "id": 8,
+            "classification": "",
+            "X": 0.3,
+            "Y": 0.2,
+            "Z": 0.0,
+            "nodal_support": null
+        },
+        {
+            "id": 9,
+            "classification": "",
+            "X": 0.4,
+            "Y": 0.0,
+            "Z": 0.0,
+            "nodal_support": null
+        },
+        {
+            "id": 10,
+            "classification": "",
+            "X": 0.4,
+            "Y": 0.2,
+            "Z": 0.0,
+            "nodal_support": null
+        },
+        {
+            "id": 11,
+            "classification": "",
+            "X": 0.5,
+            "Y": 0.0,
+            "Z": 0.0,
+            "nodal_support": null
+        },
+        {
+            "id": 12,
+            "classification": "",
+            "X": 0.5,
+            "Y": 0.2,
+            "Z": 0.0,
+            "nodal_support": null
+        },
+        {
+            "id": 13,
+            "classification": "",
+            "X": 0.6,
+            "Y": 0.0,
+            "Z": 0.0,
+            "nodal_support": null
+        },
+        {
+            "id": 14,
+            "classification": "",
+            "X": 0.6,
+            "Y": 0.2,
+            "Z": 0.0,
+            "nodal_support": null
+        },
+        {
+            "id": 15,
+            "classification": "",
+            "X": 0.7,
+            "Y": 0.0,
+            "Z": 0.0,
+            "nodal_support": null
+        },
+        {
+            "id": 16,
+            "classification": "",
+            "X": 0.7,
+            "Y": 0.2,
+            "Z": 0.0,
+            "nodal_support": null
+        },
+        {
+            "id": 17,
+            "classification": "",
+            "X": 0.8,
+            "Y": 0.0,
+            "Z": 0.0,
+            "nodal_support": null
+        },
+        {
+            "id": 18,
+            "classification": "",
+            "X": 0.8,
+            "Y": 0.2,
+            "Z": 0.0,
+            "nodal_support": null
+        },
+        {
+            "id": 19,
+            "classification": "",
+            "X": 0.9,
+            "Y": 0.0,
+            "Z": 0.0,
+            "nodal_support": null
+        },
+        {
+            "id": 20,
+            "classification": "",
+            "X": 0.9,
+            "Y": 0.2,
+            "Z": 0.0,
+            "nodal_support": null
+        },
+        {
+            "id": 21,
+            "classification": "",
+            "X": 1.0,
+            "Y": 0.0,
+            "Z": 0.0,
+            "nodal_support": null
+        },
+        {
+            "id": 22,
+            "classification": "",
+            "X": 1.0,
+            "Y": 0.2,
+            "Z": 0.0,
+            "nodal_support": null
+        },
+        {
+            "id": 23,
+            "classification": "",
+            "X": 1.1,
+            "Y": 0.0,
+            "Z": 0.0,
+            "nodal_support": null
+        },
+        {
+            "id": 24,
+            "classification": "",
+            "X": 1.1,
+            "Y": 0.2,
+            "Z": 0.0,
+            "nodal_support": null
+        },
+        {
+            "id": 25,
+            "classification": "",
+            "X": 1.2,
+            "Y": 0.0,
+            "Z": 0.0,
+            "nodal_support": null
+        },
+        {
+            "id": 26,
+            "classification": "",
+            "X": 1.2,
+            "Y": 0.2,
+            "Z": 0.0,
+            "nodal_support": null
+        },
+        {
+            "id": 27,
+            "classification": "",
+            "X": 1.3,
+            "Y": 0.0,
+            "Z": 0.0,
+            "nodal_support": null
+        },
+        {
+            "id": 28,
+            "classification": "",
+            "X": 1.3,
+            "Y": 0.2,
+            "Z": 0.0,
+            "nodal_support": null
+        },
+        {
+            "id": 29,
+            "classification": "",
+            "X": 1.4,
+            "Y": 0.0,
+            "Z": 0.0,
+            "nodal_support": null
+        },
+        {
+            "id": 30,
+            "classification": "",
+            "X": 1.4,
+            "Y": 0.2,
+            "Z": 0.0,
+            "nodal_support": null
+        },
+        {
+            "id": 31,
+            "classification": "",
+            "X": 1.5,
+            "Y": 0.0,
+            "Z": 0.0,
+            "nodal_support": null
+        },
+        {
+            "id": 32,
+            "classification": "",
+            "X": 1.5,
+            "Y": 0.2,
+            "Z": 0.0,
+            "nodal_support": null
+        },
+        {
+            "id": 33,
+            "classification": "",
+            "X": 1.6,
+            "Y": 0.0,
+            "Z": 0.0,
+            "nodal_support": null
+        },
+        {
+            "id": 34,
+            "classification": "",
+            "X": 1.6,
+            "Y": 0.2,
+            "Z": 0.0,
+            "nodal_support": null
+        },
+        {
+            "id": 35,
+            "classification": "",
+            "X": 1.7,
+            "Y": 0.0,
+            "Z": 0.0,
+            "nodal_support": null
+        },
+        {
+            "id": 36,
+            "classification": "",
+            "X": 1.7,
+            "Y": 0.2,
+            "Z": 0.0,
+            "nodal_support": null
+        },
+        {
+            "id": 37,
+            "classification": "",
+            "X": 1.8,
+            "Y": 0.0,
+            "Z": 0.0,
+            "nodal_support": null
+        },
+        {
+            "id": 38,
+            "classification": "",
+            "X": 1.8,
+            "Y": 0.2,
+            "Z": 0.0,
+            "nodal_support": null
+        },
+        {
+            "id": 39,
+            "classification": "",
+            "X": 1.9,
+            "Y": 0.0,
+            "Z": 0.0,
+            "nodal_support": null
+        },
+        {
+            "id": 40,
+            "classification": "",
+            "X": 1.9,
+            "Y": 0.2,
+            "Z": 0.0,
+            "nodal_support": null
+        },
+        {
+            "id": 41,
+            "classification": "",
+            "X": 2.0,
+            "Y": 0.0,
+            "Z": 0.0,
+            "nodal_support": null
+        },
+        {
+            "id": 42,
+            "classification": "",
+            "X": 2.0,
+            "Y": 0.2,
+            "Z": 0.0,
+            "nodal_support": null
+        }
+    ],
+    "member_sets": [],
+    "plate_surfaces": [],
+    "plate_elements": [
+        {
+            "id": 1,
+            "node_ids": [
+                1,
+                3,
+                4
             ],
             "material": 1,
             "thickness": 0.03,
-            "classification": "",
             "local_x_direction": [
                 1.0,
                 0.0,
@@ -41,35 +357,13 @@
         },
         {
             "id": 2,
-            "nodes": [
-                {
-                    "id": 1,
-                    "classification": "",
-                    "X": 0.0,
-                    "Y": 0.0,
-                    "Z": 0.0,
-                    "nodal_support": 1
-                },
-                {
-                    "id": 4,
-                    "classification": "",
-                    "X": 0.1,
-                    "Y": 0.2,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 2,
-                    "classification": "",
-                    "X": 0.0,
-                    "Y": 0.2,
-                    "Z": 0.0,
-                    "nodal_support": 1
-                }
+            "node_ids": [
+                1,
+                4,
+                2
             ],
             "material": 1,
             "thickness": 0.03,
-            "classification": "",
             "local_x_direction": [
                 1.0,
                 0.0,
@@ -78,35 +372,13 @@
         },
         {
             "id": 3,
-            "nodes": [
-                {
-                    "id": 3,
-                    "classification": "",
-                    "X": 0.1,
-                    "Y": 0.0,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 5,
-                    "classification": "",
-                    "X": 0.2,
-                    "Y": 0.0,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 6,
-                    "classification": "",
-                    "X": 0.2,
-                    "Y": 0.2,
-                    "Z": 0.0,
-                    "nodal_support": null
-                }
+            "node_ids": [
+                3,
+                5,
+                6
             ],
             "material": 1,
             "thickness": 0.03,
-            "classification": "",
             "local_x_direction": [
                 1.0,
                 0.0,
@@ -115,35 +387,13 @@
         },
         {
             "id": 4,
-            "nodes": [
-                {
-                    "id": 3,
-                    "classification": "",
-                    "X": 0.1,
-                    "Y": 0.0,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 6,
-                    "classification": "",
-                    "X": 0.2,
-                    "Y": 0.2,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 4,
-                    "classification": "",
-                    "X": 0.1,
-                    "Y": 0.2,
-                    "Z": 0.0,
-                    "nodal_support": null
-                }
+            "node_ids": [
+                3,
+                6,
+                4
             ],
             "material": 1,
             "thickness": 0.03,
-            "classification": "",
             "local_x_direction": [
                 1.0,
                 0.0,
@@ -152,35 +402,13 @@
         },
         {
             "id": 5,
-            "nodes": [
-                {
-                    "id": 5,
-                    "classification": "",
-                    "X": 0.2,
-                    "Y": 0.0,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 7,
-                    "classification": "",
-                    "X": 0.3,
-                    "Y": 0.0,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 8,
-                    "classification": "",
-                    "X": 0.3,
-                    "Y": 0.2,
-                    "Z": 0.0,
-                    "nodal_support": null
-                }
+            "node_ids": [
+                5,
+                7,
+                8
             ],
             "material": 1,
             "thickness": 0.03,
-            "classification": "",
             "local_x_direction": [
                 1.0,
                 0.0,
@@ -189,35 +417,13 @@
         },
         {
             "id": 6,
-            "nodes": [
-                {
-                    "id": 5,
-                    "classification": "",
-                    "X": 0.2,
-                    "Y": 0.0,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 8,
-                    "classification": "",
-                    "X": 0.3,
-                    "Y": 0.2,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 6,
-                    "classification": "",
-                    "X": 0.2,
-                    "Y": 0.2,
-                    "Z": 0.0,
-                    "nodal_support": null
-                }
+            "node_ids": [
+                5,
+                8,
+                6
             ],
             "material": 1,
             "thickness": 0.03,
-            "classification": "",
             "local_x_direction": [
                 1.0,
                 0.0,
@@ -226,35 +432,13 @@
         },
         {
             "id": 7,
-            "nodes": [
-                {
-                    "id": 7,
-                    "classification": "",
-                    "X": 0.3,
-                    "Y": 0.0,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 9,
-                    "classification": "",
-                    "X": 0.4,
-                    "Y": 0.0,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 10,
-                    "classification": "",
-                    "X": 0.4,
-                    "Y": 0.2,
-                    "Z": 0.0,
-                    "nodal_support": null
-                }
+            "node_ids": [
+                7,
+                9,
+                10
             ],
             "material": 1,
             "thickness": 0.03,
-            "classification": "",
             "local_x_direction": [
                 1.0,
                 0.0,
@@ -263,35 +447,13 @@
         },
         {
             "id": 8,
-            "nodes": [
-                {
-                    "id": 7,
-                    "classification": "",
-                    "X": 0.3,
-                    "Y": 0.0,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 10,
-                    "classification": "",
-                    "X": 0.4,
-                    "Y": 0.2,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 8,
-                    "classification": "",
-                    "X": 0.3,
-                    "Y": 0.2,
-                    "Z": 0.0,
-                    "nodal_support": null
-                }
+            "node_ids": [
+                7,
+                10,
+                8
             ],
             "material": 1,
             "thickness": 0.03,
-            "classification": "",
             "local_x_direction": [
                 1.0,
                 0.0,
@@ -300,35 +462,13 @@
         },
         {
             "id": 9,
-            "nodes": [
-                {
-                    "id": 9,
-                    "classification": "",
-                    "X": 0.4,
-                    "Y": 0.0,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 11,
-                    "classification": "",
-                    "X": 0.5,
-                    "Y": 0.0,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 12,
-                    "classification": "",
-                    "X": 0.5,
-                    "Y": 0.2,
-                    "Z": 0.0,
-                    "nodal_support": null
-                }
+            "node_ids": [
+                9,
+                11,
+                12
             ],
             "material": 1,
             "thickness": 0.03,
-            "classification": "",
             "local_x_direction": [
                 1.0,
                 0.0,
@@ -337,35 +477,13 @@
         },
         {
             "id": 10,
-            "nodes": [
-                {
-                    "id": 9,
-                    "classification": "",
-                    "X": 0.4,
-                    "Y": 0.0,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 12,
-                    "classification": "",
-                    "X": 0.5,
-                    "Y": 0.2,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 10,
-                    "classification": "",
-                    "X": 0.4,
-                    "Y": 0.2,
-                    "Z": 0.0,
-                    "nodal_support": null
-                }
+            "node_ids": [
+                9,
+                12,
+                10
             ],
             "material": 1,
             "thickness": 0.03,
-            "classification": "",
             "local_x_direction": [
                 1.0,
                 0.0,
@@ -374,35 +492,13 @@
         },
         {
             "id": 11,
-            "nodes": [
-                {
-                    "id": 11,
-                    "classification": "",
-                    "X": 0.5,
-                    "Y": 0.0,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 13,
-                    "classification": "",
-                    "X": 0.6,
-                    "Y": 0.0,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 14,
-                    "classification": "",
-                    "X": 0.6,
-                    "Y": 0.2,
-                    "Z": 0.0,
-                    "nodal_support": null
-                }
+            "node_ids": [
+                11,
+                13,
+                14
             ],
             "material": 1,
             "thickness": 0.03,
-            "classification": "",
             "local_x_direction": [
                 1.0,
                 0.0,
@@ -411,35 +507,13 @@
         },
         {
             "id": 12,
-            "nodes": [
-                {
-                    "id": 11,
-                    "classification": "",
-                    "X": 0.5,
-                    "Y": 0.0,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 14,
-                    "classification": "",
-                    "X": 0.6,
-                    "Y": 0.2,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 12,
-                    "classification": "",
-                    "X": 0.5,
-                    "Y": 0.2,
-                    "Z": 0.0,
-                    "nodal_support": null
-                }
+            "node_ids": [
+                11,
+                14,
+                12
             ],
             "material": 1,
             "thickness": 0.03,
-            "classification": "",
             "local_x_direction": [
                 1.0,
                 0.0,
@@ -448,35 +522,13 @@
         },
         {
             "id": 13,
-            "nodes": [
-                {
-                    "id": 13,
-                    "classification": "",
-                    "X": 0.6,
-                    "Y": 0.0,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 15,
-                    "classification": "",
-                    "X": 0.7,
-                    "Y": 0.0,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 16,
-                    "classification": "",
-                    "X": 0.7,
-                    "Y": 0.2,
-                    "Z": 0.0,
-                    "nodal_support": null
-                }
+            "node_ids": [
+                13,
+                15,
+                16
             ],
             "material": 1,
             "thickness": 0.03,
-            "classification": "",
             "local_x_direction": [
                 1.0,
                 0.0,
@@ -485,35 +537,13 @@
         },
         {
             "id": 14,
-            "nodes": [
-                {
-                    "id": 13,
-                    "classification": "",
-                    "X": 0.6,
-                    "Y": 0.0,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 16,
-                    "classification": "",
-                    "X": 0.7,
-                    "Y": 0.2,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 14,
-                    "classification": "",
-                    "X": 0.6,
-                    "Y": 0.2,
-                    "Z": 0.0,
-                    "nodal_support": null
-                }
+            "node_ids": [
+                13,
+                16,
+                14
             ],
             "material": 1,
             "thickness": 0.03,
-            "classification": "",
             "local_x_direction": [
                 1.0,
                 0.0,
@@ -522,35 +552,13 @@
         },
         {
             "id": 15,
-            "nodes": [
-                {
-                    "id": 15,
-                    "classification": "",
-                    "X": 0.7,
-                    "Y": 0.0,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 17,
-                    "classification": "",
-                    "X": 0.8,
-                    "Y": 0.0,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 18,
-                    "classification": "",
-                    "X": 0.8,
-                    "Y": 0.2,
-                    "Z": 0.0,
-                    "nodal_support": null
-                }
+            "node_ids": [
+                15,
+                17,
+                18
             ],
             "material": 1,
             "thickness": 0.03,
-            "classification": "",
             "local_x_direction": [
                 1.0,
                 0.0,
@@ -559,35 +567,13 @@
         },
         {
             "id": 16,
-            "nodes": [
-                {
-                    "id": 15,
-                    "classification": "",
-                    "X": 0.7,
-                    "Y": 0.0,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 18,
-                    "classification": "",
-                    "X": 0.8,
-                    "Y": 0.2,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 16,
-                    "classification": "",
-                    "X": 0.7,
-                    "Y": 0.2,
-                    "Z": 0.0,
-                    "nodal_support": null
-                }
+            "node_ids": [
+                15,
+                18,
+                16
             ],
             "material": 1,
             "thickness": 0.03,
-            "classification": "",
             "local_x_direction": [
                 1.0,
                 0.0,
@@ -596,35 +582,13 @@
         },
         {
             "id": 17,
-            "nodes": [
-                {
-                    "id": 17,
-                    "classification": "",
-                    "X": 0.8,
-                    "Y": 0.0,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 19,
-                    "classification": "",
-                    "X": 0.9,
-                    "Y": 0.0,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 20,
-                    "classification": "",
-                    "X": 0.9,
-                    "Y": 0.2,
-                    "Z": 0.0,
-                    "nodal_support": null
-                }
+            "node_ids": [
+                17,
+                19,
+                20
             ],
             "material": 1,
             "thickness": 0.03,
-            "classification": "",
             "local_x_direction": [
                 1.0,
                 0.0,
@@ -633,35 +597,13 @@
         },
         {
             "id": 18,
-            "nodes": [
-                {
-                    "id": 17,
-                    "classification": "",
-                    "X": 0.8,
-                    "Y": 0.0,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 20,
-                    "classification": "",
-                    "X": 0.9,
-                    "Y": 0.2,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 18,
-                    "classification": "",
-                    "X": 0.8,
-                    "Y": 0.2,
-                    "Z": 0.0,
-                    "nodal_support": null
-                }
+            "node_ids": [
+                17,
+                20,
+                18
             ],
             "material": 1,
             "thickness": 0.03,
-            "classification": "",
             "local_x_direction": [
                 1.0,
                 0.0,
@@ -670,35 +612,13 @@
         },
         {
             "id": 19,
-            "nodes": [
-                {
-                    "id": 19,
-                    "classification": "",
-                    "X": 0.9,
-                    "Y": 0.0,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 21,
-                    "classification": "",
-                    "X": 1.0,
-                    "Y": 0.0,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 22,
-                    "classification": "",
-                    "X": 1.0,
-                    "Y": 0.2,
-                    "Z": 0.0,
-                    "nodal_support": null
-                }
+            "node_ids": [
+                19,
+                21,
+                22
             ],
             "material": 1,
             "thickness": 0.03,
-            "classification": "",
             "local_x_direction": [
                 1.0,
                 0.0,
@@ -707,35 +627,13 @@
         },
         {
             "id": 20,
-            "nodes": [
-                {
-                    "id": 19,
-                    "classification": "",
-                    "X": 0.9,
-                    "Y": 0.0,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 22,
-                    "classification": "",
-                    "X": 1.0,
-                    "Y": 0.2,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 20,
-                    "classification": "",
-                    "X": 0.9,
-                    "Y": 0.2,
-                    "Z": 0.0,
-                    "nodal_support": null
-                }
+            "node_ids": [
+                19,
+                22,
+                20
             ],
             "material": 1,
             "thickness": 0.03,
-            "classification": "",
             "local_x_direction": [
                 1.0,
                 0.0,
@@ -744,35 +642,13 @@
         },
         {
             "id": 21,
-            "nodes": [
-                {
-                    "id": 21,
-                    "classification": "",
-                    "X": 1.0,
-                    "Y": 0.0,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 23,
-                    "classification": "",
-                    "X": 1.1,
-                    "Y": 0.0,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 24,
-                    "classification": "",
-                    "X": 1.1,
-                    "Y": 0.2,
-                    "Z": 0.0,
-                    "nodal_support": null
-                }
+            "node_ids": [
+                21,
+                23,
+                24
             ],
             "material": 1,
             "thickness": 0.03,
-            "classification": "",
             "local_x_direction": [
                 1.0,
                 0.0,
@@ -781,35 +657,13 @@
         },
         {
             "id": 22,
-            "nodes": [
-                {
-                    "id": 21,
-                    "classification": "",
-                    "X": 1.0,
-                    "Y": 0.0,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 24,
-                    "classification": "",
-                    "X": 1.1,
-                    "Y": 0.2,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 22,
-                    "classification": "",
-                    "X": 1.0,
-                    "Y": 0.2,
-                    "Z": 0.0,
-                    "nodal_support": null
-                }
+            "node_ids": [
+                21,
+                24,
+                22
             ],
             "material": 1,
             "thickness": 0.03,
-            "classification": "",
             "local_x_direction": [
                 1.0,
                 0.0,
@@ -818,35 +672,13 @@
         },
         {
             "id": 23,
-            "nodes": [
-                {
-                    "id": 23,
-                    "classification": "",
-                    "X": 1.1,
-                    "Y": 0.0,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 25,
-                    "classification": "",
-                    "X": 1.2,
-                    "Y": 0.0,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 26,
-                    "classification": "",
-                    "X": 1.2,
-                    "Y": 0.2,
-                    "Z": 0.0,
-                    "nodal_support": null
-                }
+            "node_ids": [
+                23,
+                25,
+                26
             ],
             "material": 1,
             "thickness": 0.03,
-            "classification": "",
             "local_x_direction": [
                 1.0,
                 0.0,
@@ -855,35 +687,13 @@
         },
         {
             "id": 24,
-            "nodes": [
-                {
-                    "id": 23,
-                    "classification": "",
-                    "X": 1.1,
-                    "Y": 0.0,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 26,
-                    "classification": "",
-                    "X": 1.2,
-                    "Y": 0.2,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 24,
-                    "classification": "",
-                    "X": 1.1,
-                    "Y": 0.2,
-                    "Z": 0.0,
-                    "nodal_support": null
-                }
+            "node_ids": [
+                23,
+                26,
+                24
             ],
             "material": 1,
             "thickness": 0.03,
-            "classification": "",
             "local_x_direction": [
                 1.0,
                 0.0,
@@ -892,35 +702,13 @@
         },
         {
             "id": 25,
-            "nodes": [
-                {
-                    "id": 25,
-                    "classification": "",
-                    "X": 1.2,
-                    "Y": 0.0,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 27,
-                    "classification": "",
-                    "X": 1.3,
-                    "Y": 0.0,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 28,
-                    "classification": "",
-                    "X": 1.3,
-                    "Y": 0.2,
-                    "Z": 0.0,
-                    "nodal_support": null
-                }
+            "node_ids": [
+                25,
+                27,
+                28
             ],
             "material": 1,
             "thickness": 0.03,
-            "classification": "",
             "local_x_direction": [
                 1.0,
                 0.0,
@@ -929,35 +717,13 @@
         },
         {
             "id": 26,
-            "nodes": [
-                {
-                    "id": 25,
-                    "classification": "",
-                    "X": 1.2,
-                    "Y": 0.0,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 28,
-                    "classification": "",
-                    "X": 1.3,
-                    "Y": 0.2,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 26,
-                    "classification": "",
-                    "X": 1.2,
-                    "Y": 0.2,
-                    "Z": 0.0,
-                    "nodal_support": null
-                }
+            "node_ids": [
+                25,
+                28,
+                26
             ],
             "material": 1,
             "thickness": 0.03,
-            "classification": "",
             "local_x_direction": [
                 1.0,
                 0.0,
@@ -966,35 +732,13 @@
         },
         {
             "id": 27,
-            "nodes": [
-                {
-                    "id": 27,
-                    "classification": "",
-                    "X": 1.3,
-                    "Y": 0.0,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 29,
-                    "classification": "",
-                    "X": 1.4,
-                    "Y": 0.0,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 30,
-                    "classification": "",
-                    "X": 1.4,
-                    "Y": 0.2,
-                    "Z": 0.0,
-                    "nodal_support": null
-                }
+            "node_ids": [
+                27,
+                29,
+                30
             ],
             "material": 1,
             "thickness": 0.03,
-            "classification": "",
             "local_x_direction": [
                 1.0,
                 0.0,
@@ -1003,35 +747,13 @@
         },
         {
             "id": 28,
-            "nodes": [
-                {
-                    "id": 27,
-                    "classification": "",
-                    "X": 1.3,
-                    "Y": 0.0,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 30,
-                    "classification": "",
-                    "X": 1.4,
-                    "Y": 0.2,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 28,
-                    "classification": "",
-                    "X": 1.3,
-                    "Y": 0.2,
-                    "Z": 0.0,
-                    "nodal_support": null
-                }
+            "node_ids": [
+                27,
+                30,
+                28
             ],
             "material": 1,
             "thickness": 0.03,
-            "classification": "",
             "local_x_direction": [
                 1.0,
                 0.0,
@@ -1040,35 +762,13 @@
         },
         {
             "id": 29,
-            "nodes": [
-                {
-                    "id": 29,
-                    "classification": "",
-                    "X": 1.4,
-                    "Y": 0.0,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 31,
-                    "classification": "",
-                    "X": 1.5,
-                    "Y": 0.0,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 32,
-                    "classification": "",
-                    "X": 1.5,
-                    "Y": 0.2,
-                    "Z": 0.0,
-                    "nodal_support": null
-                }
+            "node_ids": [
+                29,
+                31,
+                32
             ],
             "material": 1,
             "thickness": 0.03,
-            "classification": "",
             "local_x_direction": [
                 1.0,
                 0.0,
@@ -1077,35 +777,13 @@
         },
         {
             "id": 30,
-            "nodes": [
-                {
-                    "id": 29,
-                    "classification": "",
-                    "X": 1.4,
-                    "Y": 0.0,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 32,
-                    "classification": "",
-                    "X": 1.5,
-                    "Y": 0.2,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 30,
-                    "classification": "",
-                    "X": 1.4,
-                    "Y": 0.2,
-                    "Z": 0.0,
-                    "nodal_support": null
-                }
+            "node_ids": [
+                29,
+                32,
+                30
             ],
             "material": 1,
             "thickness": 0.03,
-            "classification": "",
             "local_x_direction": [
                 1.0,
                 0.0,
@@ -1114,35 +792,13 @@
         },
         {
             "id": 31,
-            "nodes": [
-                {
-                    "id": 31,
-                    "classification": "",
-                    "X": 1.5,
-                    "Y": 0.0,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 33,
-                    "classification": "",
-                    "X": 1.6,
-                    "Y": 0.0,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 34,
-                    "classification": "",
-                    "X": 1.6,
-                    "Y": 0.2,
-                    "Z": 0.0,
-                    "nodal_support": null
-                }
+            "node_ids": [
+                31,
+                33,
+                34
             ],
             "material": 1,
             "thickness": 0.03,
-            "classification": "",
             "local_x_direction": [
                 1.0,
                 0.0,
@@ -1151,35 +807,13 @@
         },
         {
             "id": 32,
-            "nodes": [
-                {
-                    "id": 31,
-                    "classification": "",
-                    "X": 1.5,
-                    "Y": 0.0,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 34,
-                    "classification": "",
-                    "X": 1.6,
-                    "Y": 0.2,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 32,
-                    "classification": "",
-                    "X": 1.5,
-                    "Y": 0.2,
-                    "Z": 0.0,
-                    "nodal_support": null
-                }
+            "node_ids": [
+                31,
+                34,
+                32
             ],
             "material": 1,
             "thickness": 0.03,
-            "classification": "",
             "local_x_direction": [
                 1.0,
                 0.0,
@@ -1188,35 +822,13 @@
         },
         {
             "id": 33,
-            "nodes": [
-                {
-                    "id": 33,
-                    "classification": "",
-                    "X": 1.6,
-                    "Y": 0.0,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 35,
-                    "classification": "",
-                    "X": 1.7,
-                    "Y": 0.0,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 36,
-                    "classification": "",
-                    "X": 1.7,
-                    "Y": 0.2,
-                    "Z": 0.0,
-                    "nodal_support": null
-                }
+            "node_ids": [
+                33,
+                35,
+                36
             ],
             "material": 1,
             "thickness": 0.03,
-            "classification": "",
             "local_x_direction": [
                 1.0,
                 0.0,
@@ -1225,35 +837,13 @@
         },
         {
             "id": 34,
-            "nodes": [
-                {
-                    "id": 33,
-                    "classification": "",
-                    "X": 1.6,
-                    "Y": 0.0,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 36,
-                    "classification": "",
-                    "X": 1.7,
-                    "Y": 0.2,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 34,
-                    "classification": "",
-                    "X": 1.6,
-                    "Y": 0.2,
-                    "Z": 0.0,
-                    "nodal_support": null
-                }
+            "node_ids": [
+                33,
+                36,
+                34
             ],
             "material": 1,
             "thickness": 0.03,
-            "classification": "",
             "local_x_direction": [
                 1.0,
                 0.0,
@@ -1262,35 +852,13 @@
         },
         {
             "id": 35,
-            "nodes": [
-                {
-                    "id": 35,
-                    "classification": "",
-                    "X": 1.7,
-                    "Y": 0.0,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 37,
-                    "classification": "",
-                    "X": 1.8,
-                    "Y": 0.0,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 38,
-                    "classification": "",
-                    "X": 1.8,
-                    "Y": 0.2,
-                    "Z": 0.0,
-                    "nodal_support": null
-                }
+            "node_ids": [
+                35,
+                37,
+                38
             ],
             "material": 1,
             "thickness": 0.03,
-            "classification": "",
             "local_x_direction": [
                 1.0,
                 0.0,
@@ -1299,35 +867,13 @@
         },
         {
             "id": 36,
-            "nodes": [
-                {
-                    "id": 35,
-                    "classification": "",
-                    "X": 1.7,
-                    "Y": 0.0,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 38,
-                    "classification": "",
-                    "X": 1.8,
-                    "Y": 0.2,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 36,
-                    "classification": "",
-                    "X": 1.7,
-                    "Y": 0.2,
-                    "Z": 0.0,
-                    "nodal_support": null
-                }
+            "node_ids": [
+                35,
+                38,
+                36
             ],
             "material": 1,
             "thickness": 0.03,
-            "classification": "",
             "local_x_direction": [
                 1.0,
                 0.0,
@@ -1336,35 +882,13 @@
         },
         {
             "id": 37,
-            "nodes": [
-                {
-                    "id": 37,
-                    "classification": "",
-                    "X": 1.8,
-                    "Y": 0.0,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 39,
-                    "classification": "",
-                    "X": 1.9,
-                    "Y": 0.0,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 40,
-                    "classification": "",
-                    "X": 1.9,
-                    "Y": 0.2,
-                    "Z": 0.0,
-                    "nodal_support": null
-                }
+            "node_ids": [
+                37,
+                39,
+                40
             ],
             "material": 1,
             "thickness": 0.03,
-            "classification": "",
             "local_x_direction": [
                 1.0,
                 0.0,
@@ -1373,35 +897,13 @@
         },
         {
             "id": 38,
-            "nodes": [
-                {
-                    "id": 37,
-                    "classification": "",
-                    "X": 1.8,
-                    "Y": 0.0,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 40,
-                    "classification": "",
-                    "X": 1.9,
-                    "Y": 0.2,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 38,
-                    "classification": "",
-                    "X": 1.8,
-                    "Y": 0.2,
-                    "Z": 0.0,
-                    "nodal_support": null
-                }
+            "node_ids": [
+                37,
+                40,
+                38
             ],
             "material": 1,
             "thickness": 0.03,
-            "classification": "",
             "local_x_direction": [
                 1.0,
                 0.0,
@@ -1410,35 +912,13 @@
         },
         {
             "id": 39,
-            "nodes": [
-                {
-                    "id": 39,
-                    "classification": "",
-                    "X": 1.9,
-                    "Y": 0.0,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 41,
-                    "classification": "",
-                    "X": 2.0,
-                    "Y": 0.0,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 42,
-                    "classification": "",
-                    "X": 2.0,
-                    "Y": 0.2,
-                    "Z": 0.0,
-                    "nodal_support": null
-                }
+            "node_ids": [
+                39,
+                41,
+                42
             ],
             "material": 1,
             "thickness": 0.03,
-            "classification": "",
             "local_x_direction": [
                 1.0,
                 0.0,
@@ -1447,35 +927,13 @@
         },
         {
             "id": 40,
-            "nodes": [
-                {
-                    "id": 39,
-                    "classification": "",
-                    "X": 1.9,
-                    "Y": 0.0,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 42,
-                    "classification": "",
-                    "X": 2.0,
-                    "Y": 0.2,
-                    "Z": 0.0,
-                    "nodal_support": null
-                },
-                {
-                    "id": 40,
-                    "classification": "",
-                    "X": 1.9,
-                    "Y": 0.2,
-                    "Z": 0.0,
-                    "nodal_support": null
-                }
+            "node_ids": [
+                39,
+                42,
+                40
             ],
             "material": 1,
             "thickness": 0.03,
-            "classification": "",
             "local_x_direction": [
                 1.0,
                 0.0,
@@ -1483,6 +941,9 @@
             ]
         }
     ],
+    "work_axes": [],
+    "work_planes": [],
+    "entity_groups": [],
     "load_cases": [
         {
             "id": 1,
@@ -1524,6 +985,9 @@
                     ]
                 }
             ],
+            "member_point_loads": [],
+            "member_point_moments": [],
+            "plate_pressures": [],
             "rotation_imperfections": [],
             "translation_imperfections": []
         }
