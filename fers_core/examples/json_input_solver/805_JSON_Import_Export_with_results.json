@@ -1,4 +1,30 @@
 {
+  "nodes": [
+    {
+      "id": 1,
+      "classification": "",
+      "X": 0,
+      "Y": 0,
+      "Z": 0,
+      "nodal_support": 1
+    },
+    {
+      "id": 2,
+      "classification": "",
+      "X": 3,
+      "Y": 0,
+      "Z": 0,
+      "nodal_support": null
+    },
+    {
+      "id": 3,
+      "classification": "",
+      "X": 6,
+      "Y": 0,
+      "Z": 0,
+      "nodal_support": 2
+    }
+  ],
   "member_sets": [
     {
       "id": 1,
@@ -8,22 +34,10 @@
       "members": [
         {
           "id": 1,
-          "start_node": {
-            "id": 1,
-            "classification": "",
-            "X": 0,
-            "Y": 0,
-            "Z": 0,
-            "nodal_support": 1
-          },
-          "end_node": {
-            "id": 2,
-            "classification": "",
-            "X": 3,
-            "Y": 0,
-            "Z": 0,
-            "nodal_support": null
-          },
+          "start_node_id": 1,
+          "end_node_id": 2,
+          "start_offset": null,
+          "end_offset": null,
           "section": 1,
           "rotation_angle": 0.0,
           "mirror": false,
@@ -38,22 +52,10 @@
         },
         {
           "id": 2,
-          "start_node": {
-            "id": 2,
-            "classification": "",
-            "X": 3,
-            "Y": 0,
-            "Z": 0,
-            "nodal_support": null
-          },
-          "end_node": {
-            "id": 3,
-            "classification": "",
-            "X": 6,
-            "Y": 0,
-            "Z": 0,
-            "nodal_support": 2
-          },
+          "start_node_id": 2,
+          "end_node_id": 3,
+          "start_offset": null,
+          "end_offset": null,
           "section": 1,
           "rotation_angle": 0.0,
           "mirror": false,
@@ -92,6 +94,8 @@
       "nodal_moments": [],
       "distributed_loads": [],
       "surface_loads": [],
+      "member_point_loads": [],
+      "member_point_moments": [],
       "rotation_imperfections": [],
       "translation_imperfections": []
     }

@@ -1,18 +1,27 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, Iterable, Optional, TYPE_CHECKING
+from typing import Any, Dict, Iterable, List, Optional, Union, TYPE_CHECKING
 
 from ..members.material import Material
 from ..nodes.node import Node
+from .components import (
+    PlateBehavior,
+    PlateMeshSettings,
+    PlateOpening,
+    PlateStiffnessModifiers,
+    normalize_plate_behavior,
+)
 from .mesh import triangulate_surface_polygon
 
 if TYPE_CHECKING:
-    from .plate import Plate
+    from .plate import PlateElement
 
 
 @dataclass
 class PlateVertex:
+    """Legacy free-standing vertex (kept for backwards compatibility)."""
+
     x: float
     y: float
     z: float
@@ -26,19 +35,31 @@ class PlateVertex:
 
 
 class PlateSurface:
+    """
+    A meshable plate surface bounded by existing model nodes.
+
+    The outer boundary references model nodes by id (counter-clockwise). The
+    solver meshes the surface into ``PlateElement``s; a local mesher
+    (:meth:`generate_plate_elements`) is also provided for client-side meshing.
+    """
+
     _plate_surface_counter = 1
 
     def __init__(
         self,
-        polygon: Iterable[PlateVertex | Dict[str, Any] | tuple[float, float, float]],
+        boundary_nodes: Iterable[Node],
         material: Material,
         thickness: float,
         *,
-        mesh_size: Optional[float] = None,
-        name: str = "",
-        classification: str = "",
+        behavior: Union[PlateBehavior, str, None] = None,
+        mesh: Optional[PlateMeshSettings] = None,
+        openings: Optional[List[PlateOpening]] = None,
+        offset: Optional[float] = None,
+        stiffness_modifiers: Optional[PlateStiffnessModifiers] = None,
+        name: Optional[str] = None,
+        classification: Optional[str] = None,
         local_x_direction: Optional[tuple[float, float, float]] = None,
-        generated_plate_ids: Optional[list[int]] = None,
+        generated_plate_element_ids: Optional[list[int]] = None,
         id: Optional[int] = None,
     ) -> None:
         if thickness <= 0.0:
@@ -48,87 +69,127 @@ class PlateSurface:
         if id is None:
             PlateSurface._plate_surface_counter += 1
 
-        self.polygon = [self._coerce_vertex(vertex) for vertex in polygon]
+        self.boundary_nodes = list(boundary_nodes)
+        if len(self.boundary_nodes) < 3:
+            raise ValueError("PlateSurface requires at least three boundary nodes.")
+
         self.material = material
         self.thickness = float(thickness)
-        self.mesh_size = float(mesh_size) if mesh_size is not None else None
+        self.behavior = normalize_plate_behavior(behavior)
+        self.mesh = mesh
+        self.openings = list(openings) if openings is not None else None
+        self.offset = float(offset) if offset is not None else None
+        self.stiffness_modifiers = stiffness_modifiers
         self.name = name
         self.classification = classification
         self.local_x_direction = local_x_direction
-        self.generated_plate_ids = generated_plate_ids[:] if generated_plate_ids is not None else []
+        self.generated_plate_element_ids = (
+            generated_plate_element_ids[:] if generated_plate_element_ids is not None else []
+        )
 
     @classmethod
     def reset_counter(cls) -> None:
         cls._plate_surface_counter = 1
 
-    @staticmethod
-    def _coerce_vertex(
-        vertex: PlateVertex | Dict[str, Any] | tuple[float, float, float],
-    ) -> PlateVertex:
-        if isinstance(vertex, PlateVertex):
-            return vertex
-        if isinstance(vertex, dict):
-            return PlateVertex.from_dict(vertex)
-        if isinstance(vertex, (list, tuple)) and len(vertex) == 3:
-            return PlateVertex(float(vertex[0]), float(vertex[1]), float(vertex[2]))
-        raise TypeError("PlateSurface vertices must be PlateVertex, dict, or 3-item tuple/list.")
-
     def to_dict(self) -> Dict[str, Any]:
+        # Optional fields are omitted when unset (the solver uses non-nullable
+        # defaults for some of them, e.g. `behavior`/`offset`).
         data: Dict[str, Any] = {
             "id": self.id,
-            "name": self.name,
-            "polygon": [vertex.to_dict() for vertex in self.polygon],
+            "boundary_node_ids": [node.id for node in self.boundary_nodes],
             "material": self.material.id,
             "thickness": self.thickness,
-            "classification": self.classification,
-            "generated_plate_ids": self.generated_plate_ids,
+            "generated_plate_element_ids": self.generated_plate_element_ids,
         }
-        if self.mesh_size is not None:
-            data["mesh_size"] = self.mesh_size
+        if self.name is not None:
+            data["name"] = self.name
+        if self.behavior is not None:
+            data["behavior"] = self.behavior.value
+        if self.classification is not None:
+            data["classification"] = self.classification
+        if self.offset is not None:
+            data["offset"] = self.offset
+        if self.mesh is not None:
+            data["mesh"] = self.mesh.to_dict()
+        if self.openings is not None:
+            data["openings"] = [opening.to_dict() for opening in self.openings]
+        if self.stiffness_modifiers is not None:
+            data["stiffness_modifiers"] = self.stiffness_modifiers.to_dict()
         if self.local_x_direction is not None:
             data["local_x_direction"] = self.local_x_direction
         return data
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any], *, materials_by_id: dict[int, Material]) -> "PlateSurface":
+    def from_dict(
+        cls,
+        data: Dict[str, Any],
+        *,
+        materials_by_id: dict[int, Material],
+        nodes_by_id: dict[int, Node],
+    ) -> "PlateSurface":
         material_id = data.get("material")
         if material_id is None:
             raise ValueError("PlateSurface material is required.")
         material = materials_by_id[material_id]
-        return cls(
+
+        boundary_node_ids = data.get("boundary_node_ids") or []
+        boundary_nodes = [nodes_by_id[node_id] for node_id in boundary_node_ids]
+
+        openings_data = data.get("openings")
+        openings = (
+            [PlateOpening.from_dict(o) for o in openings_data] if openings_data is not None else None
+        )
+
+        surface = cls(
             id=data.get("id"),
-            name=data.get("name", ""),
-            polygon=[PlateVertex.from_dict(vertex) for vertex in data.get("polygon", [])],
+            name=data.get("name"),
+            boundary_nodes=boundary_nodes,
             material=material,
             thickness=float(data["thickness"]),
-            mesh_size=data.get("mesh_size"),
-            classification=data.get("classification", ""),
+            behavior=data.get("behavior"),
+            mesh=PlateMeshSettings.from_dict(data.get("mesh")),
+            openings=openings,
+            offset=data.get("offset"),
+            stiffness_modifiers=PlateStiffnessModifiers.from_dict(data.get("stiffness_modifiers")),
+            classification=data.get("classification"),
             local_x_direction=tuple(data["local_x_direction"])
             if data.get("local_x_direction") is not None
             else None,
-            generated_plate_ids=[int(value) for value in data.get("generated_plate_ids", [])],
+            generated_plate_element_ids=[int(v) for v in data.get("generated_plate_element_ids", [])],
         )
+        return surface
 
-    def generate_plates(
+    def generate_plate_elements(
         self,
         *,
-        next_plate_id: int = 1,
+        next_element_id: int = 1,
         next_node_id: int = 1,
-    ) -> tuple[list["Plate"], int, int]:
-        from .plate import Plate
+    ) -> tuple[list["PlateElement"], int, int]:
+        """
+        Triangulate the surface into ``PlateElement``s (client-side meshing).
 
+        Reuses the existing boundary nodes where a generated vertex coincides
+        with one, and creates interior nodes as needed.
+        """
+        from .plate import PlateElement
+
+        target_size = self.mesh.target_size if self.mesh is not None else None
         triangles = triangulate_surface_polygon(
-            [(vertex.x, vertex.y, vertex.z) for vertex in self.polygon],
-            mesh_size=self.mesh_size,
+            [(node.X, node.Y, node.Z) for node in self.boundary_nodes],
+            mesh_size=target_size,
         )
+
         node_cache: dict[tuple[float, float, float], Node] = {}
-        plates: list[Plate] = []
-        generated_plate_ids: list[int] = []
+        for node in self.boundary_nodes:
+            node_cache[(round(node.X, 9), round(node.Y, 9), round(node.Z, 9))] = node
+
+        elements: list["PlateElement"] = []
+        generated_ids: list[int] = []
 
         for triangle in triangles:
             plate_nodes: list[Node] = []
             for x, y, z in triangle:
-                key = (round(x, 12), round(y, 12), round(z, 12))
+                key = (round(x, 9), round(y, 9), round(z, 9))
                 node = node_cache.get(key)
                 if node is None:
                     node = Node(X=x, Y=y, Z=z, id=next_node_id)
@@ -136,18 +197,21 @@ class PlateSurface:
                     next_node_id += 1
                 plate_nodes.append(node)
 
-            plate = Plate(
-                id=next_plate_id,
+            element = PlateElement(
+                id=next_element_id,
                 nodes=plate_nodes,
                 material=self.material,
                 thickness=self.thickness,
-                classification=self.classification,
+                classification=self.classification or "",
                 source_surface=self,
                 local_x_direction=self.local_x_direction,
+                behavior=self.behavior,
+                offset=self.offset,
+                stiffness_modifiers=self.stiffness_modifiers,
             )
-            generated_plate_ids.append(plate.id)
-            plates.append(plate)
-            next_plate_id += 1
+            generated_ids.append(element.id)
+            elements.append(element)
+            next_element_id += 1
 
-        self.generated_plate_ids = generated_plate_ids
-        return plates, next_plate_id, next_node_id
+        self.generated_plate_element_ids = generated_ids
+        return elements, next_element_id, next_node_id

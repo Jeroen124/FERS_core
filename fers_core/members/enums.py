@@ -8,6 +8,7 @@ class MemberType(Enum):
     TENSION = "Tension"
     COMPRESSION = "Compression"
     RIGID = "Rigid"
+    CABLE = "Cable"
 
 
 def normalize_member_type(value: Union[MemberType, str]) -> MemberType:
@@ -24,6 +25,7 @@ def normalize_member_type(value: Union[MemberType, str]) -> MemberType:
         "tension": MemberType.TENSION,
         "compression": MemberType.COMPRESSION,
         "rigid": MemberType.RIGID,
+        "cable": MemberType.CABLE,
     }
     if s in mapping:
         return mapping[s]

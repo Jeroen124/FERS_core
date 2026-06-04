@@ -1,5 +1,5 @@
 import os
-from fers_core import FERS, AnalysisOrder, Material, PlateSurface, PlateVertex
+from fers_core import FERS, AnalysisOrder, Material, Node, PlateSurface, PlateMeshSettings
 
 
 # =============================================================================
@@ -30,17 +30,20 @@ concrete = Material(
     yield_stress=30e6,
 )
 
+# The surface boundary references existing model nodes (counter-clockwise).
+corners = [
+    Node(0.0, 0.0, 0.0),
+    Node(2.0, 0.0, 0.0),
+    Node(2.0, 1.0, 0.0),
+    Node(0.0, 1.0, 0.0),
+]
+
 slab = PlateSurface(
     name="Rectangular Slab",
     material=concrete,
     thickness=0.120,  # 120 mm
-    mesh_size=0.25,  # target element size in metres
-    polygon=[
-        PlateVertex(0.0, 0.0, 0.0),
-        PlateVertex(2.0, 0.0, 0.0),
-        PlateVertex(2.0, 1.0, 0.0),
-        PlateVertex(0.0, 1.0, 0.0),
-    ],
+    boundary_nodes=corners,
+    mesh=PlateMeshSettings(target_size=0.25),  # target element size in metres
 )
 
 model.add_plate_surface(slab)

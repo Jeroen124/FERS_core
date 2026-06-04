@@ -1,5 +1,6 @@
 from .nodes.node import Node
 from .members.member import Member
+from .members.enums import MemberType
 from .fers.fers import FERS
 from .members.material import Material
 from .members.material_library import MaterialLibrary
@@ -13,8 +14,21 @@ from .loads.nodalload import NodalLoad
 from .loads.nodalmoment import NodalMoment
 from .loads.distributedload import DistributedLoad
 from .loads.surfaceload import SurfaceLoad, SurfaceLoadVertex
-from .plates.plate import Plate
+from .loads.memberpointload import MemberPointLoad
+from .loads.memberpointmoment import MemberPointMoment
+from .loads.platepressure import PlatePressure
+from .plates.plate import Plate, PlateElement
 from .plates.platesurface import PlateSurface, PlateVertex
+from .plates.components import (
+    PlateBehavior,
+    PlateElementShape,
+    PlateMeshSettings,
+    PlateOpening,
+    PlateStiffnessModifiers,
+)
+from .geometry.workaxis import WorkAxis
+from .geometry.workplane import WorkPlane
+from .entities.entitygroup import EntityGroup
 from .imperfections.imperfectioncase import ImperfectionCase
 from .imperfections.rotationimperfection import RotationImperfection
 from .imperfections.translationimperfection import TranslationImperfection
@@ -57,10 +71,23 @@ __all__ = [
     "LoadCombination",
     "Material",
     "MaterialLibrary",
+    "EntityGroup",
     "Member",
+    "MemberType",
     "MemberHinge",
+    "MemberPointLoad",
+    "MemberPointMoment",
     "MemberResult",
     "MemberSet",
+    "PlateElement",
+    "PlatePressure",
+    "PlateBehavior",
+    "PlateElementShape",
+    "PlateMeshSettings",
+    "PlateOpening",
+    "PlateStiffnessModifiers",
+    "WorkAxis",
+    "WorkPlane",
     "ModelRenderer",
     "Node",
     "Plate",

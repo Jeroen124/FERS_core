@@ -19,6 +19,10 @@ class AnalysisOptions:
         include_shear_deformation: Optional[bool] = True,
         include_warping: Optional[bool] = True,
         include_shear_center_coupling: Optional[bool] = True,
+        enable_self_weight: Optional[bool] = None,
+        gravity_direction: Optional[tuple] = None,
+        gravity_factor: Optional[float] = None,
+        self_weight_load_case_id: Optional[int] = None,
     ):
         self.analysis_options_id = id or AnalysisOptions._analysis_options_counter
         if id is None:
@@ -34,9 +38,13 @@ class AnalysisOptions:
         self.include_shear_deformation = include_shear_deformation
         self.include_warping = include_warping
         self.include_shear_center_coupling = include_shear_center_coupling
+        self.enable_self_weight = enable_self_weight
+        self.gravity_direction = tuple(gravity_direction) if gravity_direction is not None else None
+        self.gravity_factor = float(gravity_factor) if gravity_factor is not None else None
+        self.self_weight_load_case_id = self_weight_load_case_id
 
     def to_dict(self):
-        return {
+        data = {
             "id": self.analysis_options_id,
             "solve_loadcases": self.solve_loadcases,
             "solver": self.solver,
@@ -50,6 +58,18 @@ class AnalysisOptions:
             "include_warping": self.include_warping,
             "include_shear_center_coupling": self.include_shear_center_coupling,
         }
+        # Self-weight options are only emitted when explicitly set, so the solver
+        # falls back to its own defaults (its `enable_self_weight` is a plain bool
+        # that rejects an explicit null).
+        if self.enable_self_weight is not None:
+            data["enable_self_weight"] = self.enable_self_weight
+        if self.gravity_direction is not None:
+            data["gravity_direction"] = list(self.gravity_direction)
+        if self.gravity_factor is not None:
+            data["gravity_factor"] = self.gravity_factor
+        if self.self_weight_load_case_id is not None:
+            data["self_weight_load_case_id"] = self.self_weight_load_case_id
+        return data
 
     @classmethod
     def from_dict(cls, data: dict) -> "AnalysisOptions":
@@ -112,4 +132,8 @@ class AnalysisOptions:
             include_shear_deformation=data.get("include_shear_deformation", True),
             include_warping=data.get("include_warping", True),
             include_shear_center_coupling=data.get("include_shear_center_coupling", True),
+            enable_self_weight=data.get("enable_self_weight"),
+            gravity_direction=data.get("gravity_direction"),
+            gravity_factor=data.get("gravity_factor"),
+            self_weight_load_case_id=data.get("self_weight_load_case_id"),
         )

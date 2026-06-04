@@ -33,8 +33,15 @@ from ..loads.loadcombination import LoadCombination
 from ..loads.nodalload import NodalLoad
 from ..loads.nodalmoment import NodalMoment
 from ..loads.surfaceload import SurfaceLoad
-from ..plates.plate import Plate
+from ..loads.memberpointload import MemberPointLoad
+from ..loads.memberpointmoment import MemberPointMoment
+from ..loads.platepressure import PlatePressure
+from ..plates.plate import PlateElement
 from ..plates.platesurface import PlateSurface
+from ..plates.components import PlateOpening
+from ..geometry.workaxis import WorkAxis
+from ..geometry.workplane import WorkPlane
+from ..entities.entitygroup import EntityGroup
 from ..members.material import Material
 from ..members.member import Member
 from ..members.section import Section
@@ -54,6 +61,9 @@ class FERS:
         self.member_sets = []
         self.plate_surfaces = []
         self.plates = []
+        self.work_axes = []
+        self.work_planes = []
+        self.entity_groups = []
         self.load_cases = []
         self.load_combinations = []
         self.imperfection_cases = []
@@ -129,9 +139,13 @@ class FERS:
 
     def to_dict(self, include_results: bool = True) -> dict[str, Any]:
         data: dict[str, Any] = {
+            "nodes": [node.to_dict() for node in self.get_all_nodes()],
             "member_sets": [member_set.to_dict() for member_set in self.member_sets],
             "plate_surfaces": [plate_surface.to_dict() for plate_surface in self.plate_surfaces],
-            "plates": [plate.to_dict() for plate in self.plates],
+            "plate_elements": [plate.to_dict() for plate in self.plates],
+            "work_axes": [wa.to_dict() for wa in self.work_axes],
+            "work_planes": [wp.to_dict() for wp in self.work_planes],
+            "entity_groups": [eg.to_dict() for eg in self.entity_groups],
             "load_cases": [load_case.to_dict() for load_case in self.load_cases],
             "load_combinations": [load_comb.to_dict() for load_comb in self.load_combinations],
             "imperfection_cases": [imp_case.to_dict() for imp_case in self.imperfection_cases],
@@ -209,6 +223,15 @@ class FERS:
         id_to_member: dict[int, Member] = {}
         id_to_plate_surface: dict[int, PlateSurface] = {}
 
+        # Top-level nodes — members and plates reference these by id, so load
+        # them first.
+        for node_data in as_list(data.get("nodes"), "nodes"):
+            Node.get_or_create_from_dict(
+                node_data,
+                nodes_by_id=id_to_node,
+                nodal_supports_by_id=id_to_support,
+            )
+
         # member sets + members
         for ms_data in data.get("member_sets", []):
             members: list[Member] = []
@@ -234,12 +257,17 @@ class FERS:
             fers.add_member_set(member_set)
 
         for plate_surface_data in as_list(data.get("plate_surfaces"), "plate_surfaces"):
-            plate_surface = PlateSurface.from_dict(plate_surface_data, materials_by_id=id_to_material)
+            plate_surface = PlateSurface.from_dict(
+                plate_surface_data,
+                materials_by_id=id_to_material,
+                nodes_by_id=id_to_node,
+            )
             id_to_plate_surface[plate_surface.id] = plate_surface
             fers.add_plate_surface(plate_surface)
 
-        for plate_data in as_list(data.get("plates"), "plates"):
-            plate = Plate.from_dict(
+        # Plate elements
+        for plate_data in as_list(data.get("plate_elements"), "plate_elements"):
+            plate = PlateElement.from_dict(
                 plate_data,
                 nodes_by_id=id_to_node,
                 materials_by_id=id_to_material,
@@ -248,7 +276,13 @@ class FERS:
             )
             fers.add_plate(plate)
 
-        # NO second loop with resolve_member here. Delete that block.
+        # Work geometry + entity groups (calculation-agnostic).
+        for wa_data in as_list(data.get("work_axes"), "work_axes"):
+            fers.add_work_axis(WorkAxis.from_dict(wa_data))
+        for wp_data in as_list(data.get("work_planes"), "work_planes"):
+            fers.add_work_plane(WorkPlane.from_dict(wp_data))
+        for eg_data in as_list(data.get("entity_groups"), "entity_groups"):
+            fers.add_entity_group(EntityGroup.from_dict(eg_data))
 
         # load cases
         for lc_data in as_list(data.get("load_cases"), "load_cases"):
@@ -308,6 +342,18 @@ class FERS:
         for plate in plates:
             self.plates.append(plate)
 
+    def add_work_axis(self, *work_axes):
+        for work_axis in work_axes:
+            self.work_axes.append(work_axis)
+
+    def add_work_plane(self, *work_planes):
+        for work_plane in work_planes:
+            self.work_planes.append(work_plane)
+
+    def add_entity_group(self, *entity_groups):
+        for entity_group in entity_groups:
+            self.entity_groups.append(entity_group)
+
     def add_load_combination(self, load_combination):
         self.load_combinations.append(load_combination)
 
@@ -339,8 +385,15 @@ class FERS:
         NodalMoment.reset_counter()
         DistributedLoad.reset_counter()
         SurfaceLoad.reset_counter()
+        MemberPointLoad.reset_counter()
+        MemberPointMoment.reset_counter()
+        PlatePressure.reset_counter()
         PlateSurface.reset_counter()
-        Plate.reset_counter()
+        PlateElement.reset_counter()
+        PlateOpening.reset_counter()
+        WorkAxis.reset_counter()
+        WorkPlane.reset_counter()
+        EntityGroup.reset_counter()
         Section.reset_counter()
         Material.reset_counter()
         ShapePath.reset_counter()
@@ -634,8 +687,19 @@ class FERS:
                     nodes.append(member.end_node)
                     node_ids.add(member.end_node.id)
 
+                ref_node = member.reference_node
+                if ref_node is not None and ref_node.id not in node_ids:
+                    nodes.append(ref_node)
+                    node_ids.add(ref_node.id)
+
         for plate in self.plates:
             for node in plate.nodes:
+                if node.id not in node_ids:
+                    nodes.append(node)
+                    node_ids.add(node.id)
+
+        for plate_surface in self.plate_surfaces:
+            for node in plate_surface.boundary_nodes:
                 if node.id not in node_ids:
                     nodes.append(node)
                     node_ids.add(node.id)
@@ -740,18 +804,19 @@ class FERS:
                 by_id[hinge.id] = hinge
         return list(by_id.keys()) if ids_only else list(by_id.values())
 
-    def generate_plate_meshes(self) -> list[Plate]:
+    def generate_plate_meshes(self) -> list[PlateElement]:
+        """Client-side meshing: triangulate every plate surface into plate elements."""
         retained_plates = [plate for plate in self.plates if plate.source_surface_id is None]
-        next_plate_id = max([plate.id for plate in retained_plates], default=0) + 1
+        next_element_id = max([plate.id for plate in retained_plates], default=0) + 1
         next_node_id = max([node.id for node in self.get_all_nodes()], default=0) + 1
 
-        generated_plates: list[Plate] = []
+        generated_plates: list[PlateElement] = []
         for plate_surface in self.plate_surfaces:
-            plates, next_plate_id, next_node_id = plate_surface.generate_plates(
-                next_plate_id=next_plate_id,
+            elements, next_element_id, next_node_id = plate_surface.generate_plate_elements(
+                next_element_id=next_element_id,
                 next_node_id=next_node_id,
             )
-            generated_plates.extend(plates)
+            generated_plates.extend(elements)
 
         self.plates = retained_plates + generated_plates
         return generated_plates
