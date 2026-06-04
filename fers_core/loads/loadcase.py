@@ -17,6 +17,9 @@ class LoadCase:
         surface_loads: Optional[list] = None,
         rotation_imperfections: Optional[list] = None,
         translation_imperfections: Optional[list] = None,
+        member_point_loads: Optional[list] = None,
+        member_point_moments: Optional[list] = None,
+        plate_pressures: Optional[list] = None,
     ):
         self.id = id or LoadCase._load_case_counter
         if id is None:
@@ -34,6 +37,9 @@ class LoadCase:
         self.translation_imperfections = (
             translation_imperfections if translation_imperfections is not None else []
         )
+        self.member_point_loads = member_point_loads if member_point_loads is not None else []
+        self.member_point_moments = member_point_moments if member_point_moments is not None else []
+        self.plate_pressures = plate_pressures if plate_pressures is not None else []
 
         LoadCase._all_load_cases.append(self)
 
@@ -48,6 +54,15 @@ class LoadCase:
 
     def add_surface_load(self, surface_load):
         self.surface_loads.append(surface_load)
+
+    def add_member_point_load(self, member_point_load):
+        self.member_point_loads.append(member_point_load)
+
+    def add_member_point_moment(self, member_point_moment):
+        self.member_point_moments.append(member_point_moment)
+
+    def add_plate_pressure(self, plate_pressure):
+        self.plate_pressures.append(plate_pressure)
 
     def add_rotation_imperfection(self, rotation_imperfection):
         self.rotation_imperfections.append(rotation_imperfection)
@@ -82,6 +97,9 @@ class LoadCase:
             "nodal_moments": [nm.to_dict() for nm in self.nodal_moments],
             "distributed_loads": [dl.to_dict() for dl in self.distributed_loads],
             "surface_loads": [sl.to_dict() for sl in self.surface_loads],
+            "member_point_loads": [mpl.to_dict() for mpl in self.member_point_loads],
+            "member_point_moments": [mpm.to_dict() for mpm in self.member_point_moments],
+            "plate_pressures": [pp.to_dict() for pp in self.plate_pressures],
             "rotation_imperfections": [ri.id for ri in self.rotation_imperfections],
             "translation_imperfections": [ti.id for ti in self.translation_imperfections],
         }
@@ -119,6 +137,9 @@ class LoadCase:
             NodalMoment = NodalLoad  # type: ignore
         from ..loads.distributedload import DistributedLoad
         from ..loads.surfaceload import SurfaceLoad
+        from ..loads.memberpointload import MemberPointLoad
+        from ..loads.memberpointmoment import MemberPointMoment
+        from ..loads.platepressure import PlatePressure
         from ..imperfections.rotationimperfection import RotationImperfection
         from ..imperfections.translationimperfection import TranslationImperfection
 
@@ -172,6 +193,21 @@ class LoadCase:
         for sl_data in data.get("surface_loads", []):
             if isinstance(sl_data, dict):
                 SurfaceLoad.from_dict(sl_data, load_case=load_case)
+
+        # --- Member point loads ---
+        for mpl_data in data.get("member_point_loads") or []:
+            if isinstance(mpl_data, dict):
+                MemberPointLoad.from_dict(mpl_data, members=members, load_case=load_case)
+
+        # --- Member point moments ---
+        for mpm_data in data.get("member_point_moments") or []:
+            if isinstance(mpm_data, dict):
+                MemberPointMoment.from_dict(mpm_data, members=members, load_case=load_case)
+
+        # --- Plate pressures ---
+        for pp_data in data.get("plate_pressures") or []:
+            if isinstance(pp_data, dict):
+                PlatePressure.from_dict(pp_data, load_case=load_case)
 
         # --- Rotation imperfections (optional, usually handled via ImperfectionCase) ---
         for ri_data in data.get("rotation_imperfections", []):

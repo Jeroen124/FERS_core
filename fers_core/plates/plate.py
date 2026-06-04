@@ -1,15 +1,27 @@
 from __future__ import annotations
 
-from typing import Dict, Optional, TYPE_CHECKING
+from typing import Dict, Optional, TYPE_CHECKING, Union
 
 from ..members.material import Material
 from ..nodes.node import Node
+from .components import (
+    PlateBehavior,
+    PlateStiffnessModifiers,
+    normalize_plate_behavior,
+)
 
 if TYPE_CHECKING:
     from .platesurface import PlateSurface
 
 
-class Plate:
+class PlateElement:
+    """
+    A single FEM plate element (TRI3 or QUAD4) referencing model nodes by id.
+
+    Mirrors the solver's ``PlateElement`` schema.  Historically this class was
+    named ``Plate``; that name is kept as an alias for backwards compatibility.
+    """
+
     _plate_counter = 1
 
     def __init__(
@@ -22,15 +34,18 @@ class Plate:
         source_surface: Optional["PlateSurface"] = None,
         source_surface_id: Optional[int] = None,
         local_x_direction: Optional[tuple[float, float, float]] = None,
+        behavior: Union[PlateBehavior, str, None] = None,
+        offset: Optional[float] = None,
+        stiffness_modifiers: Optional[PlateStiffnessModifiers] = None,
     ) -> None:
         if len(nodes) not in {3, 4}:
-            raise ValueError("Plate currently supports TRI3 or QUAD4 topology.")
+            raise ValueError("PlateElement currently supports TRI3 or QUAD4 topology.")
         if thickness <= 0.0:
-            raise ValueError("Plate thickness must be positive.")
+            raise ValueError("PlateElement thickness must be positive.")
 
-        self.id = id or Plate._plate_counter
+        self.id = id or PlateElement._plate_counter
         if id is None:
-            Plate._plate_counter += 1
+            PlateElement._plate_counter += 1
 
         self.nodes = nodes
         self.material = material
@@ -43,21 +58,31 @@ class Plate:
             else (source_surface.id if source_surface is not None else None)
         )
         self.local_x_direction = local_x_direction
+        self.behavior = normalize_plate_behavior(behavior)
+        self.offset = float(offset) if offset is not None else None
+        self.stiffness_modifiers = stiffness_modifiers
 
     @classmethod
     def reset_counter(cls) -> None:
         cls._plate_counter = 1
 
     def to_dict(self) -> Dict:
+        # Optional fields are omitted when unset: the solver's PlateElement uses
+        # plain (non-nullable) defaults for `behavior`/`offset` and rejects null.
         data = {
             "id": self.id,
-            "nodes": [node.to_dict() for node in self.nodes],
+            "node_ids": [node.id for node in self.nodes],
             "material": self.material.id,
             "thickness": self.thickness,
-            "classification": self.classification,
         }
+        if self.behavior is not None:
+            data["behavior"] = self.behavior.value
+        if self.offset is not None:
+            data["offset"] = self.offset
         if self.source_surface_id is not None:
-            data["source_surface"] = self.source_surface_id
+            data["source_surface_id"] = self.source_surface_id
+        if self.stiffness_modifiers is not None:
+            data["stiffness_modifiers"] = self.stiffness_modifiers.to_dict()
         if self.local_x_direction is not None:
             data["local_x_direction"] = self.local_x_direction
         return data
@@ -71,29 +96,22 @@ class Plate:
         materials_by_id: dict[int, Material],
         nodal_supports_by_id: dict[int, object] | None = None,
         source_surfaces_by_id: dict[int, "PlateSurface"] | None = None,
-    ) -> "Plate":
-        plate_nodes = [
-            Node.get_or_create_from_dict(
-                node_data,
-                nodes_by_id=nodes_by_id,
-                nodal_supports_by_id=nodal_supports_by_id,
-            )
-            for node_data in data.get("nodes", [])
-        ]
+    ) -> "PlateElement":
+        plate_nodes = [nodes_by_id[node_id] for node_id in data["node_ids"]]
 
         material_id = data.get("material")
         if material_id is None:
-            raise ValueError("Plate material is required.")
+            raise ValueError("PlateElement material is required.")
         material = materials_by_id[material_id]
 
-        source_surface_id = data.get("source_surface")
+        source_surface_id = data.get("source_surface_id")
         source_surface = (
             source_surfaces_by_id.get(source_surface_id)
             if source_surface_id is not None and source_surfaces_by_id is not None
             else None
         )
 
-        plate = cls(
+        return cls(
             id=data.get("id"),
             nodes=plate_nodes,
             material=material,
@@ -104,5 +122,11 @@ class Plate:
             local_x_direction=tuple(data["local_x_direction"])
             if data.get("local_x_direction") is not None
             else None,
+            behavior=data.get("behavior"),
+            offset=data.get("offset"),
+            stiffness_modifiers=PlateStiffnessModifiers.from_dict(data.get("stiffness_modifiers")),
         )
-        return plate
+
+
+# Backwards-compatible alias: the FEM plate element used to be called ``Plate``.
+Plate = PlateElement
