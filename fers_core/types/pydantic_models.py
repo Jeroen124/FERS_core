@@ -4,34 +4,174 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any
 
-from pydantic import BaseModel, Field, RootModel, conint
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    PositiveFloat,
+    RootModel,
+    confloat,
+    conint,
+)
+
+
+class Type(Enum):
+    MaxAbs = 'MaxAbs'
+
+
+class Aggregation1(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    type: Type
+
+
+class Type1(Enum):
+    Max = 'Max'
+
+
+class Aggregation2(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    type: Type1
+
+
+class Type2(Enum):
+    Min = 'Min'
+
+
+class Aggregation3(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    type: Type2
+
+
+class Type3(Enum):
+    AtFraction = 'AtFraction'
+
+
+class Aggregation4(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    fraction: float
+    type: Type3
+
+
+class Type4(Enum):
+    Start = 'Start'
+
+
+class Aggregation5(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    type: Type4
+
+
+class Type5(Enum):
+    End = 'End'
+
+
+class Aggregation6(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    type: Type5
+
+
+class Aggregation(
+    RootModel[
+        Aggregation1
+        | Aggregation2
+        | Aggregation3
+        | Aggregation4
+        | Aggregation5
+        | Aggregation6
+    ]
+):
+    root: (
+        Aggregation1
+        | Aggregation2
+        | Aggregation3
+        | Aggregation4
+        | Aggregation5
+        | Aggregation6
+    ) = Field(
+        ...,
+        description='How a member force is reduced to a single value along the member.\nInternally tagged (`{"type": …}`) so every variant is an object — a mixed\nbare-string/object `oneOf` breaks the cloud TS generator.',
+    )
 
 
 class AnalysisOrder(Enum):
-    LINEAR = "LINEAR"
-    NONLINEAR = "NONLINEAR"
+    LINEAR = 'LINEAR'
+    NONLINEAR = 'NONLINEAR'
+
+
+class BucklingCurve(Enum):
+    A0 = 'A0'
+    A = 'A'
+    B = 'B'
+    C = 'C'
+    D = 'D'
+
+
+class BucklingRestraint(BaseModel):
+    node_id: conint(ge=0) = Field(
+        ...,
+        description="Node (on one of the member set's members) where the restraint acts.",
+    )
+    restrains_local_y: bool | None = Field(
+        None, description="Restrains displacement along the member's local y axis."
+    )
+    restrains_local_z: bool | None = Field(
+        None, description="Restrains displacement along the member's local z axis."
+    )
+    restrains_torsion: bool | None = Field(
+        None,
+        description='Restrains twist (rotation about the local x axis), i.e. a\nlateral-torsional restraint.',
+    )
+
+
+class CalcStep(BaseModel):
+    formula: str
+    label: str
+    substituted: str
+    unit: str
+    value: float
 
 
 class DensityUnit(Enum):
-    kg_m3 = "kg/m3"
-    kg_mm3 = "kg/mm3"
+    kg_m3 = 'kg/m3'
+    kg_mm3 = 'kg/mm3'
 
 
 class Dimensionality(Enum):
-    field_2D = "2D"
-    field_3D = "3D"
+    field_2D = '2D'
+    field_3D = '3D'
 
 
-class DistributedLoad(BaseModel):
-    direction: list[float] = Field(..., max_length=3)
-    end_frac: float
-    end_magnitude: float
-    load_case: conint(ge=0)
-    magnitude: float
-    member: conint(ge=0)
-    start_frac: float
+class DispComponent(Enum):
+    Dx = 'Dx'
+    Dy = 'Dy'
+    Dz = 'Dz'
+    Rx = 'Rx'
+    Ry = 'Ry'
+    Rz = 'Rz'
+    Magnitude = 'Magnitude'
+
+
+class Ec3SectionParams(BaseModel):
+    buckling_curve_lt: BucklingCurve | None = None
+    buckling_curve_y: BucklingCurve | None = None
+    buckling_curve_z: BucklingCurve | None = None
+    section_class: conint(ge=0) | None = Field(
+        None,
+        description='Cross-section class 1–4 (EN 1993-1-1 §5.5). Class 4 needs effective\nproperties (currently a limitation — see the EC3 evaluator).',
+    )
 
 
 class EntityGroup(BaseModel):
@@ -40,27 +180,144 @@ class EntityGroup(BaseModel):
     member_set_ids: list[conint(ge=0)] | None = None
     name: str | None = None
     node_ids: list[conint(ge=0)] | None = None
-    plate_ids: list[conint(ge=0)] | None = None
+    plate_element_ids: list[conint(ge=0)] | None = Field(
+        None, description='Generated plate finite elements.'
+    )
+    plate_surface_ids: list[conint(ge=0)] | None = Field(
+        None, description='Modeled plate surfaces.'
+    )
     support_ids: list[conint(ge=0)] | None = None
     work_axis_ids: list[conint(ge=0)] | None = None
     work_plane_ids: list[conint(ge=0)] | None = None
 
 
+class EntityRef(BaseModel):
+    member_id: conint(ge=0) | None = None
+    memberset_id: conint(ge=0) | None = None
+    plate_element_id: conint(ge=0) | None = None
+    plate_surface_id: conint(ge=0) | None = None
+
+
+class Type6(Enum):
+    AllMembers = 'AllMembers'
+
+
+class EntitySelector1(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    type: Type6
+
+
+class Type7(Enum):
+    Members = 'Members'
+
+
+class EntitySelector2(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    ids: list[conint(ge=0)]
+    type: Type7
+
+
+class Type8(Enum):
+    MemberSets = 'MemberSets'
+
+
+class EntitySelector3(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    ids: list[conint(ge=0)]
+    type: Type8
+
+
+class Type9(Enum):
+    Classification = 'Classification'
+
+
+class EntitySelector4(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    type: Type9
+    value: str
+
+
+class Type10(Enum):
+    AllPlates = 'AllPlates'
+
+
+class EntitySelector5(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    type: Type10
+
+
+class Type11(Enum):
+    PlateSurfaces = 'PlateSurfaces'
+
+
+class EntitySelector6(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    ids: list[conint(ge=0)]
+    type: Type11
+
+
+class Type12(Enum):
+    PlateElements = 'PlateElements'
+
+
+class EntitySelector7(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    ids: list[conint(ge=0)]
+    type: Type12
+
+
+class EntitySelector(
+    RootModel[
+        EntitySelector1
+        | EntitySelector2
+        | EntitySelector3
+        | EntitySelector4
+        | EntitySelector5
+        | EntitySelector6
+        | EntitySelector7
+    ]
+):
+    root: (
+        EntitySelector1
+        | EntitySelector2
+        | EntitySelector3
+        | EntitySelector4
+        | EntitySelector5
+        | EntitySelector6
+        | EntitySelector7
+    ) = Field(
+        ...,
+        description='Which entities a check applies to. Internally tagged (`{"type": …}`) so every\nvariant is an object (a mixed bare-string/object `oneOf` breaks the cloud TS\ngenerator).',
+    )
+
+
 class ForceComponent(Enum):
-    N = "N"
-    Vy = "Vy"
-    Vz = "Vz"
-    Mx = "Mx"
-    My = "My"
-    Mz = "Mz"
-    Fx = "Fx"
-    Fy = "Fy"
-    Fz = "Fz"
+    N = 'N'
+    Vy = 'Vy'
+    Vz = 'Vz'
+    Mx = 'Mx'
+    My = 'My'
+    Mz = 'Mz'
+    Bimoment = 'Bimoment'
 
 
 class ForceUnit(Enum):
-    N = "N"
-    kN = "kN"
+    N = 'N'
+    kN = 'kN'
 
 
 class GeneralInfo(BaseModel):
@@ -69,41 +326,47 @@ class GeneralInfo(BaseModel):
     version: str
 
 
-class GoverningKey(BaseModel):
-    load_case_id: conint(ge=0) | None = None
-    load_combination_id: conint(ge=0) | None = None
-    member_id: conint(ge=0) | None = None
+class GeometryProperty(Enum):
+    Length = 'Length'
+
+
+class InteractionMethod(Enum):
+    AnnexA = 'AnnexA'
+    AnnexB = 'AnnexB'
 
 
 class LengthUnit(Enum):
-    mm = "mm"
-    cm = "cm"
-    m = "m"
+    mm = 'mm'
+    cm = 'cm'
+    m = 'm'
 
 
 class LimitState(Enum):
-    SLS = "SLS"
-    ULS = "ULS"
-    FLS = "FLS"
-    ALS = "ALS"
+    SLS = 'SLS'
+    ULS = 'ULS'
+    FLS = 'FLS'
+    ALS = 'ALS'
+
+
+class LoadCaseFactor(BaseModel):
+    factor: float
+    load_case_id: conint(ge=0)
 
 
 class LoadCombination(BaseModel):
     check: str
     id: conint(ge=0)
     limit_state: LimitState | None = None
-    load_cases_factors: dict[str, float]
+    load_case_factors: list[LoadCaseFactor]
     name: str
     situation: str | None = None
 
 
-class Material(BaseModel):
-    density: float
-    e_mod: float
-    g_mod: float
-    id: conint(ge=0)
-    name: str
-    yield_stress: float
+class MaterialProperty(Enum):
+    E = 'E'
+    G = 'G'
+    Fy = 'Fy'
+    Density = 'Density'
 
 
 class MemberEndOffset(BaseModel):
@@ -112,65 +375,40 @@ class MemberEndOffset(BaseModel):
     z: float | None = None
 
 
-class MemberPointLoad(BaseModel):
-    axes: str | None = Field(None, description='Coordinate axes: "global" or "local".')
-    direction: list[float] = Field(
-        ...,
-        description="Load direction unit vector (global or local axes).",
-        max_length=3,
+class MemberSet(BaseModel):
+    buckling_length_y: float | None = Field(
+        None,
+        description='Buckling-length overrides for code checks (EN 1993-1-1 §6.3). When absent,\nthe unity-check evaluator derives L_cr from `buckling_restraints` spacing.\nExplicit lengths (m) take precedence over the factors.',
     )
+    buckling_length_z: float | None = None
+    buckling_restraints: list[BucklingRestraint] | None = Field(
+        [],
+        description='Node-based buckling restraints along the beam (replaces scalar l_y/l_z).',
+        validate_default=True,
+    )
+    classification: str | None = None
+    effective_length_factor_y: float | None = Field(
+        None,
+        description='Effective-length factor K_y (L_cr,y = K_y · L) when no explicit length given.',
+    )
+    effective_length_factor_z: float | None = None
     id: conint(ge=0)
-    load_case: conint(ge=0)
-    magnitude: float
-    member: conint(ge=0)
-    position: float = Field(
-        ...,
-        description="Fractional position along the member (0.0 = start, 1.0 = end).",
+    ltb_length: float | None = Field(
+        None, description='Unrestrained length for lateral-torsional buckling (m).'
     )
-
-
-class MemberPointMoment(BaseModel):
-    axes: str | None = Field(None, description='Coordinate axes: "global" or "local".')
-    direction: list[float] = Field(
+    member_ids: list[conint(ge=0)] = Field(
         ...,
-        description="Load direction unit vector (global or local axes).",
-        max_length=3,
-    )
-    id: conint(ge=0)
-    load_case: conint(ge=0)
-    magnitude: float
-    member: conint(ge=0)
-    position: float = Field(
-        ...,
-        description="Fractional position along the member (0.0 = start, 1.0 = end).",
+        description='Ids of the members (in `FERS.members`) that make up this beam.',
     )
 
 
 class MemberType(Enum):
-    Normal = "Normal"
-    Truss = "Truss"
-    Tension = "Tension"
-    Compression = "Compression"
-    Rigid = "Rigid"
-    Cable = "Cable"
-
-
-class NodalLoad(BaseModel):
-    direction: list[float] = Field(..., max_length=3)
-    id: conint(ge=0)
-    load_case: conint(ge=0)
-    load_type: str
-    magnitude: float
-    node: conint(ge=0)
-
-
-class NodalMoment(BaseModel):
-    direction: list[float] = Field(..., max_length=3)
-    id: conint(ge=0)
-    load_case: conint(ge=0)
-    load_type: str
-    magnitude: float
-    node: conint(ge=0)
+    Normal = 'Normal'
+    Truss = 'Truss'
+    Tension = 'Tension'
+    Compression = 'Compression'
+    Rigid = 'Rigid'
+    Cable = 'Cable'
 
 
 class Node(BaseModel):
@@ -208,58 +446,118 @@ class NodeLocation(BaseModel):
 
 
 class NonlinearMethod(Enum):
-    P_DELTA = "P_DELTA"
-    COROTATIONAL = "COROTATIONAL"
+    P_DELTA = 'P_DELTA'
+    COROTATIONAL = 'COROTATIONAL'
+
+
+class OrthotropicPlateMaterial(BaseModel):
+    e_x: PositiveFloat = Field(..., description="Young's modulus along local x.")
+    e_y: PositiveFloat = Field(..., description="Young's modulus along local y.")
+    g_xy: PositiveFloat = Field(..., description='In-plane shear modulus.')
+    g_xz: float | None = Field(
+        None,
+        description='Transverse shear modulus (x–z); used by Mindlin/thick plates.',
+    )
+    g_yz: float | None = Field(
+        None,
+        description='Transverse shear modulus (y–z); used by Mindlin/thick plates.',
+    )
+    nu_xy: float = Field(
+        ...,
+        description="Major Poisson's ratio (ν_xy); ν_yx is derived from `e_x·ν_yx = e_y·ν_xy`.",
+    )
 
 
 class PdeltaFormulation(Enum):
-    CONSISTENT = "CONSISTENT"
-    SIMPLIFIED = "SIMPLIFIED"
+    CONSISTENT = 'CONSISTENT'
+    SIMPLIFIED = 'SIMPLIFIED'
 
 
 class PdeltaMode(Enum):
-    FULL = "FULL"
-    IN_PLANE_ONLY = "IN_PLANE_ONLY"
+    FULL = 'FULL'
+    IN_PLANE_ONLY = 'IN_PLANE_ONLY'
+
+
+class PlaneState(Enum):
+    PlaneStress = 'PlaneStress'
+    PlaneStrain = 'PlaneStrain'
 
 
 class PlateBehavior(Enum):
-    Shell = "Shell"
-    Membrane = "Membrane"
+    Shell = 'Shell'
+    Membrane = 'Membrane'
+
+
+class NodeId(RootModel[conint(ge=0)]):
+    root: conint(ge=0)
 
 
 class PlateElementShape(Enum):
-    Auto = "Auto"
-    Triangle = "Triangle"
-    Quad = "Quad"
+    Auto = 'Auto'
+    Triangle = 'Triangle'
+    Quad = 'Quad'
+
+
+class PlateMeshDivisions(BaseModel):
+    u: conint(ge=1)
+    v: conint(ge=1)
+
+
+class PlateMeshMethod(Enum):
+    Auto = 'Auto'
+    Structured = 'Structured'
+    Unstructured = 'Unstructured'
 
 
 class PlateMeshSettings(BaseModel):
-    element_shape: PlateElementShape | None = None
-    target_size: float | None = Field(
+    divisions: PlateMeshDivisions | None = None
+    element_shape: PlateElementShape | None = 'Auto'
+    method: PlateMeshMethod | None = 'Auto'
+    target_size: PositiveFloat | None = Field(
         None,
-        description="Target element edge length. `None` meshes the boundary as-is (no interior\nrefinement).",
+        description='Target element edge length. `None` meshes the boundary as-is (no interior\nrefinement).',
     )
+
+
+class BoundaryNodeId(RootModel[conint(ge=0)]):
+    root: conint(ge=0)
 
 
 class PlateOpening(BaseModel):
-    boundary_node_ids: list[conint(ge=0)] | None = None
+    boundary_node_ids: list[BoundaryNodeId] = Field(
+        ..., description='Hole boundary (≥ 3 existing model nodes).', min_length=3
+    )
     id: conint(ge=0)
 
 
-class PlatePressure(BaseModel):
-    direction: list[float] = Field(..., max_length=3)
-    id: conint(ge=0)
-    load_case: conint(ge=0)
-    magnitude: float
-    plate_element_id: conint(ge=0) | None = Field(
-        None, description="Target a single generated plate element."
+class Kind(Enum):
+    Surface = 'Surface'
+
+
+class PlatePressureTarget1(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
     )
-    projected: bool | None = Field(
-        None,
-        description="When true the pressure acts on the area projected onto `direction`\n(e.g. snow), otherwise on the true element area.",
+    kind: Kind
+    surface_id: conint(ge=0)
+
+
+class Kind1(Enum):
+    Element = 'Element'
+
+
+class PlatePressureTarget2(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
     )
-    surface_id: conint(ge=0) | None = Field(
-        None, description="Target a whole surface (all its generated elements)."
+    kind: Kind1
+    plate_element_id: conint(ge=0)
+
+
+class PlatePressureTarget(RootModel[PlatePressureTarget1 | PlatePressureTarget2]):
+    root: PlatePressureTarget1 | PlatePressureTarget2 = Field(
+        ...,
+        description='The target of a [`PlatePressure`]. A tagged union so exactly one target kind\nis set (replaces the previous pair of nullable ids).',
     )
 
 
@@ -275,44 +573,90 @@ class PlateResultants(BaseModel):
 
 
 class PlateStiffnessModifiers(BaseModel):
-    bending: float | None = None
-    membrane: float | None = None
-    shear: float | None = None
+    bending: confloat(ge=0.0) | None = None
+    membrane: confloat(ge=0.0) | None = None
+    shear: confloat(ge=0.0) | None = None
 
 
-class PlateSurface(BaseModel):
-    behavior: PlateBehavior | None = None
-    boundary_node_ids: list[conint(ge=0)] = Field(
-        ...,
-        description="Outer boundary, referencing existing model nodes (counter-clockwise).",
-    )
-    classification: str | None = None
-    generated_plate_element_ids: list[conint(ge=0)] | None = Field(
-        None,
-        description="Ids of the plate elements generated from this surface (populated by the\nmesher; input value is ignored).",
-    )
-    id: conint(ge=0)
-    local_x_direction: list[float] | None = Field(None, max_length=3)
-    material: conint(ge=0)
-    mesh: PlateMeshSettings | None = None
-    name: str | None = None
-    offset: float | None = Field(
-        None,
-        description="Distance from the reference surface along the local plate normal.",
-    )
-    openings: list[PlateOpening] | None = Field(
-        None,
-        description="Holes in the surface; the mesher generates elements around them.",
-    )
-    stiffness_modifiers: PlateStiffnessModifiers | None = None
-    thickness: float
+class PlateStressMeasure(Enum):
+    VonMises = 'VonMises'
+    PrincipalMax = 'PrincipalMax'
+    PrincipalMin = 'PrincipalMin'
+
+
+class PlateTheory(Enum):
+    Auto = 'Auto'
+    Mindlin = 'Mindlin'
+    Kirchhoff = 'Kirchhoff'
 
 
 class PressureUnit(Enum):
-    Pa = "Pa"
-    kPa = "kPa"
-    MPa = "MPa"
-    GPa = "GPa"
+    Pa = 'Pa'
+    kPa = 'kPa'
+    MPa = 'MPa'
+    GPa = 'GPa'
+
+
+class MemberForce(BaseModel):
+    aggregation: Aggregation | None = None
+    component: ForceComponent
+
+
+class QuantitySource1(BaseModel):
+    MemberForce_1: MemberForce = Field(
+        ...,
+        alias='MemberForce',
+        description="A local member force, reduced by `aggregation` and enveloped over the\ncheck's applicable load combinations.",
+    )
+
+
+class Displacement(BaseModel):
+    component: DispComponent
+
+
+class QuantitySource2(BaseModel):
+    Displacement_1: Displacement = Field(
+        ...,
+        alias='Displacement',
+        description='A nodal displacement of the entity (member end / governing node).',
+    )
+
+
+class Material1(BaseModel):
+    property: MaterialProperty
+
+
+class QuantitySource4(BaseModel):
+    Material: Material1 = Field(..., description="A property of the entity's material.")
+
+
+class Geometry(BaseModel):
+    property: GeometryProperty
+
+
+class QuantitySource5(BaseModel):
+    Geometry_1: Geometry = Field(
+        ..., alias='Geometry', description='A geometric quantity of the entity.'
+    )
+
+
+class PlateStress(BaseModel):
+    measure: PlateStressMeasure
+
+
+class QuantitySource6(BaseModel):
+    PlateStress_1: PlateStress = Field(
+        ...,
+        alias='PlateStress',
+        description='A plate-element stress measure (for plate-targeted checks).',
+    )
+
+
+class QuantitySource7(BaseModel):
+    Constant: float = Field(
+        ...,
+        description="A literal constant (in the model's units for its intended dimension).",
+    )
 
 
 class ReactionNodeResult(BaseModel):
@@ -341,63 +685,94 @@ class ResultsSummary(BaseModel):
 
 
 class RigidStrategy(Enum):
-    LinearMpc = "LinearMpc"
-    RigidMember = "RigidMember"
-
-
-class RotationImperfection(BaseModel):
-    axis: list[float] = Field(..., max_length=3)
-    magnitude: float
-    memberset_ids: list[conint(ge=0)]
+    LinearMpc = 'LinearMpc'
+    RigidMember = 'RigidMember'
 
 
 class Section(BaseModel):
     a_sy: float | None = Field(
         None,
-        description="Effective shear area in Y-direction (m²). None = no shear deformation (Euler-Bernoulli).",
+        description='Effective shear area in Y-direction (m²). None = no shear deformation (Euler-Bernoulli).',
     )
     a_sz: float | None = Field(
         None,
-        description="Effective shear area in Z-direction (m²). None = no shear deformation (Euler-Bernoulli).",
+        description='Effective shear area in Z-direction (m²). None = no shear deformation (Euler-Bernoulli).',
     )
-    area: float
+    area: PositiveFloat
     b: float | None = None
     centroid_y: float | None = Field(
         None,
-        description="Centroid Y-coordinate within the shape path coordinate system (mm).\nUsed by the viewer to offset shape-path extrusions so the centroid\naligns with the member node.  Not used by the solver.",
+        description='Centroid Y-coordinate within the shape path coordinate system (mm).\nUsed by the viewer to offset shape-path extrusions so the centroid\naligns with the member node.  Not used by the solver.',
     )
     centroid_z: float | None = Field(
         None,
-        description="Centroid Z-coordinate within the shape path coordinate system (mm).",
+        description='Centroid Z-coordinate within the shape path coordinate system (mm).',
     )
+    ec3: Ec3SectionParams | None = None
     h: float | None = None
     i_w: float | None = Field(
         None,
-        description="Warping constant (m⁶). None = no warping (pure St. Venant torsion).",
+        description='Warping constant (m⁶). None = no warping (pure St. Venant torsion).',
     )
-    i_y: float
+    i_y: PositiveFloat
     i_yz: float | None = Field(
         None,
-        description="Product of inertia about centroidal axes (mm⁴ in JSON, scaled to m⁴ by solver).\nNon-zero for asymmetric sections (e.g. angle, C-channel with unequal flanges).\nWhen present and non-zero, the solver auto-detects whether `i_y`/`i_z`\nare centroidal or principal values (by checking angle consistency) and\napplies or skips the principal-axis rotation accordingly.",
+        description='Product of inertia about centroidal axes (mm⁴ in JSON, scaled to m⁴ by solver).\nNon-zero for asymmetric sections (e.g. angle, C-channel with unequal flanges).\nWhen present and non-zero, the solver auto-detects whether `i_y`/`i_z`\nare centroidal or principal values (by checking angle consistency) and\napplies or skips the principal-axis rotation accordingly.',
     )
-    i_z: float
+    i_z: PositiveFloat
     id: conint(ge=0)
-    j: float
+    j: PositiveFloat
     material: conint(ge=0)
     name: str
     principal_axis_angle: float | None = Field(
         None,
-        description="Angle (degrees) from centroidal to principal axes.\nWhen `i_yz` is absent or zero, this angle is used to rotate the\nstiffness matrix from principal to centroidal frame.  When `i_yz`\nis present, the solver checks whether `i_y`/`i_z` are centroidal\n(angle matches formula) or principal (rotation applied).\nPositive = counter-clockwise.  Default 0.",
+        description='Angle (degrees) from centroidal to principal axes.\nWhen `i_yz` is absent or zero, this angle is used to rotate the\nstiffness matrix from principal to centroidal frame.  When `i_yz`\nis present, the solver checks whether `i_y`/`i_z` are centroidal\n(angle matches formula) or principal (rotation applied).\nPositive = counter-clockwise.  Default 0.',
     )
     shape_path: conint(ge=0) | None = None
-    wagner_coeff: float | None = Field(None, description="Wagner coefficient for lateral-torsional buckling.")
-    y_s: float | None = Field(None, description="Shear center Y-coordinate relative to centroid (m).")
-    z_s: float | None = Field(None, description="Shear center Z-coordinate relative to centroid (m).")
+    wagner_coeff: float | None = Field(
+        None, description='Wagner coefficient for lateral-torsional buckling.'
+    )
+    wel_y: PositiveFloat | None = Field(
+        None,
+        description='Elastic section modulus about the y (major) axis (m³). Universal property\n(≡ AISC `S_x`); used by unity checks for bending capacity.',
+    )
+    wel_z: PositiveFloat | None = Field(
+        None, description='Elastic section modulus about the z (minor) axis (m³).'
+    )
+    wpl_y: PositiveFloat | None = Field(
+        None,
+        description='Plastic section modulus about the y (major) axis (m³, ≡ AISC `Z_x`).',
+    )
+    wpl_z: PositiveFloat | None = Field(
+        None, description='Plastic section modulus about the z (minor) axis (m³).'
+    )
+    y_s: float | None = Field(
+        None, description='Shear center Y-coordinate relative to centroid (m).'
+    )
+    z_s: float | None = Field(
+        None, description='Shear center Z-coordinate relative to centroid (m).'
+    )
 
 
 class SectionForce(BaseModel):
     forces: NodeForces
     x_frac: float
+
+
+class SectionProperty(Enum):
+    Area = 'Area'
+    Iy = 'Iy'
+    Iz = 'Iz'
+    J = 'J'
+    Iw = 'Iw'
+    WelY = 'WelY'
+    WelZ = 'WelZ'
+    WplY = 'WplY'
+    WplZ = 'WplZ'
+    H = 'H'
+    B = 'B'
+    Asy = 'Asy'
+    Asz = 'Asz'
 
 
 class ShapeCommand(BaseModel):
@@ -418,31 +793,27 @@ class ShapePath(BaseModel):
 
 
 class StiffnessCurveConfig(BaseModel):
-    depends_on: ForceComponent = Field(..., description="Which force component the stiffness depends on.")
+    depends_on: ForceComponent = Field(
+        ..., description='Which force component the stiffness depends on.'
+    )
     points: list[list[float]] = Field(
         ...,
-        description="Sorted `[force_value, stiffness]` pairs (≥ 2 points, positive stiffness).",
+        description='Sorted `[force_value, stiffness]` pairs (≥ 2 points, positive stiffness).',
     )
 
 
 class SupportConditionType(Enum):
-    Fixed = "Fixed"
-    Free = "Free"
-    Spring = "Spring"
-    PositiveOnly = "PositiveOnly"
-    NegativeOnly = "NegativeOnly"
+    Fixed = 'Fixed'
+    Free = 'Free'
+    Spring = 'Spring'
+    PositiveOnly = 'PositiveOnly'
+    NegativeOnly = 'NegativeOnly'
 
 
 class SurfaceLoadVertex(BaseModel):
     x: float
     y: float
     z: float
-
-
-class TranslationImperfection(BaseModel):
-    axis: list[float] = Field(..., max_length=3)
-    magnitude: float
-    memberset_ids: list[conint(ge=0)]
 
 
 class UnitSettings(BaseModel):
@@ -453,22 +824,25 @@ class UnitSettings(BaseModel):
     system: str | None = None
 
 
-class UnityCheck(BaseModel):
-    check_id: str
-    details: Any
-    governing: GoverningKey | None = None
-    limit: float | None = None
-    message: str | None = None
-    ok: bool
-    value: float | None = None
+class UnityStatus(Enum):
+    Green = 'Green'
+    Yellow = 'Yellow'
+    Orange = 'Orange'
+    Red = 'Red'
 
 
-class UnityCheckOverview(BaseModel):
-    aggregated_ok: bool
-    aggregated_value: float | None = None
-    check_id: str
-    children: list[UnityCheck]
-    governing: GoverningKey | None = None
+class VarSource2(BaseModel):
+    Expression: str = Field(
+        ...,
+        description='An expression string (may reference earlier variable names + functions).',
+    )
+
+
+class Vector3(RootModel[tuple[float, float, float]]):
+    root: tuple[float, float, float] = Field(
+        ...,
+        description='A 3-component vector `[x, y, z]`.\n\nShared schema referenced (via `#[schema(value_type = Vector3)]`) by every\ndirection/axis field so the OpenAPI defines one reusable component instead of\nrepeating the inline array. The Rust model keeps plain `(f64, f64, f64)`\ntuples and the JSON shape is unchanged.',
+    )
 
 
 class WorkAxis(BaseModel):
@@ -493,44 +867,57 @@ class WorkPlane(BaseModel):
     origin_z: float
 
 
+class Workspace(BaseModel):
+    entity_groups: list[EntityGroup] | None = Field(
+        [],
+        description='Generic, calculation-agnostic entity groups for UI/visualization.',
+        validate_default=True,
+    )
+    work_axes: list[WorkAxis] | None = Field([], validate_default=True)
+    work_planes: list[WorkPlane] | None = Field([], validate_default=True)
+
+
 class AnalysisOptions(BaseModel):
     axial_slack: float | None = None
     dimensionality: Dimensionality
     enable_self_weight: bool | None = Field(
         None,
-        description="When true, the engine generates self-weight (dead load) for every member\nfrom its material density and cross-sectional area, collected into a\nself-weight load case (see `self_weight_load_case_id`).  Cable members\ncarry their weight intrinsically in the catenary formulation and are\ntherefore excluded from the generated self-weight load.",
+        description='When true, the engine generates self-weight (dead load) for every member\nfrom its material density and cross-sectional area, collected into a\nself-weight load case (see `self_weight_load_case_id`).  Cable members\ncarry their weight intrinsically in the catenary formulation and are\ntherefore excluded from the generated self-weight load.',
     )
-    gravity_direction: list[float] | None = Field(
+    gravity_direction: Vector3 | None = Field(
         None,
-        description="Global gravity direction as a vector (normalized to a unit vector at use).\nDefault `(0, -1, 0)` — gravity acting in the negative Y direction.",
-        max_length=3,
+        description='Global gravity direction as a vector (normalized to a unit vector at use).\nDefault `(0, -1, 0)` — gravity acting in the negative Y direction.',
     )
     gravity_factor: float | None = Field(
         None,
-        description="Signed gravitational acceleration magnitude in length-units/s².\nDefault `-9.81` (m/s²).  Self-weight per unit length is\n`w = density · area · |gravity_factor|` applied along `gravity_direction`.",
+        description='Signed gravitational acceleration magnitude in length-units/s².\nDefault `-9.81` (m/s²).  Self-weight per unit length is\n`w = density · area · |gravity_factor|` applied along `gravity_direction`.',
     )
     id: conint(ge=0)
+    include_report_html: bool | None = Field(
+        None,
+        description='When true, the solver embeds the single consolidated unity-check HTML\nreport in `results.report_html`. Default false (keeps results JSON lean;\nthe CLI `--report` flag writes the report to a file instead).',
+    )
     include_shear_center_coupling: bool | None = Field(
         None,
-        description="When false, suppresses shear-center eccentricity coupling (T^T·K·T\ntransformation) by clearing y_s/z_s for all sections.  Some commercial\nsolvers do not apply this coupling; disabling it improves agreement.",
+        description='When false, suppresses shear-center eccentricity coupling (T^T·K·T\ntransformation) by clearing y_s/z_s for all sections.  Some commercial\nsolvers do not apply this coupling; disabling it improves agreement.',
     )
     include_shear_deformation: bool | None = Field(
         None,
-        description="When false, forces shear deformation factor φ=0 (Euler-Bernoulli) for all elements.",
+        description='When false, forces shear deformation factor φ=0 (Euler-Bernoulli) for all elements.',
     )
     include_warping: bool | None = Field(
         None,
-        description="When false, ignores warping constant Iw and uses pure GJ/L torsion for all elements.",
+        description='When false, ignores warping constant Iw and uses pure GJ/L torsion for all elements.',
     )
     max_iterations: conint(ge=0) | None = None
     nonlinear_method: NonlinearMethod | None = Field(
         None,
-        description="Controls the nonlinear solver formulation (P_DELTA or COROTATIONAL).\nOnly affects second-order (nonlinear) analysis.",
+        description='Controls the nonlinear solver formulation (P_DELTA or COROTATIONAL).\nOnly affects second-order (nonlinear) analysis.',
     )
     order: AnalysisOrder
     pdelta_formulation: PdeltaFormulation | None = Field(
         None,
-        description="Controls the geometric stiffness matrix formulation for P-Delta analysis.\n`Consistent` (default) uses full Przemieniecki K_g; `Simplified` uses\nP/L-only diagonal terms matching commercial solvers.",
+        description='Controls the geometric stiffness matrix formulation for P-Delta analysis.\n`Consistent` (default) uses full Przemieniecki K_g; `Simplified` uses\nP/L-only diagonal terms matching commercial solvers.',
     )
     pdelta_mode: PdeltaMode | None = Field(
         None,
@@ -550,11 +937,56 @@ class AnalysisOptions(BaseModel):
     tolerance: float
 
 
-class ImperfectionCase(BaseModel):
-    imperfection_case_id: conint(ge=0)
-    load_combinations: list[conint(ge=0)]
-    rotation_imperfections: list[RotationImperfection]
-    translation_imperfections: list[TranslationImperfection]
+class DistributedLoad(BaseModel):
+    direction: Vector3
+    end_frac: confloat(ge=0.0, le=1.0)
+    end_magnitude: float
+    load_case: conint(ge=0)
+    magnitude: float
+    member: conint(ge=0)
+    start_frac: confloat(ge=0.0, le=1.0)
+
+
+class Ec3SteelSpec(BaseModel):
+    c1: float | None = Field(
+        None,
+        description='LTB moment-distribution factor C1 (default 1.0 = conservative, uniform M).',
+    )
+    gamma_m0: float | None = 1.0
+    gamma_m1: float | None = 1.0
+    include_buckling: bool | None = True
+    include_ltb: bool | None = True
+    interaction_method: InteractionMethod | None = None
+
+
+class EntityUnityResult(BaseModel):
+    capacity: float | None = None
+    demand: float
+    entity: EntityRef
+    governing_combination_id: conint(ge=0) | None = None
+    location_x_frac: float | None = None
+    message: str | None = None
+    rendered_report: str | None = Field(
+        None,
+        description="Rendered narrative report (from the check's `report_template`), if any.",
+    )
+    status: UnityStatus
+    trace: list[CalcStep] | None = Field(
+        [],
+        description='Transparent hand-calc trace (symbolic + substituted) in display units.',
+        validate_default=True,
+    )
+    utilization: float
+
+
+class Material(BaseModel):
+    density: PositiveFloat
+    e_mod: PositiveFloat
+    g_mod: PositiveFloat
+    id: conint(ge=0)
+    name: str
+    orthotropic_plate: OrthotropicPlateMaterial | None = None
+    yield_stress: float
 
 
 class Member(BaseModel):
@@ -567,11 +999,11 @@ class Member(BaseModel):
     member_type: MemberType
     mirror: bool | None = Field(
         None,
-        description="When true, the cross-section is mirrored: shear-center offsets y_s and\nz_s are negated, and the shape_path geometry is flipped.",
+        description='When true, the cross-section is mirrored: shear-center offsets y_s and\nz_s are negated, and the shape_path geometry is flipped.',
     )
     pretension: float | None = Field(
         None,
-        description="Initial cable tension (force units) for `Cable` members. Used to derive\nthe unstretched length when `unstretched_length` is not given directly:\n`L₀ = L_chord / (1 + pretension/EA)`.  Ignored for non-cable members.",
+        description='Initial cable tension (force units) for `Cable` members. Used to derive\nthe unstretched length when `unstretched_length` is not given directly:\n`L₀ = L_chord / (1 + pretension/EA)`.  Ignored for non-cable members.',
     )
     reference_member: conint(ge=0) | None = None
     reference_node: conint(ge=0) | None = None
@@ -612,6 +1044,36 @@ class MemberHinge(BaseModel):
     translational_release_vz: float | None = None
 
 
+class MemberPointLoad(BaseModel):
+    axes: str | None = Field(None, description='Coordinate axes: "global" or "local".')
+    direction: Vector3 = Field(
+        ..., description='Load direction unit vector (global or local axes).'
+    )
+    id: conint(ge=0)
+    load_case: conint(ge=0)
+    magnitude: float
+    member: conint(ge=0)
+    position: confloat(ge=0.0, le=1.0) = Field(
+        ...,
+        description='Fractional position along the member (0.0 = start, 1.0 = end).',
+    )
+
+
+class MemberPointMoment(BaseModel):
+    axes: str | None = Field(None, description='Coordinate axes: "global" or "local".')
+    direction: Vector3 = Field(
+        ..., description='Load direction unit vector (global or local axes).'
+    )
+    id: conint(ge=0)
+    load_case: conint(ge=0)
+    magnitude: float
+    member: conint(ge=0)
+    position: confloat(ge=0.0, le=1.0) = Field(
+        ...,
+        description='Fractional position along the member (0.0 = start, 1.0 = end).',
+    )
+
+
 class MemberResult(BaseModel):
     end_node_forces: NodeForces
     local_displacement_end_node: NodeDisplacement
@@ -626,61 +1088,169 @@ class MemberResult(BaseModel):
     start_node_forces: NodeForces
 
 
-class MemberSet(BaseModel):
-    classification: str | None = None
+class NodalLoad(BaseModel):
+    direction: Vector3
     id: conint(ge=0)
-    l_y: float | None = None
-    l_z: float | None = None
-    members: list[Member]
+    load_case: conint(ge=0)
+    load_type: str
+    magnitude: float
+    node: conint(ge=0)
+
+
+class NodalMoment(BaseModel):
+    direction: Vector3
+    id: conint(ge=0)
+    load_case: conint(ge=0)
+    load_type: str
+    magnitude: float
+    node: conint(ge=0)
 
 
 class PlateElement(BaseModel):
-    behavior: PlateBehavior | None = None
+    behavior: PlateBehavior | None = 'Shell'
     id: conint(ge=0)
-    local_x_direction: list[float] | None = Field(None, max_length=3)
+    local_x_direction: Vector3 | None = None
     material: conint(ge=0)
-    node_ids: list[conint(ge=0)]
+    node_ids: list[NodeId] = Field(
+        ...,
+        description='Element connectivity: 3 nodes (triangle) or 4 nodes (quad).',
+        max_length=4,
+        min_length=3,
+    )
     offset: float | None = Field(
-        None,
-        description="Distance from the reference surface along the local plate normal.",
+        0.0,
+        description='Distance from the reference surface along the local plate normal.',
+    )
+    plane_state: PlaneState | None = Field(
+        'PlaneStress',
+        description='In-plane constitutive assumption (plane stress/strain).',
     )
     source_surface_id: conint(ge=0) | None = Field(
-        None, description="The `PlateSurface` this element was meshed from, if any."
+        None, description='The `PlateSurface` this element was meshed from, if any.'
     )
     stiffness_modifiers: PlateStiffnessModifiers | None = None
-    thickness: float
+    theory: PlateTheory | None = Field(
+        'Auto', description='Finite-element theory (thin/thick/auto).'
+    )
+    thickness: PositiveFloat
+
+
+class PlatePressure(BaseModel):
+    direction: Vector3
+    id: conint(ge=0)
+    load_case: conint(ge=0)
+    magnitude: float
+    projected: bool | None = Field(
+        False,
+        description='When true the pressure acts on the area projected onto `direction`\n(e.g. snow), otherwise on the true element area.',
+    )
+    target: PlatePressureTarget = Field(
+        ...,
+        description='What the pressure is applied to — exactly one of a surface or an element.',
+    )
 
 
 class PlateResult(BaseModel):
     centroid: NodeLocation
     centroid_displacement_global: NodeDisplacement
     centroid_displacement_local: NodeDisplacement
-    nodal_forces_global: dict[str, NodeForces]
+    nodal_forces_global: dict[str, NodeForces] = Field(...)
     plate_id: conint(ge=0)
     resultants: PlateResultants
 
 
+class PlateSurface(BaseModel):
+    behavior: PlateBehavior | None = 'Shell'
+    boundary_node_ids: list[BoundaryNodeId] = Field(
+        ...,
+        description='Outer boundary, referencing existing model nodes (counter-clockwise).',
+        min_length=3,
+    )
+    classification: str | None = None
+    generated_plate_element_ids: list[conint(ge=0)] | None = Field(
+        [],
+        description='Ids of the plate elements generated from this surface. Populated by the\nmesher; any input value is ignored (derived from element\n`source_surface_id`).',
+    )
+    id: conint(ge=0)
+    local_x_direction: Vector3 | None = None
+    material: conint(ge=0)
+    mesh: PlateMeshSettings | None = None
+    mesh_group_id: conint(ge=0) | None = Field(
+        None,
+        description='Surfaces sharing a `mesh_group_id` are meshed together so coincident\nboundary nodes are shared between them.',
+    )
+    name: str | None = None
+    offset: float | None = Field(
+        0.0,
+        description='Distance from the reference surface along the local plate normal.',
+    )
+    openings: list[PlateOpening] | None = Field(
+        [],
+        description='Holes in the surface; the mesher generates elements around them.',
+        validate_default=True,
+    )
+    plane_state: PlaneState | None = Field(
+        'PlaneStress',
+        description='In-plane constitutive assumption (plane stress/strain).',
+    )
+    stiffness_modifiers: PlateStiffnessModifiers | None = None
+    theory: PlateTheory | None = Field(
+        'Auto', description='Finite-element theory (thin/thick/auto).'
+    )
+    thickness: PositiveFloat
+
+
+class Section1(BaseModel):
+    property: SectionProperty
+
+
+class QuantitySource3(BaseModel):
+    Section: Section1 = Field(..., description="A property of the entity's section.")
+
+
+class QuantitySource(
+    RootModel[
+        QuantitySource1
+        | QuantitySource2
+        | QuantitySource3
+        | QuantitySource4
+        | QuantitySource5
+        | QuantitySource6
+        | QuantitySource7
+    ]
+):
+    root: (
+        QuantitySource1
+        | QuantitySource2
+        | QuantitySource3
+        | QuantitySource4
+        | QuantitySource5
+        | QuantitySource6
+        | QuantitySource7
+    ) = Field(
+        ...,
+        description='A bindable quantity — the source of a `{{variable}}` in a unity-check formula.',
+    )
+
+
 class Results(BaseModel):
-    displacement_nodes: dict[str, NodeDisplacement]
-    member_results: dict[str, MemberResult]
+    displacement_nodes: dict[str, NodeDisplacement] = Field(...)
+    member_results: dict[str, MemberResult] = Field(...)
     name: str
-    plate_results: dict[str, PlateResult] | None = None
-    reaction_nodes: dict[str, ReactionNodeResult]
+    plate_results: dict[str, PlateResult] | None = Field(None)
+    reaction_nodes: dict[str, ReactionNodeResult] = Field(...)
     result_type: ResultType
     summary: ResultsSummary
-    unity_checks: dict[str, UnityCheck] | None = None
 
 
-class ResultsBundle(BaseModel):
-    loadcases: dict[str, Results]
-    loadcombinations: dict[str, Results]
-    unity_checks_overview: dict[str, UnityCheckOverview] | None = None
+class RotationImperfection(BaseModel):
+    axis: Vector3
+    magnitude: float
+    memberset_ids: list[conint(ge=0)]
 
 
 class Settings(BaseModel):
-    analysis_options: AnalysisOptions
     general_info: GeneralInfo
-    id: conint(ge=0)
     unit_settings: UnitSettings
 
 
@@ -691,26 +1261,70 @@ class SupportCondition(BaseModel):
 
 
 class SurfaceLoad(BaseModel):
-    direction: list[float] = Field(..., max_length=3)
-    distribution_direction: list[float] | None = Field(None, max_length=3)
+    direction: Vector3
+    distribution_direction: Vector3 | None = None
     id: conint(ge=0)
     load_case: conint(ge=0)
     magnitude: float
     polygon: list[SurfaceLoadVertex]
 
 
-class LoadCase(BaseModel):
-    distributed_loads: list[DistributedLoad]
-    id: conint(ge=0)
-    member_point_loads: list[MemberPointLoad] | None = None
-    member_point_moments: list[MemberPointMoment] | None = None
+class TranslationImperfection(BaseModel):
+    axis: Vector3
+    magnitude: float
+    memberset_ids: list[conint(ge=0)]
+
+
+class UnityCheckResult(BaseModel):
+    check_id: str
+    governing: EntityUnityResult | None = None
+    limit_state: LimitState | None = None
+    max_utilization: float
     name: str
-    nodal_loads: list[NodalLoad]
-    nodal_moments: list[NodalMoment]
-    plate_pressures: list[PlatePressure] | None = None
+    per_entity: list[EntityUnityResult] | None = Field([], validate_default=True)
+    status: UnityStatus
+
+
+class VarSource1(BaseModel):
+    Quantity: QuantitySource
+
+
+class VarSource(RootModel[VarSource1 | VarSource2]):
+    root: VarSource1 | VarSource2 = Field(
+        ...,
+        description='The source of a named formula variable: a catalog quantity, or a\nsub-expression over previously-declared variables/quantities.',
+    )
+
+
+class CheckSpec2(BaseModel):
+    Ec3Steel: Ec3SteelSpec
+
+
+class ImperfectionCase(BaseModel):
+    imperfection_case_id: conint(ge=0)
+    load_combinations: list[conint(ge=0)]
     rotation_imperfections: list[RotationImperfection]
-    surface_loads: list[SurfaceLoad] | None = None
     translation_imperfections: list[TranslationImperfection]
+
+
+class LoadCase(BaseModel):
+    distributed_loads: list[DistributedLoad] | None = Field([], validate_default=True)
+    id: conint(ge=0)
+    member_point_loads: list[MemberPointLoad] | None = Field([], validate_default=True)
+    member_point_moments: list[MemberPointMoment] | None = Field(
+        [], validate_default=True
+    )
+    name: str
+    nodal_loads: list[NodalLoad] | None = Field([], validate_default=True)
+    nodal_moments: list[NodalMoment] | None = Field([], validate_default=True)
+    plate_pressures: list[PlatePressure] | None = Field([], validate_default=True)
+    rotation_imperfections: list[RotationImperfection] | None = Field(
+        [], validate_default=True
+    )
+    surface_loads: list[SurfaceLoad] | None = Field([], validate_default=True)
+    translation_imperfections: list[TranslationImperfection] | None = Field(
+        [], validate_default=True
+    )
 
 
 class NodalSupport(BaseModel):
@@ -721,24 +1335,115 @@ class NodalSupport(BaseModel):
     warping_condition: SupportCondition | None = None
 
 
-class FERS(BaseModel):
-    entity_groups: list[EntityGroup] | None = Field(
+class ResultsBundle(BaseModel):
+    loadcases: dict[str, Results]
+    loadcombinations: dict[str, Results]
+    report_html: str | None = Field(
         None,
-        description="Generic, calculation-agnostic entity groups for UI/visualization.",
+        description='Optional single consolidated HTML report (populated only when requested\nvia the CLI `--report` flag or `AnalysisOptions.include_report_html`).',
     )
+    unity_check_results: list[UnityCheckResult] | None = Field(
+        [],
+        description='Unity-check results (one entry per check definition), enveloped over the\napplicable load combinations.',
+        validate_default=True,
+    )
+
+
+class VarBinding(BaseModel):
+    name: str
+    source: VarSource
+
+
+class GenericSpec(BaseModel):
+    capacity: str = Field(
+        ..., description='Capacity (resistance) expression, e.g. `"fy"`.'
+    )
+    demand: str = Field(
+        ...,
+        description='Demand (action effect) expression, e.g.\n`"bending_moment * fibre_distance / second_moment_of_area"`.',
+    )
+    report_template: str | None = Field(
+        None,
+        description='Optional narrative report template (HTML/markdown with `{{name}}` and\n`{{= sub-expression}}` placeholders auto-filled with values).',
+    )
+    variables: list[VarBinding] | None = Field(
+        [],
+        description='Named variables referenced by `demand`/`capacity`/`report_template`.',
+        validate_default=True,
+    )
+
+
+class Model(BaseModel):
+    materials: list[Material]
+    member_hinges: list[MemberHinge] | None = Field([], validate_default=True)
+    member_sets: list[MemberSet]
+    members: list[Member] = Field(
+        ...,
+        description='Single source of truth for member objects. Member sets reference these by id.',
+    )
+    nodal_supports: list[NodalSupport]
+    nodes: list[Node]
+    plate_elements: list[PlateElement] | None = Field([], validate_default=True)
+    plate_surfaces: list[PlateSurface] | None = Field([], validate_default=True)
+    sections: list[Section]
+    shape_paths: list[ShapePath] | None = Field([], validate_default=True)
+    workspace: Workspace | None = Field({}, validate_default=True)
+
+
+class CheckSpec1(BaseModel):
+    Generic: GenericSpec
+
+
+class CheckSpec(RootModel[CheckSpec1 | CheckSpec2]):
+    root: CheckSpec1 | CheckSpec2 = Field(
+        ...,
+        description='The evaluator kind. Open union — new codes (AISC, …) add variants; the\nresult/report/colour layer is identical for every variant.',
+    )
+
+
+class UnityCheckDefinition(BaseModel):
+    applies_to: EntitySelector
+    description: str | None = None
+    id: str
+    limit_state: LimitState | None = None
+    load_combination_ids: list[conint(ge=0)] | None = Field(
+        [],
+        description='Restrict to these combination ids (empty = all matching `limit_state`).',
+    )
+    name: str
+    spec: CheckSpec
+    thresholds: list[float] | None = Field(
+        [0.8, 0.95, 1.0],
+        description='Utilization colour boundaries [green→yellow, yellow→orange, orange→red].',
+    )
+
+
+class Analysis(BaseModel):
     imperfection_cases: list[ImperfectionCase]
     load_cases: list[LoadCase]
     load_combinations: list[LoadCombination]
-    materials: list[Material]
-    member_sets: list[MemberSet]
-    memberhinges: list[MemberHinge] | None = None
-    nodal_supports: list[NodalSupport]
-    nodes: list[Node] | None = None
-    plate_elements: list[PlateElement] | None = None
-    plate_surfaces: list[PlateSurface] | None = None
+    options: AnalysisOptions = Field(
+        ...,
+        description='Solver options (first/second order, tolerances, self-weight, gravity, …).',
+    )
+    unity_checks: list[UnityCheckDefinition] | None = Field(
+        [],
+        description='Post-processing unity checks evaluated against the results.',
+        validate_default=True,
+    )
+
+
+class FERS(BaseModel):
+    analysis: Analysis = Field(
+        ...,
+        description='The analysis definition: solver options + load/imperfection cases.',
+    )
+    model: Model = Field(
+        ...,
+        description='The structural model: geometry, topology, materials, workspace.',
+    )
     results: ResultsBundle | None = None
-    sections: list[Section]
-    settings: Settings
-    shape_paths: list[ShapePath] | None = None
-    work_axes: list[WorkAxis] | None = None
-    work_planes: list[WorkPlane] | None = None
+    settings: Settings = Field(
+        ...,
+        description='Units + general info (analysis solver options live on `analysis.options`).',
+    )

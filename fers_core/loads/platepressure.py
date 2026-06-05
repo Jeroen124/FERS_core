@@ -48,16 +48,22 @@ class PlatePressure:
         self.load_case.add_plate_pressure(self)
 
     def to_dict(self) -> Dict[str, Any]:
+        # Exactly one target — serialized as a tagged `target` object.
+        if self.surface_id is not None:
+            target = {"kind": "Surface", "surface_id": self.surface_id}
+        elif self.plate_element_id is not None:
+            target = {"kind": "Element", "plate_element_id": self.plate_element_id}
+        else:
+            raise ValueError(
+                "PlatePressure requires exactly one of surface_id or plate_element_id."
+            )
         data: Dict[str, Any] = {
             "id": self.id,
             "load_case": self.load_case.id,
+            "target": target,
             "magnitude": self.magnitude,
             "direction": self.direction,
         }
-        if self.surface_id is not None:
-            data["surface_id"] = self.surface_id
-        if self.plate_element_id is not None:
-            data["plate_element_id"] = self.plate_element_id
         if self.projected is not None:
             data["projected"] = self.projected
         return data
@@ -70,12 +76,13 @@ class PlatePressure:
         load_case: "LoadCase",
     ) -> "PlatePressure":
         pressure_id = data.get("id")
+        target = data.get("target", {}) or {}
         obj = cls(
             load_case=load_case,
             magnitude=data.get("magnitude", 0.0),
             direction=tuple(data.get("direction", (0.0, 0.0, -1.0))),
-            surface_id=data.get("surface_id"),
-            plate_element_id=data.get("plate_element_id"),
+            surface_id=target.get("surface_id"),
+            plate_element_id=target.get("plate_element_id"),
             projected=data.get("projected"),
             id=pressure_id,
         )

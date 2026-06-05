@@ -2,18 +2,26 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from ..members.member import Member
+from ..members.bucklingrestraint import BucklingRestraint
 from typing import Optional
 
 
 class MemberSet:
+    """One physical beam: the ordered chain of collinear members that together
+    form a single continuous structural member.
+
+    The member objects are kept in-memory (``self.members``) so the helper
+    methods can operate on them, but the set is serialized as a list of member
+    ids (``member_ids``) referencing the top-level ``FERS.members`` list.
+    """
+
     _member_set_counter = 1
 
     def __init__(
         self,
         members: Optional[list[Member]] = None,
         classification: Optional[str] = None,
-        l_y: Optional[float] = None,
-        l_z: Optional[float] = None,
+        buckling_restraints: Optional[list[BucklingRestraint]] = None,
         id: Optional[int] = None,
     ):
         self.id = id or MemberSet._member_set_counter
@@ -22,8 +30,7 @@ class MemberSet:
 
         self.members_id = [member.id for member in members] if members else []
         self.members = members if members is not None else []
-        self.l_y = l_y
-        self.l_z = l_z
+        self.buckling_restraints = buckling_restraints if buckling_restraints is not None else []
         self.classification = classification
 
     @classmethod
@@ -31,13 +38,11 @@ class MemberSet:
         cls._member_set_counter = 1
 
     def to_dict(self):
-        # Get unique materials and sections using get_unique methods
         return {
             "id": self.id,
-            "l_y": self.l_y,
-            "l_z": self.l_z,
             "classification": self.classification,
-            "members": [member.to_dict() for member in self.members],
+            "member_ids": self.members_id,
+            "buckling_restraints": [br.to_dict() for br in self.buckling_restraints],
         }
 
     @classmethod
@@ -47,27 +52,23 @@ class MemberSet:
         *,
         members_by_id: dict[int, Member],
     ) -> "MemberSet":
-        # members can be full dicts or just ids; assume FERS already built members_by_id
         members: list[Member] = []
-        for m in data.get("members", []):
-            if isinstance(m, dict):
-                mid = m.get("id")
-                if mid is None:
-                    raise ValueError("Member dict in MemberSet is missing 'id'.")
-            else:
-                mid = int(m)
+        for mid in data.get("member_ids", []):
+            mid = int(mid)
             try:
                 members.append(members_by_id[mid])
             except KeyError:
                 raise KeyError(f"Member with id={mid} not found when building MemberSet.")
 
-        ms_id = data.get("id")
+        buckling_restraints = [
+            BucklingRestraint.from_dict(br) for br in data.get("buckling_restraints", [])
+        ]
+
         return cls(
             members=members,
             classification=data.get("classification"),
-            l_y=data.get("l_y"),
-            l_z=data.get("l_z"),
-            id=ms_id,
+            buckling_restraints=buckling_restraints,
+            id=data.get("id"),
         )
 
     @staticmethod

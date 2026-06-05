@@ -28,7 +28,6 @@ class Settings:
 
     def to_dict(self):
         return {
-            "id": self.settings_id,
             "analysis_options": self.analysis_options.to_dict(),
             "unit_settings": self.unit_settings.to_dict(),
             "general_info": self.general_info.to_dict(),

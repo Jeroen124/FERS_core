@@ -40,7 +40,7 @@ def test_surface_load_to_dict_is_embedded_in_load_case():
     model = build_surface_model()
 
     data = model.to_dict(include_results=False)
-    load_case = data["load_cases"][0]
+    load_case = data["analysis"]["load_cases"][0]
 
     assert "surface_loads" in load_case
     assert len(load_case["surface_loads"]) == 1

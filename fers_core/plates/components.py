@@ -15,6 +15,34 @@ class PlateElementShape(Enum):
     QUAD = "Quad"
 
 
+class PlateTheory(Enum):
+    AUTO = "Auto"
+    MINDLIN = "Mindlin"
+    KIRCHHOFF = "Kirchhoff"
+
+
+class PlaneState(Enum):
+    PLANE_STRESS = "PlaneStress"
+    PLANE_STRAIN = "PlaneStrain"
+
+
+class PlateMeshMethod(Enum):
+    AUTO = "Auto"
+    STRUCTURED = "Structured"
+    UNSTRUCTURED = "Unstructured"
+
+
+def _normalize_enum(enum_cls, value):
+    """Coerce a string/enum into an enum member (or pass through None)."""
+    if value is None or isinstance(value, enum_cls):
+        return value
+    s = str(value).strip().lower()
+    for member in enum_cls:
+        if member.value.lower() == s or member.name.lower() == s:
+            return member
+    raise ValueError(f"Unknown {enum_cls.__name__}: {value!r}")
+
+
 def normalize_plate_behavior(
     value: Union[PlateBehavior, str, None],
 ) -> Optional[PlateBehavior]:
@@ -66,6 +94,23 @@ class PlateStiffnessModifiers:
         )
 
 
+class PlateMeshDivisions:
+    """Division counts for a structured (u, v) mesh."""
+
+    def __init__(self, u: int, v: int) -> None:
+        self.u = u
+        self.v = v
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {"u": self.u, "v": self.v}
+
+    @classmethod
+    def from_dict(cls, data: Optional[Dict[str, Any]]) -> Optional["PlateMeshDivisions"]:
+        if data is None:
+            return None
+        return cls(u=data["u"], v=data["v"])
+
+
 class PlateMeshSettings:
     """Meshing controls for a PlateSurface."""
 
@@ -73,15 +118,25 @@ class PlateMeshSettings:
         self,
         element_shape: Union[PlateElementShape, str, None] = None,
         target_size: Optional[float] = None,
+        method: Union[PlateMeshMethod, str, None] = None,
+        divisions: Optional[PlateMeshDivisions] = None,
     ) -> None:
         self.element_shape = normalize_element_shape(element_shape)
         self.target_size = float(target_size) if target_size is not None else None
+        self.method = _normalize_enum(PlateMeshMethod, method)
+        self.divisions = divisions
 
     def to_dict(self) -> Dict[str, Any]:
-        return {
-            "element_shape": self.element_shape.value if self.element_shape is not None else None,
-            "target_size": self.target_size,
-        }
+        # Omit `element_shape` when unset: the solver's field is a non-nullable
+        # enum with a serde default and rejects an explicit null.
+        data: Dict[str, Any] = {"target_size": self.target_size}
+        if self.element_shape is not None:
+            data["element_shape"] = self.element_shape.value
+        if self.method is not None:
+            data["method"] = self.method.value
+        if self.divisions is not None:
+            data["divisions"] = self.divisions.to_dict()
+        return data
 
     @classmethod
     def from_dict(cls, data: Optional[Dict[str, Any]]) -> Optional["PlateMeshSettings"]:
@@ -90,6 +145,8 @@ class PlateMeshSettings:
         return cls(
             element_shape=data.get("element_shape"),
             target_size=data.get("target_size"),
+            method=data.get("method"),
+            divisions=PlateMeshDivisions.from_dict(data.get("divisions")),
         )
 
 

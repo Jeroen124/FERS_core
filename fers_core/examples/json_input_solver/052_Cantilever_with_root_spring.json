@@ -111,7 +111,7 @@
         }
     },
     "results": null,
-    "memberhinges": [
+    "member_hinges": [
         {
             "id": 1,
             "hinge_type": "SPRING_Z",
