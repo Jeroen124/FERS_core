@@ -44,7 +44,9 @@ from typing import Any, Dict, List, Optional
 # ── variable sources ─────────────────────────────────────────────────────────
 
 
-def member_force(component: str, aggregation: str = "MaxAbs", fraction: Optional[float] = None) -> Dict[str, Any]:
+def member_force(
+    component: str, aggregation: str = "MaxAbs", fraction: Optional[float] = None
+) -> Dict[str, Any]:
     agg: Dict[str, Any] = {"type": aggregation}
     if aggregation == "AtFraction":
         agg["fraction"] = 0.5 if fraction is None else float(fraction)
@@ -128,7 +130,9 @@ def generic_check(
     spec: Dict[str, Any] = {"variables": variables, "demand": demand, "capacity": capacity}
     if report_template is not None:
         spec["report_template"] = report_template
-    return _check(id, name, {"Generic": spec}, applies_to, limit_state, load_combination_ids, thresholds, description)
+    return _check(
+        id, name, {"Generic": spec}, applies_to, limit_state, load_combination_ids, thresholds, description
+    )
 
 
 def ec3_steel_check(
@@ -157,7 +161,9 @@ def ec3_steel_check(
     }
     if c1 is not None:
         spec["c1"] = c1
-    return _check(id, name, {"Ec3Steel": spec}, applies_to, limit_state, load_combination_ids, thresholds, description)
+    return _check(
+        id, name, {"Ec3Steel": spec}, applies_to, limit_state, load_combination_ids, thresholds, description
+    )
 
 
 def _check(id, name, spec, applies_to, limit_state, load_combination_ids, thresholds, description):
