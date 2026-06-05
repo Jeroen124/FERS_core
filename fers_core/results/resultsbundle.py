@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import field
-from typing import Dict, Any, Mapping, Optional
+from typing import Dict, Any, List, Mapping, Optional
 
 from fers_core.results.member import MemberResult
 from fers_core.results.plate import PlateResult
@@ -10,10 +10,27 @@ from fers_core.results.resultssummary import ResultsSummary
 from fers_core.results.singleresults import SingleResults
 
 
+def _to_plain(value: Any) -> Any:
+    """Convert a pydantic model (or list/dict of them) to plain dicts."""
+    if hasattr(value, "model_dump"):
+        return value.model_dump()
+    if hasattr(value, "dict"):
+        return value.dict()
+    if isinstance(value, list):
+        return [_to_plain(v) for v in value]
+    if isinstance(value, dict):
+        return {k: _to_plain(v) for k, v in value.items()}
+    return value
+
+
 class ResultsBundle:
     loadcases: Dict[str, SingleResults] = field(default_factory=dict)
     loadcombinations: Dict[str, SingleResults] = field(default_factory=dict)
-    unity_checks_overview: Optional[Dict[str, Any]] = None
+    # Unity-check results: one entry per check definition (see the solver's
+    # `UnityCheckResult` — utilization, status colour, per-entity + governing).
+    unity_check_results: List[Dict[str, Any]] = field(default_factory=list)
+    # Single consolidated HTML report, when the solver was asked to embed it.
+    report_html: Optional[str] = None
 
     # Factory from the generated Pydantic ResultsBundle
     @classmethod
@@ -26,16 +43,11 @@ class ResultsBundle:
         for key, pyd_res in (getattr(pyd_bundle, "loadcombinations", {}) or {}).items():
             comb_map[str(key)] = SingleResults.from_pydantic(pyd_res)
 
-        overview_value = getattr(pyd_bundle, "unity_checks_overview", None)
-        if hasattr(overview_value, "model_dump"):
-            overview_value = overview_value.model_dump()  # type: ignore[attr-defined]
-        elif hasattr(overview_value, "dict"):
-            overview_value = overview_value.dict()  # type: ignore[attr-defined]
-
         instance = cls()
         instance.loadcases = lc_map
         instance.loadcombinations = comb_map
-        instance.unity_checks_overview = overview_value
+        instance.unity_check_results = _to_plain(getattr(pyd_bundle, "unity_check_results", []) or [])
+        instance.report_html = getattr(pyd_bundle, "report_html", None)
 
         return instance
 
@@ -108,15 +120,17 @@ class ResultsBundle:
                 unity_checks=value.get("unity_checks"),
             )
 
-        return cls(
-            loadcases=lc_map,
-            loadcombinations=comb_map,
-            unity_checks_overview=raw.get("unity_checks_overview"),
-        )
+        instance = cls()
+        instance.loadcases = lc_map
+        instance.loadcombinations = comb_map
+        instance.unity_check_results = list(raw.get("unity_check_results") or [])
+        instance.report_html = raw.get("report_html")
+        return instance
 
     def to_dict(self) -> Dict[str, Any]:
         return {
             "loadcases": {k: v.to_dict() for k, v in self.loadcases.items()},
             "loadcombinations": {k: v.to_dict() for k, v in self.loadcombinations.items()},
-            "unity_checks_overview": self.unity_checks_overview,
+            "unity_check_results": self.unity_check_results,
+            "report_html": self.report_html,
         }

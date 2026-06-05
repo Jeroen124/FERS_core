@@ -184,6 +184,13 @@ class _AnalysisView:
     def imperfection_cases(self):
         return self._f.imperfection_cases
 
+    @property
+    def unity_checks(self):
+        return self._f.unity_checks
+
+    def add_unity_check(self, *checks):
+        return self._f.add_unity_check(*checks)
+
     def add_load_case(self, load_case):
         return self._f.add_load_case(load_case)
 
@@ -219,6 +226,9 @@ class FERS:
         self.load_cases = []
         self.load_combinations = []
         self.imperfection_cases = []
+        # Unity-check definitions (plain dicts in the solver's schema shape; use
+        # the builders in `fers_core.unity_checks` to construct them).
+        self.unity_checks = []
         self.settings = (
             settings if settings is not None else Settings()
         )  # Use provided settings or create default
@@ -331,6 +341,9 @@ class FERS:
                 "load_cases": [load_case.to_dict() for load_case in self.load_cases],
                 "load_combinations": [load_comb.to_dict() for load_comb in self.load_combinations],
                 "imperfection_cases": [imp_case.to_dict() for imp_case in self.imperfection_cases],
+                "unity_checks": [
+                    c.to_dict() if hasattr(c, "to_dict") else c for c in self.unity_checks
+                ],
             },
         }
         if include_results and self.resultsbundle is not None:
@@ -379,12 +392,15 @@ class FERS:
             "load_cases": analysis.get("load_cases", []),
             "load_combinations": analysis.get("load_combinations", []),
             "imperfection_cases": analysis.get("imperfection_cases", []),
+            "unity_checks": analysis.get("unity_checks", []),
             "settings": settings_data,
             "results": data.get("results") or data.get("resultsbundle"),
         }
 
         settings = Settings.from_dict(data["settings"])
         fers = cls(settings=settings, reset_counters=True)
+        # Unity-check definitions are carried through as plain dicts.
+        fers.unity_checks = list(data.get("unity_checks") or [])
 
         # lookup tables as you already have...
         id_to_shape_path = {
@@ -557,6 +573,25 @@ class FERS:
 
     def add_imperfection_case(self, imperfection_case):
         self.imperfection_cases.append(imperfection_case)
+
+    def add_unity_check(self, *checks):
+        """Register one or more unity-check definitions (plain dicts in the
+        solver schema — build them with `fers_core.unity_checks`)."""
+        for c in checks:
+            self.unity_checks.append(c.to_dict() if hasattr(c, "to_dict") else c)
+
+    def unity_check_results(self):
+        """Unity-check results from the last analysis (list of dicts), or []."""
+        if self.resultsbundle is None:
+            return []
+        return getattr(self.resultsbundle, "unity_check_results", []) or []
+
+    def unity_report_html(self):
+        """The consolidated unity-check HTML report from the last analysis, if the
+        solver was asked to embed it (`settings.analysis_options.include_report_html`)."""
+        if self.resultsbundle is None:
+            return None
+        return getattr(self.resultsbundle, "report_html", None)
 
     def number_of_elements(self):
         """Returns the total number of unique members and plates in the model."""
