@@ -54,10 +54,169 @@ from ..settings.settings import Settings
 from ..types.pydantic_models import ResultsBundle as ResultsBundleSchema
 
 
+class _WorkspaceView:
+    """Nested-API view of the calculation-agnostic workspace
+    (``calc.model.workspace.*``). A thin facade over the :class:`FERS` storage."""
+
+    def __init__(self, fers: "FERS"):
+        self._f = fers
+
+    @property
+    def work_axes(self):
+        return self._f.work_axes
+
+    @property
+    def work_planes(self):
+        return self._f.work_planes
+
+    @property
+    def entity_groups(self):
+        return self._f.entity_groups
+
+    def add_work_axis(self, *work_axes):
+        return self._f.add_work_axis(*work_axes)
+
+    def add_work_plane(self, *work_planes):
+        return self._f.add_work_plane(*work_planes)
+
+    def add_entity_group(self, *entity_groups):
+        return self._f.add_entity_group(*entity_groups)
+
+
+class _ModelView:
+    """Nested-API view of the structural model (``calc.model.*``). A thin facade
+    over the flat :class:`FERS` storage so the in-memory API mirrors the nested
+    ``{settings, model, analysis, results}`` document shape."""
+
+    def __init__(self, fers: "FERS"):
+        self._f = fers
+        self.workspace = _WorkspaceView(fers)
+
+    @property
+    def nodes(self):
+        return self._f.get_all_nodes()
+
+    @property
+    def members(self):
+        return self._f.members
+
+    @property
+    def member_sets(self):
+        return self._f.member_sets
+
+    @property
+    def materials(self):
+        return self._f.get_unique_materials_from_all_member_sets()
+
+    @property
+    def sections(self):
+        return self._f.get_unique_sections_from_all_member_sets()
+
+    @property
+    def nodal_supports(self):
+        return self._f.get_unique_nodal_support_from_all_member_sets()
+
+    @property
+    def member_hinges(self):
+        return self._f.get_unique_member_hinges_from_all_member_sets()
+
+    @property
+    def shape_paths(self):
+        return self._f.get_unique_shape_paths_from_all_member_sets()
+
+    @property
+    def plate_surfaces(self):
+        return self._f.plate_surfaces
+
+    @property
+    def plate_elements(self):
+        return self._f.plates
+
+    @property
+    def plates(self):
+        return self._f.plates
+
+    def add_member(self, *members):
+        return self._f.add_member(*members)
+
+    def add_member_set(self, *member_sets):
+        return self._f.add_member_set(*member_sets)
+
+    def add_plate_surface(self, *plate_surfaces):
+        return self._f.add_plate_surface(*plate_surfaces)
+
+    def add_plate(self, *plates):
+        return self._f.add_plate(*plates)
+
+    def get_all_members(self):
+        return self._f.get_all_members()
+
+    def get_all_nodes(self):
+        return self._f.get_all_nodes()
+
+    def get_all_plates(self):
+        return self._f.get_all_plates()
+
+
+class _AnalysisView:
+    """Nested-API view of the analysis definition (``calc.analysis.*``)."""
+
+    def __init__(self, fers: "FERS"):
+        self._f = fers
+
+    @property
+    def options(self):
+        return self._f.settings.analysis_options
+
+    @options.setter
+    def options(self, value):
+        self._f.settings.analysis_options = value
+
+    @property
+    def load_cases(self):
+        return self._f.load_cases
+
+    @property
+    def load_combinations(self):
+        return self._f.load_combinations
+
+    @property
+    def imperfection_cases(self):
+        return self._f.imperfection_cases
+
+    @property
+    def unity_checks(self):
+        return self._f.unity_checks
+
+    def add_unity_check(self, *checks):
+        return self._f.add_unity_check(*checks)
+
+    def add_load_case(self, load_case):
+        return self._f.add_load_case(load_case)
+
+    def add_load_combination(self, load_combination):
+        return self._f.add_load_combination(load_combination)
+
+    def add_imperfection_case(self, imperfection_case):
+        return self._f.add_imperfection_case(imperfection_case)
+
+    def create_load_case(self, name):
+        return self._f.create_load_case(name)
+
+    def create_load_combination(self, name, load_cases_factors, situation, check):
+        return self._f.create_load_combination(name, load_cases_factors, situation, check)
+
+    def create_imperfection_case(self, load_combinations):
+        return self._f.create_imperfection_case(load_combinations)
+
+
 class FERS:
     def __init__(self, settings=None, reset_counters=True):
         if reset_counters:
             self.reset_counters()
+        # Backing list for top-level members (the `members` property returns the
+        # deduplicated union of these and any members referenced by member sets).
+        self._members = []
         self.member_sets = []
         self.plate_surfaces = []
         self.plates = []
@@ -67,12 +226,18 @@ class FERS:
         self.load_cases = []
         self.load_combinations = []
         self.imperfection_cases = []
+        # Unity-check definitions (plain dicts in the solver's schema shape; use
+        # the builders in `fers_core.unity_checks` to construct them).
+        self.unity_checks = []
         self.settings = (
             settings if settings is not None else Settings()
         )  # Use provided settings or create default
         self.validation_checks = []
         self.report = None
         self.resultsbundle = None
+        # Nested-API facades mirroring the wire shape: calc.model.* / calc.analysis.*
+        self.model = _ModelView(self)
+        self.analysis = _AnalysisView(self)
 
     def run_analysis_from_file(self, file_path: str):
         """
@@ -138,32 +303,53 @@ class FERS:
             raise ValueError(f"Failed to parse or validate results: {e}")
 
     def to_dict(self, include_results: bool = True) -> dict[str, Any]:
+        # Settings now carries only general_info + unit_settings on the wire;
+        # the analysis options move under `analysis.options`.
+        settings_dict = self.settings.to_dict()
+        analysis_options_dict = settings_dict.pop("analysis_options", None)
         data: dict[str, Any] = {
-            "nodes": [node.to_dict() for node in self.get_all_nodes()],
-            "member_sets": [member_set.to_dict() for member_set in self.member_sets],
-            "plate_surfaces": [plate_surface.to_dict() for plate_surface in self.plate_surfaces],
-            "plate_elements": [plate.to_dict() for plate in self.plates],
-            "work_axes": [wa.to_dict() for wa in self.work_axes],
-            "work_planes": [wp.to_dict() for wp in self.work_planes],
-            "entity_groups": [eg.to_dict() for eg in self.entity_groups],
-            "load_cases": [load_case.to_dict() for load_case in self.load_cases],
-            "load_combinations": [load_comb.to_dict() for load_comb in self.load_combinations],
-            "imperfection_cases": [imp_case.to_dict() for imp_case in self.imperfection_cases],
-            "settings": self.settings.to_dict(),
-            "memberhinges": [
-                hinge.to_dict() for hinge in self.get_unique_member_hinges_from_all_member_sets()
-            ],
-            "materials": [
-                material.to_dict() for material in self.get_unique_materials_from_all_member_sets()
-            ],
-            "sections": [section.to_dict() for section in self.get_unique_sections_from_all_member_sets()],
-            "nodal_supports": [ns.to_dict() for ns in self.get_unique_nodal_support_from_all_member_sets()],
-            "shape_paths": [sp.to_dict() for sp in self.get_unique_shape_paths_from_all_member_sets()],
+            "settings": settings_dict,
+            "model": {
+                "nodes": [node.to_dict() for node in self.get_all_nodes()],
+                "members": [member.to_dict() for member in self.get_all_members()],
+                "member_sets": [member_set.to_dict() for member_set in self.member_sets],
+                "materials": [
+                    material.to_dict() for material in self.get_unique_materials_from_all_member_sets()
+                ],
+                "sections": [
+                    section.to_dict() for section in self.get_unique_sections_from_all_member_sets()
+                ],
+                "nodal_supports": [
+                    ns.to_dict() for ns in self.get_unique_nodal_support_from_all_member_sets()
+                ],
+                "member_hinges": [
+                    hinge.to_dict() for hinge in self.get_unique_member_hinges_from_all_member_sets()
+                ],
+                "shape_paths": [
+                    sp.to_dict() for sp in self.get_unique_shape_paths_from_all_member_sets()
+                ],
+                "plate_surfaces": [plate_surface.to_dict() for plate_surface in self.plate_surfaces],
+                "plate_elements": [plate.to_dict() for plate in self.plates],
+                "workspace": {
+                    "work_axes": [wa.to_dict() for wa in self.work_axes],
+                    "work_planes": [wp.to_dict() for wp in self.work_planes],
+                    "entity_groups": [eg.to_dict() for eg in self.entity_groups],
+                },
+            },
+            "analysis": {
+                "options": analysis_options_dict,
+                "load_cases": [load_case.to_dict() for load_case in self.load_cases],
+                "load_combinations": [load_comb.to_dict() for load_comb in self.load_combinations],
+                "imperfection_cases": [imp_case.to_dict() for imp_case in self.imperfection_cases],
+                "unity_checks": [
+                    c.to_dict() if hasattr(c, "to_dict") else c for c in self.unity_checks
+                ],
+            },
         }
         if include_results and self.resultsbundle is not None:
-            data["resultsbundle"] = self.resultsbundle.to_dict()
+            data["results"] = self.resultsbundle.to_dict()
         else:
-            data["resultsbundle"] = None
+            data["results"] = None
         return data
 
     def settings_to_dict(self):
@@ -191,8 +377,30 @@ class FERS:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "FERS":
+        # Unwrap the nested {settings, model{…, workspace}, analysis, results}
+        # document into the flat lookup this builder consumes. `analysis.options`
+        # is folded back under settings (in-memory Settings still owns it).
+        model = data.get("model") or {}
+        analysis = data.get("analysis") or {}
+        workspace = model.get("workspace") or {}
+        settings_data = dict(data.get("settings") or {})
+        if "options" in analysis and "analysis_options" not in settings_data:
+            settings_data["analysis_options"] = analysis["options"]
+        data = {
+            **{k: v for k, v in model.items() if k != "workspace"},
+            **workspace,
+            "load_cases": analysis.get("load_cases", []),
+            "load_combinations": analysis.get("load_combinations", []),
+            "imperfection_cases": analysis.get("imperfection_cases", []),
+            "unity_checks": analysis.get("unity_checks", []),
+            "settings": settings_data,
+            "results": data.get("results") or data.get("resultsbundle"),
+        }
+
         settings = Settings.from_dict(data["settings"])
         fers = cls(settings=settings, reset_counters=True)
+        # Unity-check definitions are carried through as plain dicts.
+        fers.unity_checks = list(data.get("unity_checks") or [])
 
         # lookup tables as you already have...
         id_to_shape_path = {
@@ -216,7 +424,7 @@ class FERS:
 
         id_to_hinge = {
             h_data["id"]: MemberHinge.from_dict(h_data)
-            for h_data in as_list(data.get("memberhinges"), "memberhinges")
+            for h_data in as_list(data.get("member_hinges"), "member_hinges")
         }
 
         id_to_node: dict[int, Node] = {}
@@ -232,28 +440,22 @@ class FERS:
                 nodal_supports_by_id=id_to_support,
             )
 
-        # member sets + members
-        for ms_data in data.get("member_sets", []):
-            members: list[Member] = []
-            for m_data in ms_data.get("members", []):
-                member = Member.from_dict(
-                    m_data,
-                    nodes_by_id=id_to_node,
-                    nodal_supports_by_id=id_to_support,
-                    sections_by_id=id_to_section,
-                    hinges_by_id=id_to_hinge,
-                    members_by_id=id_to_member,
-                )
-                members.append(member)
-
-            ms_id = ms_data.get("id")
-            member_set = MemberSet(
-                members=members,
-                classification=ms_data.get("classification"),
-                l_y=ms_data.get("l_y"),
-                l_z=ms_data.get("l_z"),
-                id=ms_id,
+        # Top-level members — the single source of truth. Member sets reference
+        # these by id, so build them first.
+        for m_data in as_list(data.get("members"), "members"):
+            member = Member.from_dict(
+                m_data,
+                nodes_by_id=id_to_node,
+                nodal_supports_by_id=id_to_support,
+                sections_by_id=id_to_section,
+                hinges_by_id=id_to_hinge,
+                members_by_id=id_to_member,
             )
+            fers.add_member(member)
+
+        # member sets reference members by id
+        for ms_data in data.get("member_sets", []):
+            member_set = MemberSet.from_dict(ms_data, members_by_id=id_to_member)
             fers.add_member_set(member_set)
 
         for plate_surface_data in as_list(data.get("plate_surfaces"), "plate_surfaces"):
@@ -357,12 +559,39 @@ class FERS:
     def add_load_combination(self, load_combination):
         self.load_combinations.append(load_combination)
 
+    def add_member(self, *members):
+        """Register members on the model's top-level member list (deduped by id)."""
+        existing_ids = {m.id for m in self._members}
+        for member in members:
+            if member.id not in existing_ids:
+                self._members.append(member)
+                existing_ids.add(member.id)
+
     def add_member_set(self, *member_sets):
         for member_set in member_sets:
             self.member_sets.append(member_set)
 
     def add_imperfection_case(self, imperfection_case):
         self.imperfection_cases.append(imperfection_case)
+
+    def add_unity_check(self, *checks):
+        """Register one or more unity-check definitions (plain dicts in the
+        solver schema — build them with `fers_core.unity_checks`)."""
+        for c in checks:
+            self.unity_checks.append(c.to_dict() if hasattr(c, "to_dict") else c)
+
+    def unity_check_results(self):
+        """Unity-check results from the last analysis (list of dicts), or []."""
+        if self.resultsbundle is None:
+            return []
+        return getattr(self.resultsbundle, "unity_check_results", []) or []
+
+    def unity_report_html(self):
+        """The consolidated unity-check HTML report from the last analysis, if the
+        solver was asked to embed it (`settings.analysis_options.include_report_html`)."""
+        if self.resultsbundle is None:
+            return None
+        return getattr(self.resultsbundle, "report_html", None)
 
     def number_of_elements(self):
         """Returns the total number of unique members and plates in the model."""
@@ -505,8 +734,7 @@ class FERS:
                 translated_member_set = MemberSet(
                     members=new_members,
                     classification=original_member_set.classification,
-                    l_y=original_member_set.l_y,
-                    l_z=original_member_set.l_z,
+                    buckling_restraints=original_member_set.buckling_restraints,
                 )
                 combined_model.add_member_set(translated_member_set)
 
@@ -636,9 +864,15 @@ class FERS:
         return self.get_all_nodes()
 
     def get_all_members(self):
-        """Returns a list of all members in the model."""
+        """Returns a list of all unique members in the model (top-level list plus
+        any members referenced by member sets), deduplicated by id."""
         members = []
         member_ids = set()
+
+        for member in self._members:
+            if member.id not in member_ids:
+                members.append(member)
+                member_ids.add(member.id)
 
         for member_set in self.member_sets:
             for member in member_set.members:
@@ -677,20 +911,19 @@ class FERS:
         """Returns a list of all unique nodes in the model."""
         nodes = []
         node_ids = set()
-        for member_set in self.member_sets:
-            for member in member_set.members:
-                if member.start_node.id not in node_ids:
-                    nodes.append(member.start_node)
-                    node_ids.add(member.start_node.id)
+        for member in self.get_all_members():
+            if member.start_node.id not in node_ids:
+                nodes.append(member.start_node)
+                node_ids.add(member.start_node.id)
 
-                if member.end_node.id not in node_ids:
-                    nodes.append(member.end_node)
-                    node_ids.add(member.end_node.id)
+            if member.end_node.id not in node_ids:
+                nodes.append(member.end_node)
+                node_ids.add(member.end_node.id)
 
-                ref_node = member.reference_node
-                if ref_node is not None and ref_node.id not in node_ids:
-                    nodes.append(ref_node)
-                    node_ids.add(ref_node.id)
+            ref_node = member.reference_node
+            if ref_node is not None and ref_node.id not in node_ids:
+                nodes.append(ref_node)
+                node_ids.add(ref_node.id)
 
         for plate in self.plates:
             for node in plate.nodes:
@@ -719,12 +952,14 @@ class FERS:
         Deduplicates by material.id.
         """
         by_id = {}
-        for member_set in self.member_sets:
-            materials = member_set.get_unique_materials(ids_only=False)
-            for material in materials:
-                if material is None:
-                    continue
-                by_id[material.id] = material
+        for member in self.get_all_members():
+            section = getattr(member, "section", None)
+            if section is None:
+                continue
+            material = getattr(section, "material", None)
+            if material is None:
+                continue
+            by_id[material.id] = material
         for plate_surface in self.plate_surfaces:
             by_id[plate_surface.material.id] = plate_surface.material
         for plate in self.plates:
@@ -737,14 +972,13 @@ class FERS:
         Ignores members without a section or without a shape_path.
         """
         unique_shape_paths = {}
-        for member_set in self.member_sets:
-            for member in member_set.members:
-                section = getattr(member, "section", None)
-                if section is None or getattr(section, "shape_path", None) is None:
-                    continue
-                sp = section.shape_path
-                if sp.id not in unique_shape_paths:
-                    unique_shape_paths[sp.id] = sp
+        for member in self.get_all_members():
+            section = getattr(member, "section", None)
+            if section is None or getattr(section, "shape_path", None) is None:
+                continue
+            sp = section.shape_path
+            if sp.id not in unique_shape_paths:
+                unique_shape_paths[sp.id] = sp
         return list(unique_shape_paths.keys()) if ids_only else list(unique_shape_paths.values())
 
     def get_unique_nodal_support_from_all_member_sets(self, ids_only=False):
@@ -760,13 +994,12 @@ class FERS:
         """
         unique_nodal_supports = {}
 
-        for member_set in self.member_sets:
-            for member in member_set.members:
-                # Check nodal supports for start and end nodes
-                for node in [member.start_node, member.end_node]:
-                    if node.nodal_support and node.nodal_support.id not in unique_nodal_supports:
-                        # Store unique nodal supports by ID
-                        unique_nodal_supports[node.nodal_support.id] = node.nodal_support
+        for member in self.get_all_members():
+            # Check nodal supports for start and end nodes
+            for node in [member.start_node, member.end_node]:
+                if node.nodal_support and node.nodal_support.id not in unique_nodal_supports:
+                    # Store unique nodal supports by ID
+                    unique_nodal_supports[node.nodal_support.id] = node.nodal_support
 
         for plate in self.plates:
             for node in plate.nodes:
@@ -782,12 +1015,11 @@ class FERS:
         Deduplicates by section.id.
         """
         by_id = {}
-        for member_set in self.member_sets:
-            sections = member_set.get_unique_sections(ids_only=False)
-            for section in sections:
-                if section is None:
-                    continue
-                by_id[section.id] = section
+        for member in self.get_all_members():
+            section = getattr(member, "section", None)
+            if section is None:
+                continue
+            by_id[section.id] = section
         return list(by_id.keys()) if ids_only else list(by_id.values())
 
     def get_unique_member_hinges_from_all_member_sets(self, ids_only: bool = False):
@@ -796,12 +1028,11 @@ class FERS:
         Deduplicates by hinge.id.
         """
         by_id = {}
-        for member_set in self.member_sets:
-            hinges = member_set.get_unique_memberhinges(ids_only=False)
-            for hinge in hinges:
-                if hinge is None:
-                    continue
-                by_id[hinge.id] = hinge
+        for member in self.get_all_members():
+            if member.start_hinge:
+                by_id[member.start_hinge.id] = member.start_hinge
+            if member.end_hinge:
+                by_id[member.end_hinge.id] = member.end_hinge
         return list(by_id.keys()) if ids_only else list(by_id.values())
 
     def generate_plate_meshes(self) -> list[PlateElement]:
@@ -3468,8 +3699,7 @@ class FERS:
         rotation_angle=None,
         chi=None,
         reference_member=None,
-        l_y=None,
-        l_z=None,
+        buckling_restraints=None,
     ):
         members = []
         node_list = [start_point] + (intermediate_points or []) + [end_point]
@@ -3488,7 +3718,9 @@ class FERS:
             )
             members.append(member)
 
-        member_set = MemberSet(members=members, classification=classification, l_y=l_y, l_z=l_z)
+        member_set = MemberSet(
+            members=members, classification=classification, buckling_restraints=buckling_restraints
+        )
         return member_set
 
     @staticmethod

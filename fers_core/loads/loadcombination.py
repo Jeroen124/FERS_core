@@ -73,7 +73,10 @@ class LoadCombination:
         return {
             "id": self.id,
             "name": self.name,
-            "load_cases_factors": {lc.id: factor for lc, factor in self.load_cases_factors.items()},
+            "load_case_factors": [
+                {"load_case_id": lc.id, "factor": factor}
+                for lc, factor in self.load_cases_factors.items()
+            ],
             "situation": self.situation,
             "check": self.check,
             "limit_state": self.limit_state,
@@ -128,10 +131,12 @@ class LoadCombination:
         """
         by_id, by_name = cls._index_load_cases(load_cases)
 
-        raw_factors = data.get("load_cases_factors", {}) or {}
+        raw_factors = data.get("load_case_factors", []) or []
         load_cases_factors: dict[LoadCase, float] = {}
 
-        for key, factor in raw_factors.items():
+        for entry in raw_factors:
+            key = entry.get("load_case_id")
+            factor = entry.get("factor")
             lc: LoadCase | None = None
 
             # Try as id

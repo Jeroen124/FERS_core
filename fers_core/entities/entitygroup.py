@@ -14,7 +14,8 @@ class EntityGroup:
         "member_ids",
         "member_set_ids",
         "node_ids",
-        "plate_ids",
+        "plate_surface_ids",
+        "plate_element_ids",
         "support_ids",
         "work_axis_ids",
         "work_plane_ids",
@@ -26,7 +27,8 @@ class EntityGroup:
         member_ids: Optional[List[int]] = None,
         member_set_ids: Optional[List[int]] = None,
         node_ids: Optional[List[int]] = None,
-        plate_ids: Optional[List[int]] = None,
+        plate_surface_ids: Optional[List[int]] = None,
+        plate_element_ids: Optional[List[int]] = None,
         support_ids: Optional[List[int]] = None,
         work_axis_ids: Optional[List[int]] = None,
         work_plane_ids: Optional[List[int]] = None,
@@ -39,7 +41,8 @@ class EntityGroup:
         self.member_ids = member_ids
         self.member_set_ids = member_set_ids
         self.node_ids = node_ids
-        self.plate_ids = plate_ids
+        self.plate_surface_ids = plate_surface_ids
+        self.plate_element_ids = plate_element_ids
         self.support_ids = support_ids
         self.work_axis_ids = work_axis_ids
         self.work_plane_ids = work_plane_ids
@@ -62,7 +65,8 @@ class EntityGroup:
             member_ids=data.get("member_ids"),
             member_set_ids=data.get("member_set_ids"),
             node_ids=data.get("node_ids"),
-            plate_ids=data.get("plate_ids"),
+            plate_surface_ids=data.get("plate_surface_ids"),
+            plate_element_ids=data.get("plate_element_ids"),
             support_ids=data.get("support_ids"),
             work_axis_ids=data.get("work_axis_ids"),
             work_plane_ids=data.get("work_plane_ids"),

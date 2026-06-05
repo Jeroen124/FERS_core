@@ -8,6 +8,7 @@ from fers_core import (
     Material,
     Section,
     MemberSet,
+    BucklingRestraint,
     LoadCase,
     MemberType,
     PlateElement,
@@ -22,6 +23,8 @@ from fers_core import (
 )
 from fers_core.types.pydantic_models import (
     Member as MemberSchema,
+    MemberSet as MemberSetSchema,
+    BucklingRestraint as BucklingRestraintSchema,
     PlateElement as PlateElementSchema,
     PlateSurface as PlateSurfaceSchema,
     PlatePressure as PlatePressureSchema,
@@ -47,7 +50,14 @@ def _build_model() -> FERS:
         pretension=1500.0,
         unstretched_length=4.98,
     )
-    model.add_member_set(MemberSet(members=[cable]))
+    model.add_member_set(
+        MemberSet(
+            members=[cable],
+            buckling_restraints=[
+                BucklingRestraint(node_id=n2.id, restrains_local_y=True, restrains_torsion=True)
+            ],
+        )
+    )
 
     corners = [Node(0, 0, 0), Node(1, 0, 0), Node(1, 1, 0), Node(0, 1, 0)]
     surface = PlateSurface(
@@ -78,23 +88,31 @@ def _build_model() -> FERS:
 def test_new_features_conform_to_pydantic_schema():
     data = _build_model().to_dict(include_results=False)
 
-    member = data["member_sets"][0]["members"][0]
+    member = data["model"]["members"][0]
     MemberSchema(**member)
     assert member["member_type"] == "Cable"
     assert member["pretension"] == 1500.0
     assert member["unstretched_length"] == 4.98
 
-    for el in data["plate_elements"]:
+    member_set = data["model"]["member_sets"][0]
+    MemberSetSchema(**member_set)
+    assert member_set["member_ids"] == [member["id"]]
+    assert "l_y" not in member_set and "members" not in member_set
+    for br in member_set["buckling_restraints"]:
+        BucklingRestraintSchema(**br)
+    assert member_set["buckling_restraints"][0]["restrains_local_y"] is True
+
+    for el in data["model"]["plate_elements"]:
         PlateElementSchema(**el)
-    for surf in data["plate_surfaces"]:
+    for surf in data["model"]["plate_surfaces"]:
         PlateSurfaceSchema(**surf)
-    for wa in data["work_axes"]:
+    for wa in data["model"]["workspace"]["work_axes"]:
         WorkAxisSchema(**wa)
-    for wp in data["work_planes"]:
+    for wp in data["model"]["workspace"]["work_planes"]:
         WorkPlaneSchema(**wp)
-    for eg in data["entity_groups"]:
+    for eg in data["model"]["workspace"]["entity_groups"]:
         EntityGroupSchema(**eg)
-    for pp in data["load_cases"][0]["plate_pressures"]:
+    for pp in data["analysis"]["load_cases"][0]["plate_pressures"]:
         PlatePressureSchema(**pp)
 
 
@@ -106,17 +124,8 @@ def test_new_features_round_trip():
     rebuilt = FERS.from_dict(data)
     data2 = rebuilt.to_dict(include_results=False)
 
-    for key in (
-        "nodes",
-        "member_sets",
-        "plate_elements",
-        "plate_surfaces",
-        "work_axes",
-        "work_planes",
-        "entity_groups",
-        "load_cases",
-    ):
-        assert data[key] == data2[key], f"round-trip mismatch in {key}"
+    assert data["model"] == data2["model"], "round-trip mismatch in model"
+    assert data["analysis"] == data2["analysis"], "round-trip mismatch in analysis"
 
 
 def test_self_weight_analysis_options_round_trip():
