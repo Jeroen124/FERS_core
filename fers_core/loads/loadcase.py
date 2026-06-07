@@ -15,8 +15,6 @@ class LoadCase:
         nodal_moments: Optional[list] = None,
         distributed_loads: Optional[list] = None,
         surface_loads: Optional[list] = None,
-        rotation_imperfections: Optional[list] = None,
-        translation_imperfections: Optional[list] = None,
         member_point_loads: Optional[list] = None,
         member_point_moments: Optional[list] = None,
         plate_pressures: Optional[list] = None,
@@ -33,10 +31,6 @@ class LoadCase:
         self.nodal_moments = nodal_moments if nodal_moments is not None else []
         self.distributed_loads = distributed_loads if distributed_loads is not None else []
         self.surface_loads = surface_loads if surface_loads is not None else []
-        self.rotation_imperfections = rotation_imperfections if rotation_imperfections is not None else []
-        self.translation_imperfections = (
-            translation_imperfections if translation_imperfections is not None else []
-        )
         self.member_point_loads = member_point_loads if member_point_loads is not None else []
         self.member_point_moments = member_point_moments if member_point_moments is not None else []
         self.plate_pressures = plate_pressures if plate_pressures is not None else []
@@ -63,12 +57,6 @@ class LoadCase:
 
     def add_plate_pressure(self, plate_pressure):
         self.plate_pressures.append(plate_pressure)
-
-    def add_rotation_imperfection(self, rotation_imperfection):
-        self.rotation_imperfections.append(rotation_imperfection)
-
-    def add_translation_imperfection(self, translation_imperfection):
-        self.translation_imperfections.append(translation_imperfection)
 
     @classmethod
     def reset_counter(cls):
@@ -100,8 +88,6 @@ class LoadCase:
             "member_point_loads": [mpl.to_dict() for mpl in self.member_point_loads],
             "member_point_moments": [mpm.to_dict() for mpm in self.member_point_moments],
             "plate_pressures": [pp.to_dict() for pp in self.plate_pressures],
-            "rotation_imperfections": [ri.id for ri in self.rotation_imperfections],
-            "translation_imperfections": [ti.id for ti in self.translation_imperfections],
         }
 
     @classmethod
@@ -140,8 +126,6 @@ class LoadCase:
         from ..loads.memberpointload import MemberPointLoad
         from ..loads.memberpointmoment import MemberPointMoment
         from ..loads.platepressure import PlatePressure
-        from ..imperfections.rotationimperfection import RotationImperfection
-        from ..imperfections.translationimperfection import TranslationImperfection
 
         nodes = nodes or {}
         members = members or {}
@@ -157,8 +141,6 @@ class LoadCase:
             nodal_moments=[],
             distributed_loads=[],
             surface_loads=[],
-            rotation_imperfections=[],
-            translation_imperfections=[],
         )
 
         # Ensure counter stays ahead of any explicit id
@@ -209,28 +191,8 @@ class LoadCase:
             if isinstance(pp_data, dict):
                 PlatePressure.from_dict(pp_data, load_case=load_case)
 
-        # --- Rotation imperfections (optional, usually handled via ImperfectionCase) ---
-        for ri_data in data.get("rotation_imperfections", []):
-            if isinstance(ri_data, dict):
-                if hasattr(RotationImperfection, "from_dict"):
-                    ri = RotationImperfection.from_dict(ri_data)
-                else:
-                    ri = RotationImperfection(**ri_data)
-                load_case.rotation_imperfections.append(ri)
-            else:
-                # if it's just an id, keep it as a reference (link later if needed)
-                load_case.rotation_imperfections.append(ri_data)
-
-        # --- Translation imperfections ---
-        for ti_data in data.get("translation_imperfections", []):
-            if isinstance(ti_data, dict):
-                if hasattr(TranslationImperfection, "from_dict"):
-                    ti = TranslationImperfection.from_dict(ti_data)
-                else:
-                    ti = TranslationImperfection(**ti_data)
-                load_case.translation_imperfections.append(ti)
-            else:
-                load_case.translation_imperfections.append(ti_data)
+        # Imperfections are modeled via ImperfectionCase (analysis.imperfection_cases),
+        # not on the load case — see imperfections/imperfectioncase.py.
 
         return load_case
 

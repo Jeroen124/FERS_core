@@ -59,7 +59,6 @@ class PlatePressure:
             )
         data: Dict[str, Any] = {
             "id": self.id,
-            "load_case": self.load_case.id,
             "target": target,
             "magnitude": self.magnitude,
             "direction": self.direction,

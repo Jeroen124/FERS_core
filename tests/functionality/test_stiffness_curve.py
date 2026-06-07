@@ -103,10 +103,10 @@ class TestSpringCurveCreation:
         assert sc.stiffness_curve.depends_on == ForceComponent.My
 
     def test_convenience_stiffness_curve_factory(self):
-        """Old factory defaults to ForceComponent.Vz."""
+        """Old factory defaults to ForceComponent.Fz (supports use global components)."""
         sc = SupportCondition.stiffness_curve([[0, 1e5], [100_000, 1e8]])
         assert sc.condition_type == SupportConditionType.SPRING
-        assert sc.stiffness_curve.depends_on == ForceComponent.Vz
+        assert sc.stiffness_curve.depends_on == ForceComponent.Fz
 
     def test_curve_on_non_spring_type_raises(self):
         curve = StiffnessCurveConfig(ForceComponent.Vz, [[0, 1e5], [100, 1e6]])
@@ -208,14 +208,14 @@ class TestNodalSupportSpringCurve:
         assert ns.rotation_conditions["X"].condition_type == SupportConditionType.FIXED  # default
 
     def test_list_shorthand(self):
-        """Passing a list to NodalSupport creates a spring_curve with Vz default."""
+        """Passing a list to NodalSupport creates a spring_curve with Fz default."""
         ns = NodalSupport(
             rotation_conditions={
                 "Z": [[0, 1e5], [50_000, 1e7], [100_000, 1e8]],
             }
         )
         assert ns.rotation_conditions["Z"].condition_type == SupportConditionType.SPRING
-        assert ns.rotation_conditions["Z"].stiffness_curve.depends_on == ForceComponent.Vz
+        assert ns.rotation_conditions["Z"].stiffness_curve.depends_on == ForceComponent.Fz
         assert len(ns.rotation_conditions["Z"].stiffness_curve.points) == 3
 
     def test_string_stiffnesscurve_raises(self):
@@ -227,23 +227,25 @@ class TestNodalSupportSpringCurve:
             NodalSupport(rotation_conditions={"Y": "spring_curve"})
 
     def test_to_dict_round_trip(self):
+        # Support rotation curves use a global moment component (My); the wire
+        # format is the flat RX/RY/RZ fields, not a rotation_conditions dict.
         ns = NodalSupport(
             id=42,
             rotation_conditions={
-                "Y": SupportCondition.spring_curve(ForceComponent.Vz, [[0, 1e5], [100_000, 1e8]]),
+                "Y": SupportCondition.spring_curve(ForceComponent.My, [[0, 1e5], [100_000, 1e8]]),
                 "Z": SupportCondition.free(),
             },
         )
         d = ns.to_dict()
-        assert d["rotation_conditions"]["Y"]["condition_type"] == "Spring"
-        assert d["rotation_conditions"]["Y"]["stiffness_curve"] == {
-            "depends_on": "Vz",
+        assert d["RY"]["condition_type"] == "Spring"
+        assert d["RY"]["stiffness_curve"] == {
+            "depends_on": "My",
             "points": [[0, 1e5], [100_000, 1e8]],
         }
 
         ns2 = NodalSupport.from_dict(d)
         assert ns2.rotation_conditions["Y"].condition_type == SupportConditionType.SPRING
-        assert ns2.rotation_conditions["Y"].stiffness_curve.depends_on == ForceComponent.Vz
+        assert ns2.rotation_conditions["Y"].stiffness_curve.depends_on == ForceComponent.My
         assert ns2.rotation_conditions["Y"].stiffness_curve.points == [[0, 1e5], [100_000, 1e8]]
         assert ns2.rotation_conditions["Z"].condition_type == SupportConditionType.FREE
 
@@ -341,5 +343,5 @@ class TestBackwardCompatibility:
         """The old SupportCondition.stiffness_curve() factory still works."""
         sc = SupportCondition.stiffness_curve([[0, 1e5], [50000, 1e7]])
         assert sc.condition_type == SupportConditionType.SPRING
-        assert sc.stiffness_curve.depends_on == ForceComponent.Vz
+        assert sc.stiffness_curve.depends_on == ForceComponent.Fz
         assert sc.stiffness_curve.points == [[0, 1e5], [50000, 1e7]]

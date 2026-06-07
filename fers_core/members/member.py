@@ -75,15 +75,16 @@ class Member:
 
     @staticmethod
     def _normalize_offset(offset):
-        """Coerce an end-offset into a {x, y, z} dict (or None when absent/all-zero)."""
+        """Coerce an end-offset into a {X, Y, Z} dict (or None when absent/all-zero)."""
         if offset is None:
             return None
         if isinstance(offset, (tuple, list)):
             x, y, z = (list(offset) + [0.0, 0.0, 0.0])[:3]
         elif isinstance(offset, dict):
-            x = offset.get("x")
-            y = offset.get("y")
-            z = offset.get("z")
+            # Accept the wire form (X/Y/Z) and lower-case for ergonomics.
+            x = offset.get("X", offset.get("x"))
+            y = offset.get("Y", offset.get("y"))
+            z = offset.get("Z", offset.get("z"))
         else:
             raise TypeError(f"Member offset must be dict, tuple or None, got {type(offset).__name__}")
 
@@ -93,7 +94,7 @@ class Member:
         x, y, z = f(x), f(y), f(z)
         if all(v in (None, 0.0) for v in (x, y, z)):
             return None
-        return {"x": x, "y": y, "z": z}
+        return {"X": x, "Y": y, "Z": z}
 
     @classmethod
     def reset_counter(cls):

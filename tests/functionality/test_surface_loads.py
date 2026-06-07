@@ -44,7 +44,7 @@ def test_surface_load_to_dict_is_embedded_in_load_case():
 
     assert "surface_loads" in load_case
     assert len(load_case["surface_loads"]) == 1
-    assert load_case["surface_loads"][0]["polygon"][2] == {"x": 4.0, "y": 0.0, "z": 1.0}
+    assert load_case["surface_loads"][0]["polygon"][2] == {"X": 4.0, "Y": 0.0, "Z": 1.0}
     assert tuple(load_case["surface_loads"][0]["distribution_direction"]) == (1.0, 0.0, 0.0)
 
 
