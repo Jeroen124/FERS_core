@@ -29,18 +29,10 @@
             {
                 "id": 2,
                 "classification": "",
-                "X": 3,
+                "X": 0,
                 "Y": 0,
-                "Z": 0,
+                "Z": 5.0,
                 "nodal_support": null
-            },
-            {
-                "id": 3,
-                "classification": "",
-                "X": 6,
-                "Y": 0,
-                "Z": 0,
-                "nodal_support": 1
             }
         ],
         "members": [
@@ -56,27 +48,7 @@
                 "start_hinge": null,
                 "end_hinge": null,
                 "classification": "",
-                "weight": 46.158,
-                "chi": null,
-                "reference_member": null,
-                "reference_node": null,
-                "member_type": "Normal",
-                "pretension": null,
-                "unstretched_length": null
-            },
-            {
-                "id": 2,
-                "start_node_id": 2,
-                "end_node_id": 3,
-                "start_offset": null,
-                "end_offset": null,
-                "section": 1,
-                "rotation_angle": 0.0,
-                "mirror": false,
-                "start_hinge": null,
-                "end_hinge": null,
-                "classification": "",
-                "weight": 46.158,
+                "weight": 306.5425,
                 "chi": null,
                 "reference_member": null,
                 "reference_node": null,
@@ -90,16 +62,15 @@
                 "id": 1,
                 "classification": null,
                 "member_ids": [
-                    1,
-                    2
+                    1
                 ],
                 "buckling_restraints": []
             }
         ],
         "materials": [
             {
-                "id": 1,
-                "name": "Steel",
+                "id": 23,
+                "name": "Steel S235",
                 "e_mod": 210000000000.0,
                 "g_mod": 80769000000.0,
                 "density": 7850,
@@ -109,14 +80,14 @@
         "sections": [
             {
                 "id": 1,
-                "name": "IPE 180 Beam Section",
-                "material": 1,
+                "name": "HEB 200",
+                "material": 23,
                 "h": null,
                 "b": null,
-                "i_y": 1.01e-6,
-                "i_z": 1.321e-5,
-                "j": 2.7e-8,
-                "area": 0.00196,
+                "i_y": 2.003e-5,
+                "i_z": 5.696e-5,
+                "j": 5.92e-7,
+                "area": 0.00781,
                 "shape_path": null
             }
         ],
@@ -141,8 +112,49 @@
                     "stiffness": null
                 },
                 "RY": {
-                    "condition_type": "Fixed",
-                    "stiffness": null
+                    "condition_type": "Spring",
+                    "stiffness": null,
+                    "stiffness_curve": {
+                        "depends_on": "Fz",
+                        "points": [
+                            [
+                                -80000,
+                                6250000
+                            ],
+                            [
+                                -60000,
+                                5000000
+                            ],
+                            [
+                                -40000,
+                                3750000
+                            ],
+                            [
+                                -20000,
+                                2500000
+                            ],
+                            [
+                                0,
+                                2500000
+                            ],
+                            [
+                                20000,
+                                2500000
+                            ],
+                            [
+                                40000,
+                                3750000
+                            ],
+                            [
+                                60000,
+                                5000000
+                            ],
+                            [
+                                80000,
+                                6250000
+                            ]
+                        ]
+                    }
                 },
                 "RZ": {
                     "condition_type": "Fixed",
@@ -164,10 +176,10 @@
     "analysis": {
         "options": {
             "solve_loadcases": true,
-            "tolerance": 0.01,
-            "max_iterations": 30,
+            "tolerance": 0.001,
+            "max_iterations": 50,
             "dimensionality": "3D",
-            "order": "Linear",
+            "order": "Nonlinear",
             "rigid_strategy": "Rigid_Member",
             "axial_slack": 500,
             "include_shear_deformation": true,
@@ -177,37 +189,33 @@
         "load_cases": [
             {
                 "id": 1,
-                "name": "Distributed Load",
-                "nodal_loads": [],
-                "nodal_moments": [],
-                "distributed_loads": [
+                "name": "LC1",
+                "nodal_loads": [
                     {
                         "id": 1,
-                        "member": 1,
+                        "node": 2,
                         "magnitude": 1000.0,
-                        "end_magnitude": 1000.0,
                         "direction": [
+                            1,
                             0,
-                            -1,
                             0
                         ],
-                        "start_frac": 0.0,
-                        "end_frac": 1.0
+                        "load_type": "force"
                     },
                     {
                         "id": 2,
-                        "member": 2,
-                        "magnitude": 1000.0,
-                        "end_magnitude": 1000.0,
+                        "node": 2,
+                        "magnitude": 70000,
                         "direction": [
                             0,
-                            -1,
-                            0
+                            0,
+                            -1
                         ],
-                        "start_frac": 0.0,
-                        "end_frac": 1.0
+                        "load_type": "force"
                     }
                 ],
+                "nodal_moments": [],
+                "distributed_loads": [],
                 "surface_loads": [],
                 "member_point_loads": [],
                 "member_point_moments": [],

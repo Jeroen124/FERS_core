@@ -1,133 +1,6 @@
 {
-    "member_sets": [
-        {
-            "id": 1,
-            "l_y": null,
-            "l_z": null,
-            "classification": null,
-            "members": [
-                {
-                    "id": 1,
-                    "start_node": {
-                        "id": 1,
-                        "classification": "",
-                        "X": 0,
-                        "Y": 0,
-                        "Z": 0,
-                        "nodal_support": 1
-                    },
-                    "end_node": {
-                        "id": 2,
-                        "classification": "",
-                        "X": 3,
-                        "Y": 0,
-                        "Z": 0,
-                        "nodal_support": null
-                    },
-                    "section": 1,
-                    "rotation_angle": 0.0,
-                    "mirror": false,
-                    "start_hinge": null,
-                    "end_hinge": null,
-                    "classification": "",
-                    "weight": 46.158,
-                    "chi": null,
-                    "reference_member": null,
-                    "reference_node": null,
-                    "member_type": "Normal"
-                },
-                {
-                    "id": 2,
-                    "start_node": {
-                        "id": 2,
-                        "classification": "",
-                        "X": 3,
-                        "Y": 0,
-                        "Z": 0,
-                        "nodal_support": null
-                    },
-                    "end_node": {
-                        "id": 3,
-                        "classification": "",
-                        "X": 6,
-                        "Y": 0,
-                        "Z": 0,
-                        "nodal_support": 1
-                    },
-                    "section": 1,
-                    "rotation_angle": 0.0,
-                    "mirror": false,
-                    "start_hinge": null,
-                    "end_hinge": null,
-                    "classification": "",
-                    "weight": 46.158,
-                    "chi": null,
-                    "reference_member": null,
-                    "reference_node": null,
-                    "member_type": "Normal"
-                }
-            ]
-        }
-    ],
-    "plate_surfaces": [],
-    "plates": [],
-    "load_cases": [
-        {
-            "id": 1,
-            "name": "Intermediate Load",
-            "nodal_loads": [],
-            "nodal_moments": [],
-            "distributed_loads": [
-                {
-                    "member": 1,
-                    "load_case": 1,
-                    "magnitude": 1000.0,
-                    "end_magnitude": 1000.0,
-                    "direction": [
-                        0,
-                        -1,
-                        0
-                    ],
-                    "start_frac": 0.0,
-                    "end_frac": 1.0
-                },
-                {
-                    "member": 2,
-                    "load_case": 1,
-                    "magnitude": 1000.0,
-                    "end_magnitude": 1000.0,
-                    "direction": [
-                        0,
-                        -1,
-                        0
-                    ],
-                    "start_frac": 0.0,
-                    "end_frac": 1.0
-                }
-            ],
-            "surface_loads": [],
-            "rotation_imperfections": [],
-            "translation_imperfections": []
-        }
-    ],
-    "load_combinations": [],
-    "imperfection_cases": [],
+    "schema_version": 1,
     "settings": {
-        "id": 1,
-        "analysis_options": {
-            "id": 1,
-            "solve_loadcases": true,
-            "solver": "newton_raphson",
-            "tolerance": 0.01,
-            "max_iterations": 30,
-            "dimensionality": "3D",
-            "order": "Linear",
-            "rigid_strategy": "Rigid_Member",
-            "axial_slack": 500,
-            "include_shear_deformation": true,
-            "include_warping": true,
-            "include_shear_center_coupling": true
-        },
         "unit_settings": {
             "system": "metric",
             "lengthUnit": "m",
@@ -143,36 +16,114 @@
             "version": "1.0"
         }
     },
-    "member_hinges": [],
-    "materials": [
-        {
-            "id": 1,
-            "name": "Steel",
-            "e_mod": 210000000000.0,
-            "g_mod": 80769000000.0,
-            "density": 7850,
-            "yield_stress": 235000000.0
-        }
-    ],
-    "sections": [
-        {
-            "id": 1,
-            "name": "IPE 180 Beam Section",
-            "material": 1,
-            "h": null,
-            "b": null,
-            "i_y": 1.01e-6,
-            "i_z": 1.321e-5,
-            "j": 2.7e-8,
-            "area": 0.00196,
-            "shape_path": null
-        }
-    ],
-    "nodal_supports": [
-        {
-            "id": 1,
-            "classification": null,
-            "displacement_conditions": {
+    "model": {
+        "nodes": [
+            {
+                "id": 1,
+                "classification": "",
+                "X": 0,
+                "Y": 0,
+                "Z": 0,
+                "nodal_support": 1
+            },
+            {
+                "id": 2,
+                "classification": "",
+                "X": 3,
+                "Y": 0,
+                "Z": 0,
+                "nodal_support": null
+            },
+            {
+                "id": 3,
+                "classification": "",
+                "X": 6,
+                "Y": 0,
+                "Z": 0,
+                "nodal_support": 1
+            }
+        ],
+        "members": [
+            {
+                "id": 1,
+                "start_node_id": 1,
+                "end_node_id": 2,
+                "start_offset": null,
+                "end_offset": null,
+                "section": 1,
+                "rotation_angle": 0.0,
+                "mirror": false,
+                "start_hinge": null,
+                "end_hinge": null,
+                "classification": "",
+                "weight": 46.158,
+                "chi": null,
+                "reference_member": null,
+                "reference_node": null,
+                "member_type": "Normal",
+                "pretension": null,
+                "unstretched_length": null
+            },
+            {
+                "id": 2,
+                "start_node_id": 2,
+                "end_node_id": 3,
+                "start_offset": null,
+                "end_offset": null,
+                "section": 1,
+                "rotation_angle": 0.0,
+                "mirror": false,
+                "start_hinge": null,
+                "end_hinge": null,
+                "classification": "",
+                "weight": 46.158,
+                "chi": null,
+                "reference_member": null,
+                "reference_node": null,
+                "member_type": "Normal",
+                "pretension": null,
+                "unstretched_length": null
+            }
+        ],
+        "member_sets": [
+            {
+                "id": 1,
+                "classification": null,
+                "member_ids": [
+                    1,
+                    2
+                ],
+                "buckling_restraints": []
+            }
+        ],
+        "materials": [
+            {
+                "id": 1,
+                "name": "Steel",
+                "e_mod": 210000000000.0,
+                "g_mod": 80769000000.0,
+                "density": 7850,
+                "yield_stress": 235000000.0
+            }
+        ],
+        "sections": [
+            {
+                "id": 1,
+                "name": "IPE 180 Beam Section",
+                "material": 1,
+                "h": null,
+                "b": null,
+                "i_y": 1.01e-6,
+                "i_z": 1.321e-5,
+                "j": 2.7e-8,
+                "area": 0.00196,
+                "shape_path": null
+            }
+        ],
+        "nodal_supports": [
+            {
+                "id": 1,
+                "classification": null,
                 "X": {
                     "condition_type": "Fixed",
                     "stiffness": null
@@ -184,25 +135,88 @@
                 "Z": {
                     "condition_type": "Fixed",
                     "stiffness": null
-                }
-            },
-            "rotation_conditions": {
-                "X": {
+                },
+                "RX": {
                     "condition_type": "Fixed",
                     "stiffness": null
                 },
-                "Y": {
+                "RY": {
                     "condition_type": "Free",
                     "stiffness": null
                 },
-                "Z": {
+                "RZ": {
                     "condition_type": "Free",
                     "stiffness": null
-                }
-            },
-            "warping_condition": null
+                },
+                "warping_condition": null
+            }
+        ],
+        "member_hinges": [],
+        "shape_paths": [],
+        "plate_surfaces": [],
+        "plate_elements": [],
+        "workspace": {
+            "work_axes": [],
+            "work_planes": [],
+            "entity_groups": []
         }
-    ],
-    "shape_paths": [],
-    "resultsbundle": null
+    },
+    "analysis": {
+        "options": {
+            "solve_loadcases": true,
+            "tolerance": 0.01,
+            "max_iterations": 30,
+            "dimensionality": "3D",
+            "order": "Linear",
+            "rigid_strategy": "Rigid_Member",
+            "axial_slack": 500,
+            "include_shear_deformation": true,
+            "include_warping": true,
+            "include_shear_center_coupling": true
+        },
+        "load_cases": [
+            {
+                "id": 1,
+                "name": "Intermediate Load",
+                "nodal_loads": [],
+                "nodal_moments": [],
+                "distributed_loads": [
+                    {
+                        "id": 1,
+                        "member": 1,
+                        "magnitude": 1000.0,
+                        "end_magnitude": 1000.0,
+                        "direction": [
+                            0,
+                            -1,
+                            0
+                        ],
+                        "start_frac": 0.0,
+                        "end_frac": 1.0
+                    },
+                    {
+                        "id": 2,
+                        "member": 2,
+                        "magnitude": 1000.0,
+                        "end_magnitude": 1000.0,
+                        "direction": [
+                            0,
+                            -1,
+                            0
+                        ],
+                        "start_frac": 0.0,
+                        "end_frac": 1.0
+                    }
+                ],
+                "surface_loads": [],
+                "member_point_loads": [],
+                "member_point_moments": [],
+                "plate_pressures": []
+            }
+        ],
+        "load_combinations": [],
+        "imperfection_cases": [],
+        "unity_checks": []
+    },
+    "results": null
 }
