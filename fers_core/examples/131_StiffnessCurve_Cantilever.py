@@ -168,7 +168,7 @@ print("=" * 78)
 print(f"\n  Column :  HEB 200,  h = {H} m,  Steel S235")
 print(f"  Lateral:  {F_H / 1000:.0f} kN  in X-direction at top")
 print(
-    f"  Spring :  Ry = spring_curve(Vz)"
+    f"  Spring :  Ry = spring_curve(Fz)"
     f"  ({STIFFNESS_CURVE[4][1] / 1e6:.1f}"
     f" – {STIFFNESS_CURVE[-1][1] / 1e6:.2f} MNm/rad)"
 )
@@ -176,7 +176,7 @@ print()
 
 # (A) Load-dependent rotational spring
 print("  ► Solving Model A (spring_curve)…")
-model_a, base_a, top_a = build_model(SupportCondition.spring_curve(ForceComponent.Vz, STIFFNESS_CURVE))
+model_a, base_a, top_a = build_model(SupportCondition.spring_curve(ForceComponent.Fz, STIFFNESS_CURVE))
 file_path = os.path.join("json_input_solver", "131_StiffnessCurve_Cantilever.json")
 os.makedirs(os.path.dirname(file_path), exist_ok=True)
 model_a.save_to_json(file_path, indent=4)

@@ -177,37 +177,22 @@
         "load_cases": [
             {
                 "id": 1,
-                "name": "Distributed Load",
-                "nodal_loads": [],
-                "nodal_moments": [],
-                "distributed_loads": [
+                "name": "Intermediate Load",
+                "nodal_loads": [
                     {
                         "id": 1,
-                        "member": 1,
-                        "magnitude": 1000.0,
-                        "end_magnitude": 1000.0,
+                        "node": 2,
+                        "magnitude": -1000,
                         "direction": [
                             0,
-                            -1,
+                            1,
                             0
                         ],
-                        "start_frac": 0.0,
-                        "end_frac": 1.0
-                    },
-                    {
-                        "id": 2,
-                        "member": 2,
-                        "magnitude": 1000.0,
-                        "end_magnitude": 1000.0,
-                        "direction": [
-                            0,
-                            -1,
-                            0
-                        ],
-                        "start_frac": 0.0,
-                        "end_frac": 1.0
+                        "load_type": "force"
                     }
                 ],
+                "nodal_moments": [],
+                "distributed_loads": [],
                 "surface_loads": [],
                 "member_point_loads": [],
                 "member_point_moments": [],

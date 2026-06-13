@@ -54,7 +54,6 @@ class MemberPointMoment:
         return {
             "id": self.id,
             "member": self.member.id,
-            "load_case": self.load_case.id,
             "magnitude": self.magnitude,
             "direction": self.direction,
             "position": self.position,
