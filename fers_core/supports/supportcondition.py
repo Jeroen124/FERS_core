@@ -118,16 +118,17 @@ class SupportCondition:
 
     @classmethod
     def stiffness_curve(cls, curve_points: List[List[float]]) -> "SupportCondition":
-        """Convenience factory — equivalent to ``spring_curve(ForceComponent.Vz, curve_points)``.
+        """Convenience factory — equivalent to ``spring_curve(ForceComponent.Fz, curve_points)``.
 
         Kept for ergonomic backward compatibility.  Defaults ``depends_on`` to
-        ``ForceComponent.Vz`` (axial load).
+        ``ForceComponent.Fz`` (a support uses global reaction components
+        Fx/Fy/Fz/Mx/My/Mz).
 
         Args:
             curve_points: List of ``[force_value, stiffness]`` pairs, sorted by
                 ascending ``force_value``.  At least 2 points required.
         """
-        return cls.spring_curve(ForceComponent.Vz, curve_points)
+        return cls.spring_curve(ForceComponent.Fz, curve_points)
 
     # ------------------------------------------------------------------
     # Serialization

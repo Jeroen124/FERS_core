@@ -308,6 +308,7 @@ class FERS:
         settings_dict = self.settings.to_dict()
         analysis_options_dict = settings_dict.pop("analysis_options", None)
         data: dict[str, Any] = {
+            "schema_version": getattr(self, "schema_version", 1),
             "settings": settings_dict,
             "model": {
                 "nodes": [node.to_dict() for node in self.get_all_nodes()],
@@ -380,6 +381,7 @@ class FERS:
         # Unwrap the nested {settings, model{…, workspace}, analysis, results}
         # document into the flat lookup this builder consumes. `analysis.options`
         # is folded back under settings (in-memory Settings still owns it).
+        schema_version = data.get("schema_version", 1)
         model = data.get("model") or {}
         analysis = data.get("analysis") or {}
         workspace = model.get("workspace") or {}
@@ -399,6 +401,7 @@ class FERS:
 
         settings = Settings.from_dict(data["settings"])
         fers = cls(settings=settings, reset_counters=True)
+        fers.schema_version = schema_version
         # Unity-check definitions are carried through as plain dicts.
         fers.unity_checks = list(data.get("unity_checks") or [])
 

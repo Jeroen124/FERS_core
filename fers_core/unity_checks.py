@@ -102,7 +102,7 @@ def member_sets(ids: List[int]) -> Dict[str, Any]:
 
 
 def classification(value: str) -> Dict[str, Any]:
-    return {"type": "Classification", "value": value}
+    return {"type": "MemberClassification", "value": value}
 
 
 def all_plates() -> Dict[str, Any]:

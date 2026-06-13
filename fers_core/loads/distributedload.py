@@ -84,8 +84,8 @@ class DistributedLoad:
         Serialize the distributed load into a dictionary for JSON output.
         """
         return {
+            "id": self.id,
             "member": self.member.id,
-            "load_case": self.load_case.id,
             "magnitude": self.magnitude,
             "end_magnitude": self.end_magnitude,
             "direction": self.direction,

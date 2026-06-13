@@ -78,10 +78,11 @@ class NodalSupport:
         if isinstance(value, SupportCondition):
             return value
         if isinstance(value, list):
-            # List of [force_value, stiffness] pairs → Spring with curve (Vz default)
+            # List of [force_value, stiffness] pairs → Spring with curve.
+            # Supports use global reaction components; default to Fz.
             from .stiffness_curve import ForceComponent
 
-            return SupportCondition.spring_curve(ForceComponent.Vz, value)
+            return SupportCondition.spring_curve(ForceComponent.Fz, value)
         if isinstance(value, (int, float)):
             # Convenience: numeric means spring with that stiffness
             return SupportCondition.spring(float(value))
@@ -122,68 +123,59 @@ class NodalSupport:
 
     def to_exchange_dict(self) -> dict:
         """
-        Stable wire format for Rust (JSON). Example:
+        Stable wire format for Rust (JSON). Translation conditions are the flat
+        ``X``/``Y``/``Z`` fields, rotation conditions the flat ``RX``/``RY``/``RZ``
+        fields. Example:
 
         {
           "id": 3,
           "classification": "Baseplate SR",
-          "displacement_conditions": {
-            "X": {"type": "Free",   "stiffness": null},
-            "Y": {"type": "Spring", "stiffness": 1.5e7},
-            "Z": {"type": "Fixed",  "stiffness": null}
-          },
-          "rotation_conditions": {
-            "X": {"type": "Free",   "stiffness": null},
-            "Y": {"type": "Free",   "stiffness": null},
-            "Z": {"type": "Spring", "stiffness": 6.0e6}
-          }
+          "X":  {"type": "Free",   "stiffness": null},
+          "Y":  {"type": "Spring", "stiffness": 1.5e7},
+          "Z":  {"type": "Fixed",  "stiffness": null},
+          "RX": {"type": "Free",   "stiffness": null},
+          "RY": {"type": "Free",   "stiffness": null},
+          "RZ": {"type": "Spring", "stiffness": 6.0e6}
         }
         """
-        return {
-            "id": self.id,
-            "classification": self.classification,
-            "displacement_conditions": {
-                direction: condition.to_exchange_dict()
-                for direction, condition in self.displacement_conditions.items()
-            },
-            "rotation_conditions": {
-                direction: condition.to_exchange_dict()
-                for direction, condition in self.rotation_conditions.items()
-            },
-            "warping_condition": self.warping_condition.to_exchange_dict()
-            if self.warping_condition
-            else None,
-        }
+        return self._serialize(lambda c: c.to_exchange_dict())
 
     def to_dict(self) -> dict:
+        return self._serialize(lambda c: c.to_dict())
+
+    def _serialize(self, encode) -> dict:
+        d = self.displacement_conditions
+        r = self.rotation_conditions
         return {
             "id": self.id,
             "classification": self.classification,
-            "displacement_conditions": {
-                direction: condition.to_dict()
-                for direction, condition in self.displacement_conditions.items()
-            },
-            "rotation_conditions": {
-                direction: condition.to_dict() for direction, condition in self.rotation_conditions.items()
-            },
-            "warping_condition": self.warping_condition.to_dict() if self.warping_condition else None,
+            "X": encode(d["X"]),
+            "Y": encode(d["Y"]),
+            "Z": encode(d["Z"]),
+            "RX": encode(r["X"]),
+            "RY": encode(r["Y"]),
+            "RZ": encode(r["Z"]),
+            "warping_condition": encode(self.warping_condition) if self.warping_condition else None,
         }
 
     @classmethod
     def from_dict(cls, data: dict) -> "NodalSupport":
         from .supportcondition import SupportCondition  # avoid circulars at top-level if needed
 
-        def decode_conditions(raw: dict) -> dict:
-            if raw is None:
-                return {}
-            decoded = {}
-            for direction, cond_data in raw.items():
-                # cond_data is what SupportCondition.to_dict() produced
-                decoded[direction] = SupportCondition.from_dict(cond_data)
-            return decoded
+        def decode(raw):
+            return SupportCondition.from_dict(raw) if raw is not None else None
 
-        displacement_conditions = decode_conditions(data.get("displacement_conditions"))
-        rotation_conditions = decode_conditions(data.get("rotation_conditions"))
+        displacement_conditions = {}
+        for axis in cls.DIRECTIONS:
+            cond = decode(data.get(axis))
+            if cond is not None:
+                displacement_conditions[axis] = cond
+
+        rotation_conditions = {}
+        for axis, key in (("X", "RX"), ("Y", "RY"), ("Z", "RZ")):
+            cond = decode(data.get(key))
+            if cond is not None:
+                rotation_conditions[axis] = cond
 
         warping_raw = data.get("warping_condition")
         warping_condition = SupportCondition.from_dict(warping_raw) if warping_raw else None

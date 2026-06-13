@@ -73,7 +73,7 @@ print("  Example 132: Deflection Sensitivity to Axial Load")
 print("=" * 60)
 print(f"\n  Column:   HEB 200,  h = {H} m")
 print(f"  Lateral:  {F_LATERAL / 1000:.0f} kN (constant for all models)")
-print("  Support:  Ry = spring_curve(Vz) (2,500 – 6,250 kNm/rad)\n")
+print("  Support:  Ry = spring_curve(Fz) (2,500 – 6,250 kNm/rad)\n")
 
 results = []
 
@@ -95,7 +95,7 @@ for n_kn in range(10, 90, 10):
     top = Node(0, 0, H)
 
     # Stiffness-curve support at the base (only Ry is semi-rigid)
-    support = NodalSupport(rotation_conditions={"Y": SupportCondition.spring_curve(ForceComponent.Vz, CURVE)})
+    support = NodalSupport(rotation_conditions={"Y": SupportCondition.spring_curve(ForceComponent.Fz, CURVE)})
     base.nodal_support = support
 
     column = Member(start_node=base, end_node=top, section=heb200)

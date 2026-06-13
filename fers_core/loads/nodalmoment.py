@@ -37,7 +37,6 @@ class NodalMoment:
         return {
             "id": self.id,
             "node": self.node.id,
-            "load_case": self.load_case.id,
             "magnitude": self.magnitude,
             "direction": self.direction,
             "load_type": self.load_type,

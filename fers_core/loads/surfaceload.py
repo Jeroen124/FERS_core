@@ -14,11 +14,11 @@ class SurfaceLoadVertex:
     z: float
 
     def to_dict(self) -> Dict[str, float]:
-        return {"x": self.x, "y": self.y, "z": self.z}
+        return {"X": self.x, "Y": self.y, "Z": self.z}
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "SurfaceLoadVertex":
-        return cls(x=float(data["x"]), y=float(data["y"]), z=float(data["z"]))
+        return cls(x=float(data["X"]), y=float(data["Y"]), z=float(data["Z"]))
 
 
 class SurfaceLoad:
@@ -67,7 +67,6 @@ class SurfaceLoad:
     def to_dict(self) -> Dict[str, Any]:
         data: Dict[str, Any] = {
             "id": self.id,
-            "load_case": self.load_case.id,
             "polygon": [vertex.to_dict() for vertex in self.polygon],
             "magnitude": self.magnitude,
             "direction": self.direction,

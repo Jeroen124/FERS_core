@@ -45,9 +45,7 @@ class AnalysisOptions:
 
     def to_dict(self):
         data = {
-            "id": self.analysis_options_id,
             "solve_loadcases": self.solve_loadcases,
-            "solver": self.solver,
             "tolerance": self.tolerance,
             "max_iterations": self.max_iterations,
             "dimensionality": self.dimensionality.value,

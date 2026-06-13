@@ -1,134 +1,6 @@
 {
-  "nodes": [
-    {
-      "id": 1,
-      "classification": "",
-      "X": 0,
-      "Y": 0,
-      "Z": 0,
-      "nodal_support": 1
-    },
-    {
-      "id": 2,
-      "classification": "",
-      "X": 3,
-      "Y": 0,
-      "Z": 0,
-      "nodal_support": null
-    },
-    {
-      "id": 3,
-      "classification": "",
-      "X": 6,
-      "Y": 0,
-      "Z": 0,
-      "nodal_support": 2
-    }
-  ],
-  "members": [
-    {
-      "id": 1,
-      "start_node_id": 1,
-      "end_node_id": 2,
-      "start_offset": null,
-      "end_offset": null,
-      "section": 1,
-      "rotation_angle": 0.0,
-      "mirror": false,
-      "start_hinge": null,
-      "end_hinge": null,
-      "classification": "",
-      "weight": 67.09953226102702,
-      "chi": null,
-      "reference_member": null,
-      "reference_node": null,
-      "member_type": "Normal",
-      "pretension": null,
-      "unstretched_length": null
-    },
-    {
-      "id": 2,
-      "start_node_id": 2,
-      "end_node_id": 3,
-      "start_offset": null,
-      "end_offset": null,
-      "section": 1,
-      "rotation_angle": 0.0,
-      "mirror": false,
-      "start_hinge": null,
-      "end_hinge": null,
-      "classification": "",
-      "weight": 67.09953226102702,
-      "chi": null,
-      "reference_member": null,
-      "reference_node": null,
-      "member_type": "Normal",
-      "pretension": null,
-      "unstretched_length": null
-    }
-  ],
-  "member_sets": [
-    {
-      "id": 1,
-      "classification": null,
-      "member_ids": [
-        1,
-        2
-      ],
-      "buckling_restraints": []
-    }
-  ],
-  "plate_surfaces": [],
-  "plate_elements": [],
-  "work_axes": [],
-  "work_planes": [],
-  "entity_groups": [],
-  "load_cases": [
-    {
-      "id": 1,
-      "name": "Center load",
-      "nodal_loads": [
-        {
-          "id": 1,
-          "node": 2,
-          "load_case": 1,
-          "magnitude": -20000,
-          "direction": [
-            0,
-            1,
-            0
-          ],
-          "load_type": "force"
-        }
-      ],
-      "nodal_moments": [],
-      "distributed_loads": [],
-      "surface_loads": [],
-      "member_point_loads": [],
-      "member_point_moments": [],
-      "plate_pressures": [],
-      "rotation_imperfections": [],
-      "translation_imperfections": []
-    }
-  ],
-  "load_combinations": [],
-  "imperfection_cases": [],
+  "schema_version": 1,
   "settings": {
-    "id": 1,
-    "analysis_options": {
-      "id": 1,
-      "solve_loadcases": true,
-      "solver": "newton_raphson",
-      "tolerance": 0.01,
-      "max_iterations": 30,
-      "dimensionality": "3D",
-      "order": "Nonlinear",
-      "rigid_strategy": "Rigid_Member",
-      "axial_slack": 500,
-      "include_shear_deformation": true,
-      "include_warping": true,
-      "include_shear_center_coupling": true
-    },
     "unit_settings": {
       "system": "metric",
       "lengthUnit": "m",
@@ -144,44 +16,122 @@
       "version": "1.0"
     }
   },
-  "member_hinges": [],
-  "materials": [
-    {
-      "id": 1,
-      "name": "S355",
-      "e_mod": 210000000000.0,
-      "g_mod": 81000000000.0,
-      "density": 7850,
-      "yield_stress": 355000000.0
-    }
-  ],
-  "sections": [
-    {
-      "id": 1,
-      "name": "IPE200",
-      "material": 1,
-      "h": 0.2,
-      "b": 0.1,
-      "i_y": 1.423736918537007e-6,
-      "i_z": 1.9437968291787006e-5,
-      "j": 6.910636270810589e-8,
-      "area": 0.002849237038684799,
-      "shape_path": 1,
-      "i_w": 1.2745319110904426e-8,
-      "y_s": -8.12745428487046e-9,
-      "z_s": 3.190937163000897e-8,
-      "wagner_coeff": 0.007321856667972003,
-      "a_sy": 0.0015878831095982662,
-      "a_sz": 0.0010965545696019834,
-      "centroid_y": -2.972841275590355e-19,
-      "centroid_z": 1.783704765354213e-18
-    }
-  ],
-  "nodal_supports": [
-    {
-      "id": 1,
-      "classification": null,
-      "displacement_conditions": {
+  "model": {
+    "nodes": [
+      {
+        "id": 1,
+        "classification": "",
+        "X": 0,
+        "Y": 0,
+        "Z": 0,
+        "nodal_support": 1
+      },
+      {
+        "id": 2,
+        "classification": "",
+        "X": 3,
+        "Y": 0,
+        "Z": 0,
+        "nodal_support": null
+      },
+      {
+        "id": 3,
+        "classification": "",
+        "X": 6,
+        "Y": 0,
+        "Z": 0,
+        "nodal_support": 2
+      }
+    ],
+    "members": [
+      {
+        "id": 1,
+        "start_node_id": 1,
+        "end_node_id": 2,
+        "start_offset": null,
+        "end_offset": null,
+        "section": 1,
+        "rotation_angle": 0.0,
+        "mirror": false,
+        "start_hinge": null,
+        "end_hinge": null,
+        "classification": "",
+        "weight": 67.09953226102702,
+        "chi": null,
+        "reference_member": null,
+        "reference_node": null,
+        "member_type": "Normal",
+        "pretension": null,
+        "unstretched_length": null
+      },
+      {
+        "id": 2,
+        "start_node_id": 2,
+        "end_node_id": 3,
+        "start_offset": null,
+        "end_offset": null,
+        "section": 1,
+        "rotation_angle": 0.0,
+        "mirror": false,
+        "start_hinge": null,
+        "end_hinge": null,
+        "classification": "",
+        "weight": 67.09953226102702,
+        "chi": null,
+        "reference_member": null,
+        "reference_node": null,
+        "member_type": "Normal",
+        "pretension": null,
+        "unstretched_length": null
+      }
+    ],
+    "member_sets": [
+      {
+        "id": 1,
+        "classification": null,
+        "member_ids": [
+          1,
+          2
+        ],
+        "buckling_restraints": []
+      }
+    ],
+    "materials": [
+      {
+        "id": 1,
+        "name": "S355",
+        "e_mod": 210000000000.0,
+        "g_mod": 81000000000.0,
+        "density": 7850,
+        "yield_stress": 355000000.0
+      }
+    ],
+    "sections": [
+      {
+        "id": 1,
+        "name": "IPE200",
+        "material": 1,
+        "h": 0.2,
+        "b": 0.1,
+        "i_y": 1.423736918537007e-6,
+        "i_z": 1.9437968291787006e-5,
+        "j": 6.910636270810589e-8,
+        "area": 0.002849237038684799,
+        "shape_path": 1,
+        "i_w": 1.2745319110904426e-8,
+        "y_s": -8.12745428487046e-9,
+        "z_s": 3.190937163000897e-8,
+        "wagner_coeff": 0.007321856667972003,
+        "a_sy": 0.0015878831095982662,
+        "a_sz": 0.0010965545696019834,
+        "centroid_y": -2.972841275590355e-19,
+        "centroid_z": 1.783704765354213e-18
+      }
+    ],
+    "nodal_supports": [
+      {
+        "id": 1,
+        "classification": null,
         "X": {
           "condition_type": "Fixed",
           "stiffness": null
@@ -193,9 +143,24 @@
         "Z": {
           "condition_type": "Fixed",
           "stiffness": null
-        }
+        },
+        "RX": {
+          "condition_type": "Fixed",
+          "stiffness": null
+        },
+        "RY": {
+          "condition_type": "Fixed",
+          "stiffness": null
+        },
+        "RZ": {
+          "condition_type": "Fixed",
+          "stiffness": null
+        },
+        "warping_condition": null
       },
-      "rotation_conditions": {
+      {
+        "id": 2,
+        "classification": null,
         "X": {
           "condition_type": "Fixed",
           "stiffness": null
@@ -207,52 +172,81 @@
         "Z": {
           "condition_type": "Fixed",
           "stiffness": null
-        }
-      },
-      "warping_condition": null
+        },
+        "RX": {
+          "condition_type": "Fixed",
+          "stiffness": null
+        },
+        "RY": {
+          "condition_type": "Fixed",
+          "stiffness": null
+        },
+        "RZ": {
+          "condition_type": "Fixed",
+          "stiffness": null
+        },
+        "warping_condition": null
+      }
+    ],
+    "member_hinges": [],
+    "shape_paths": [
+      {
+        "id": 1,
+        "name": "IPE200",
+        "shape_commands": []
+      }
+    ],
+    "plate_surfaces": [],
+    "plate_elements": [],
+    "workspace": {
+      "work_axes": [],
+      "work_planes": [],
+      "entity_groups": []
+    }
+  },
+  "analysis": {
+    "options": {
+      "solve_loadcases": true,
+      "tolerance": 0.01,
+      "max_iterations": 30,
+      "dimensionality": "3D",
+      "order": "Nonlinear",
+      "rigid_strategy": "Rigid_Member",
+      "axial_slack": 500,
+      "include_shear_deformation": true,
+      "include_warping": true,
+      "include_shear_center_coupling": true
     },
-    {
-      "id": 2,
-      "classification": null,
-      "displacement_conditions": {
-        "X": {
-          "condition_type": "Fixed",
-          "stiffness": null
-        },
-        "Y": {
-          "condition_type": "Fixed",
-          "stiffness": null
-        },
-        "Z": {
-          "condition_type": "Fixed",
-          "stiffness": null
-        }
-      },
-      "rotation_conditions": {
-        "X": {
-          "condition_type": "Fixed",
-          "stiffness": null
-        },
-        "Y": {
-          "condition_type": "Fixed",
-          "stiffness": null
-        },
-        "Z": {
-          "condition_type": "Fixed",
-          "stiffness": null
-        }
-      },
-      "warping_condition": null
-    }
-  ],
-  "shape_paths": [
-    {
-      "id": 1,
-      "name": "IPE200",
-      "shape_commands": []
-    }
-  ],
-  "resultsbundle": {
+    "load_cases": [
+      {
+        "id": 1,
+        "name": "Center load",
+        "nodal_loads": [
+          {
+            "id": 1,
+            "node": 2,
+            "magnitude": -20000,
+            "direction": [
+              0,
+              1,
+              0
+            ],
+            "load_type": "force"
+          }
+        ],
+        "nodal_moments": [],
+        "distributed_loads": [],
+        "surface_loads": [],
+        "member_point_loads": [],
+        "member_point_moments": [],
+        "plate_pressures": []
+      }
+    ],
+    "load_combinations": [],
+    "imperfection_cases": [],
+    "unity_checks": []
+  },
+  "results": {
     "loadcases": {
       "Center load": {
         "name": "Center load",
@@ -597,6 +591,7 @@
       }
     },
     "loadcombinations": {},
-    "unity_checks_overview": null
+    "unity_check_results": [],
+    "report_html": null
   }
 }

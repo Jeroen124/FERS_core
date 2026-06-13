@@ -60,7 +60,7 @@ intermediate_load_case = calculation_1.create_load_case(name="Intermediate Load"
 nodal_load = NodalLoad(node=node2, load_case=intermediate_load_case, magnitude=-1000, direction=(0, 1, 0))
 
 # Save the model to a file for FERS calculations
-file_path = os.path.join("json_input_solver", "031_Fixed_Fixed_with_Center_Load copy.json")
+file_path = os.path.join("json_input_solver", "031_Fixed_Fixed_with_Center_Load.json")
 os.makedirs(os.path.dirname(file_path), exist_ok=True)
 calculation_1.save_to_json(file_path, indent=4)
 
