@@ -32,7 +32,7 @@
                 "X": 5,
                 "Y": 0,
                 "Z": 0,
-                "nodal_support": 2
+                "nodal_support": 1
             },
             {
                 "id": 3,
@@ -152,15 +152,15 @@
                     "stiffness": null
                 },
                 "RX": {
-                    "condition_type": "Fixed",
+                    "condition_type": "Free",
                     "stiffness": null
                 },
                 "RY": {
-                    "condition_type": "Fixed",
+                    "condition_type": "Free",
                     "stiffness": null
                 },
                 "RZ": {
-                    "condition_type": "Fixed",
+                    "condition_type": "Free",
                     "stiffness": null
                 },
                 "warping_condition": null
