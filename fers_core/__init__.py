@@ -35,7 +35,7 @@ from .geometry.workaxis import WorkAxis
 from .geometry.workplane import WorkPlane
 from .entities.entitygroup import EntityGroup
 from .imperfections.imperfectioncase import ImperfectionCase
-from .imperfections.rotationimperfection import RotationImperfection
+from .imperfections.swayimperfection import SwayImperfection
 from .imperfections.translationimperfection import TranslationImperfection
 from .loads.distributionshape import DistributionShape
 from .supports.supportcondition import SupportCondition
@@ -113,7 +113,6 @@ __all__ = [
     "ResultRenderer",
     "ResultsBundle",
     "RigidStrategy",
-    "RotationImperfection",
     "Section",
     "SurfaceLoad",
     "SurfaceLoadVertex",
@@ -124,5 +123,6 @@ __all__ = [
     "StiffnessCurveConfig",
     "SupportCondition",
     "SupportConditionType",
+    "SwayImperfection",
     "TranslationImperfection",
 ]
