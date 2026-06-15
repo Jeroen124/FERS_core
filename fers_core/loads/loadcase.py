@@ -109,7 +109,7 @@ class LoadCase:
             "nodal_moments": [ ... ],
             "distributed_loads": [ ... ],
             "surface_loads": [ ... ],
-            "rotation_imperfections": [ids or dicts],
+            "sway_imperfections": [ids or dicts],
             "translation_imperfections": [ids or dicts],
         }
 
