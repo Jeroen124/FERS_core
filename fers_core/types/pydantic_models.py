@@ -172,12 +172,28 @@ class Ec3SectionParams(BaseModel):
     model_config = ConfigDict(
         extra='forbid',
     )
+    a_eff: float | None = Field(
+        None,
+        description="Effective area for class 4 sections (EN 1993-1-5 §4.3), in the model's\narea unit. Required together with `wel_y_eff` to run EC3 checks on a\nclass 4 section.",
+    )
     buckling_curve_lt: BucklingCurve | None = None
     buckling_curve_y: BucklingCurve | None = None
     buckling_curve_z: BucklingCurve | None = None
     section_class: conint(ge=0) | None = Field(
         None,
         description='Cross-section class 1–4 (EN 1993-1-1 §5.5). Class 4 needs effective\nproperties (currently a limitation — see the EC3 evaluator).',
+    )
+    wel_y_eff: float | None = Field(
+        None,
+        description="Effective elastic section modulus about y (major axis) for class 4\nsections (EN 1993-1-5), in the model's section-modulus unit.",
+    )
+    wel_z_eff: float | None = Field(
+        None,
+        description="Effective elastic section modulus about z (minor axis) for class 4\nsections (EN 1993-1-5), in the model's section-modulus unit.",
+    )
+    z_j: float | None = Field(
+        None,
+        description="Mono-symmetry parameter `z_j` (EN 1993-1-1 / NCCI SN030) in the model's\nlength unit; 0 for doubly-symmetric sections. Enables the general LTB\n`M_cr` (used with the spec's C2/C3/z_g).",
     )
 
 
@@ -931,6 +947,11 @@ class ShapePath(BaseModel):
     shape_commands: list[ShapeCommand]
 
 
+class SolverMessage(BaseModel):
+    code: str
+    message: str
+
+
 class SupportConditionType(Enum):
     Fixed = 'Fixed'
     Free = 'Free'
@@ -959,6 +980,10 @@ class SupportStiffnessCurve(BaseModel):
         ...,
         description='Sorted `[force_value, stiffness]` pairs (≥ 2 points, positive stiffness).',
         min_length=2,
+    )
+    signed: bool | None = Field(
+        None,
+        description='When `true`, the curve is driven by the SIGNED reaction, so tension and\ncompression can have different stiffness (points may span negative\nforce). When `false` (default), the curve is driven by `|force|`\n(symmetric — the legacy behaviour).',
     )
 
 
@@ -1104,13 +1129,22 @@ class Ec3SteelSpec(BaseModel):
     )
     c1: float | None = Field(
         None,
-        description='LTB moment-distribution factor C1 (default 1.0 = conservative, uniform M).',
+        description="LTB moment-distribution factor C1. When omitted it is computed from the\nmember's actual moment diagram (NCCI SN003 quarter-point formula); set it\nexplicitly to override (e.g. 1.0 = conservative uniform moment).",
     )
+    c2: float | None = Field(
+        0.0,
+        description='LTB factors C2 / C3 for the general `M_cr` (load height / mono-symmetry).\nDefault 0.0 → the doubly-symmetric form (no load-height or z_j term).',
+    )
+    c3: float | None = 0.0
     gamma_m0: float | None = 1.0
     gamma_m1: float | None = 1.0
     include_buckling: bool | None = True
     include_ltb: bool | None = True
     interaction_method: InteractionMethod | None = None
+    z_g: float | None = Field(
+        0.0,
+        description='Transverse-load application height `z_g` above the shear centre (model\nlength units). Positive = destabilising (load above shear centre).\nDefault 0.0 (load at the shear centre).',
+    )
 
 
 class EntityUnityResult(BaseModel):
@@ -1131,6 +1165,11 @@ class EntityUnityResult(BaseModel):
         validate_default=True,
     )
     utilization: float
+
+
+class ErrorsAndWarnings(BaseModel):
+    errors: list[SolverMessage] | None = Field([], validate_default=True)
+    warnings: list[SolverMessage] | None = Field([], validate_default=True)
 
 
 class Material(BaseModel):
@@ -1245,6 +1284,10 @@ class MemberStiffnessCurve(BaseModel):
         ...,
         description='Sorted `[force_value, stiffness]` pairs (≥ 2 points, positive stiffness).',
         min_length=2,
+    )
+    signed: bool | None = Field(
+        None,
+        description='When `true`, the curve is driven by the SIGNED force, so tension and\ncompression can have different stiffness (points may span negative\nforce). When `false` (default), the curve is driven by `|force|`\n(symmetric in tension/compression — the legacy behaviour).',
     )
 
 
@@ -1395,18 +1438,16 @@ class QuantitySource(
 
 class Results(BaseModel):
     displacement_nodes: dict[constr(pattern=r'^[0-9]+$'), NodeDisplacement]
+    errors_and_warnings: ErrorsAndWarnings | None = Field(
+        None,
+        description='Solver diagnostics (errors/warnings) for this load case/combination.\nEmpty in the common case.',
+    )
     member_results: dict[constr(pattern=r'^[0-9]+$'), MemberResult]
     name: str
     plate_results: dict[constr(pattern=r'^[0-9]+$'), PlateResult] | None = None
     reaction_nodes: dict[constr(pattern=r'^[0-9]+$'), ReactionNodeResult]
     result_type: ResultType
     summary: ResultsSummary
-
-
-class RotationImperfection(BaseModel):
-    axis: Vector3
-    magnitude: float
-    memberset_ids: list[conint(ge=0)]
 
 
 class SupportCondition(BaseModel):
@@ -1421,6 +1462,24 @@ class SurfaceLoad(BaseModel):
     id: conint(ge=0)
     magnitude: float
     polygon: list[SurfaceLoadVertex]
+
+
+class SwayImperfection(BaseModel):
+    axis: Vector3 = Field(
+        ...,
+        description='Rotation axis. The sway direction is `axis × height_direction`.',
+    )
+    height_direction: Vector3 | None = Field(
+        None,
+        description='Direction along which height is measured and which is never displaced\n(the structure\'s "up"). Defaults to global +Y.',
+    )
+    magnitude: float = Field(
+        ..., description='Sway (lean) angle in **radians**, applied about `axis`.'
+    )
+    reference_point: Vector3 | None = Field(
+        None,
+        description="A point on the zero-sway plane: the lean is proportional to a node's\nheight above this point (along `height_direction`). Only a measurement\nreference, not a pivot. Defaults to the origin.",
+    )
 
 
 class TranslationImperfection(BaseModel):
@@ -1471,7 +1530,7 @@ class CheckSpec2(BaseModel):
 class ImperfectionCase(BaseModel):
     imperfection_case_id: conint(ge=0)
     load_combinations: list[conint(ge=0)]
-    rotation_imperfections: list[RotationImperfection]
+    sway_imperfections: list[SwayImperfection]
     translation_imperfections: list[TranslationImperfection]
 
 

@@ -1,4 +1,4 @@
-from ..imperfections.rotationimperfection import RotationImperfection
+from ..imperfections.swayimperfection import SwayImperfection
 from ..imperfections.translationimperfection import TranslationImperfection
 from ..loads.loadcombination import LoadCombination
 from typing import Any, Iterable, Optional
@@ -11,7 +11,7 @@ class ImperfectionCase:
         self,
         loadcombinations: list[LoadCombination],
         imperfection_case_id: Optional[int] = None,
-        rotation_imperfections: Optional[list[RotationImperfection]] = None,
+        sway_imperfections: Optional[list[SwayImperfection]] = None,
         translation_imperfections: Optional[list[TranslationImperfection]] = None,
     ):
         """
@@ -24,9 +24,9 @@ class ImperfectionCase:
             imperfection_case_id (int, optional):       Unique identifier for the ImperfectionCase instance.
                                                         If not provided, an auto-incremented value based
                                                         on the class counter is used.
-            rotation_imperfections (list[RotationImperfection], optional):  List of RotationImperfection
-                                                                            instances associated with this
-                                                                            ImperfectionCase.
+            sway_imperfections (list[SwayImperfection], optional):  List of SwayImperfection
+                                                                    instances associated with this
+                                                                    ImperfectionCase.
             translation_imperfections (list[TranslationImperfection], optional):
                                                                             List of TranslationImper.
                                                                             instances associated with
@@ -37,7 +37,7 @@ class ImperfectionCase:
         if imperfection_case_id is None:
             ImperfectionCase._imperfection_case_counter += 1
         self.loadcombinations = loadcombinations
-        self.rotation_imperfections = rotation_imperfections if rotation_imperfections is not None else []
+        self.sway_imperfections = sway_imperfections if sway_imperfections is not None else []
         self.translation_imperfections = (
             translation_imperfections if translation_imperfections is not None else []
         )
@@ -46,8 +46,8 @@ class ImperfectionCase:
     def reset_counter(cls):
         cls._imperfection_case_counter = 1
 
-    def add_rotation_imperfection(self, imperfection):
-        self.rotation_imperfections.append(imperfection)
+    def add_sway_imperfection(self, imperfection):
+        self.sway_imperfections.append(imperfection)
 
     def add_translation_imperfection(self, imperfection):
         self.translation_imperfections.append(imperfection)
@@ -56,7 +56,7 @@ class ImperfectionCase:
         return {
             "imperfection_case_id": self.imperfection_case_id,
             "load_combinations": [lc.id for lc in self.loadcombinations],
-            "rotation_imperfections": [ri.to_dict() for ri in self.rotation_imperfections],
+            "sway_imperfections": [si.to_dict() for si in self.sway_imperfections],
             "translation_imperfections": [ti.to_dict() for ti in self.translation_imperfections],
         }
 
@@ -73,7 +73,7 @@ class ImperfectionCase:
         {
             "imperfection_case_id": int,
             "load_combinations": [lc_id, ...],
-            "rotation_imperfections": [ {...}, ... ],
+            "sway_imperfections": [ {...}, ... ],
             "translation_imperfections": [ {...}, ... ]
         }
         """
@@ -100,18 +100,19 @@ class ImperfectionCase:
                 )
             resolved_lcs.append(lc)
 
-        # Rotation imperfections
-        rotation_imperfections: list[RotationImperfection] = []
-        for ri_data in data.get("rotation_imperfections", []) or []:
-            if isinstance(ri_data, RotationImperfection):
-                rotation_imperfections.append(ri_data)
-            elif hasattr(RotationImperfection, "from_dict") and isinstance(ri_data, dict):
-                rotation_imperfections.append(
-                    RotationImperfection.from_dict(ri_data, membersets_by_id=membersets_by_id)
-                )
+        # Sway imperfections (legacy key "rotation_imperfections" still accepted)
+        sway_imperfections: list[SwayImperfection] = []
+        sway_data = data.get("sway_imperfections")
+        if sway_data is None:
+            sway_data = data.get("rotation_imperfections", [])
+        for si_data in sway_data or []:
+            if isinstance(si_data, SwayImperfection):
+                sway_imperfections.append(si_data)
+            elif isinstance(si_data, dict):
+                sway_imperfections.append(SwayImperfection.from_dict(si_data))
             else:
-                # last resort: ignore or raise; here we raise so bad input is visible
-                raise TypeError("Invalid rotation_imperfection entry in ImperfectionCase.from_dict")
+                # last resort: raise so bad input is visible
+                raise TypeError("Invalid sway_imperfection entry in ImperfectionCase.from_dict")
 
         # Translation imperfections
         translation_imperfections: list[TranslationImperfection] = []
@@ -128,6 +129,6 @@ class ImperfectionCase:
         return cls(
             loadcombinations=resolved_lcs,
             imperfection_case_id=data.get("imperfection_case_id") or data.get("id"),
-            rotation_imperfections=rotation_imperfections,
+            sway_imperfections=sway_imperfections,
             translation_imperfections=translation_imperfections,
         )
