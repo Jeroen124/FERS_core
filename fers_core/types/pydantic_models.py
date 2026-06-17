@@ -158,6 +158,11 @@ class Dimensionality(Enum):
     field_3D = '3D'
 
 
+class DirectionalCombination(Enum):
+    SRSS = 'SRSS'
+    PERCENT30 = 'PERCENT30'
+
+
 class DispComponent(Enum):
     Dx = 'Dx'
     Dy = 'Dy'
@@ -194,6 +199,29 @@ class Ec3SectionParams(BaseModel):
     z_j: float | None = Field(
         None,
         description="Mono-symmetry parameter `z_j` (EN 1993-1-1 / NCCI SN030) in the model's\nlength unit; 0 for doubly-symmetric sections. Enables the general LTB\n`M_cr` (used with the spec's C2/C3/z_g).",
+    )
+
+
+class EigenLoadRef1(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    LoadCase: conint(ge=0) = Field(..., description='Reference a load case by id.')
+
+
+class EigenLoadRef2(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    LoadCombination: conint(ge=0) = Field(
+        ..., description='Reference a load combination by id.'
+    )
+
+
+class EigenLoadRef(RootModel[EigenLoadRef1 | EigenLoadRef2]):
+    root: EigenLoadRef1 | EigenLoadRef2 = Field(
+        ...,
+        description='Which load drives the reference stress state for a linear buckling analysis.\nIts first-order member axial forces scale linearly with the load, so the\nreturned eigenvalue is the critical load factor `α_cr` directly.',
     )
 
 
@@ -395,6 +423,14 @@ class GeometryProperty(Enum):
     Length = 'Length'
 
 
+class GroundType(Enum):
+    A = 'A'
+    B = 'B'
+    C = 'C'
+    D = 'D'
+    E = 'E'
+
+
 class InteractionMethod(Enum):
     AnnexA = 'AnnexA'
     AnnexB = 'AnnexB'
@@ -438,6 +474,11 @@ class LoadCombination(BaseModel):
 class LoadType(Enum):
     force = 'force'
     moment = 'moment'
+
+
+class MassFormulation(Enum):
+    CONSISTENT = 'CONSISTENT'
+    LUMPED = 'LUMPED'
 
 
 class MaterialProperty(Enum):
@@ -521,6 +562,29 @@ class MemberType(Enum):
     Compression = 'Compression'
     Rigid = 'Rigid'
     Cable = 'Cable'
+
+
+class ModalAnalysisSettings(BaseModel):
+    mass_formulation: MassFormulation | None = Field(
+        None,
+        description='Mass-matrix formulation (Consistent default, Lumped optional).',
+    )
+    max_iterations: conint(ge=0) | None = Field(
+        None,
+        description='Maximum subspace-iteration sweeps. Defaults to 100 when omitted.',
+    )
+    num_modes: conint(ge=1) = Field(
+        ..., description='Number of natural modes (lowest frequencies) to extract.'
+    )
+    tolerance: float | None = Field(
+        None,
+        description='Eigen convergence tolerance (relative change in the tracked eigenvalues\nbetween subspace sweeps). Defaults to 1e-6 when omitted.',
+    )
+
+
+class ModalCombination(Enum):
+    CQC = 'CQC'
+    SRSS = 'SRSS'
 
 
 class Node(BaseModel):
@@ -814,6 +878,42 @@ class ReactionNodeResult(BaseModel):
     support_id: conint(ge=0)
 
 
+class DirectParameters(BaseModel):
+    ag: float
+    beta: float | None = None
+    q: float
+    s: float
+    tb: float
+    tc: float
+    td: float
+
+
+class ResponseSpectrum2(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    DirectParameters_1: DirectParameters = Field(
+        ...,
+        alias='DirectParameters',
+        description='Direct spectrum parameters (no preset lookup); national-annex agnostic.',
+    )
+
+
+class CustomPoints(BaseModel):
+    points: list[list[float]]
+
+
+class ResponseSpectrum3(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    CustomPoints_1: CustomPoints = Field(
+        ...,
+        alias='CustomPoints',
+        description='Arbitrary `(period, spectral_acceleration)` table [s, m/s²], linearly\ninterpolated (clamped beyond the ends).',
+    )
+
+
 class ResultType1(BaseModel):
     model_config = ConfigDict(
         extra='forbid',
@@ -930,6 +1030,45 @@ class SectionProperty(Enum):
     Asz = 'Asz'
 
 
+class SeismicDirection(Enum):
+    X = 'X'
+    Y = 'Y'
+    Z = 'Z'
+
+
+class SeismicMassSource(BaseModel):
+    load_case_id: conint(ge=0)
+    psi: float = Field(
+        ...,
+        description='Combination factor `ψE` (EN 1998-1 §3.2.4 / §4.2.4). Use 1.0 for permanent loads.',
+    )
+
+
+class SeismicMethod(Enum):
+    MODAL_RESPONSE_SPECTRUM = 'MODAL_RESPONSE_SPECTRUM'
+    LATERAL_FORCE = 'LATERAL_FORCE'
+    BOTH = 'BOTH'
+
+
+class SeismicModeContribution(BaseModel):
+    base_shear: float = Field(
+        ..., description='Modal base shear `Γ²·Sd(T)` (force units).'
+    )
+    effective_mass: float = Field(..., description='Effective modal mass `Γ²` (kg).')
+    effective_mass_ratio: float = Field(
+        ..., description='Effective modal mass / total seismic mass in this direction.'
+    )
+    mode: conint(ge=0)
+    participation_factor: float = Field(
+        ...,
+        description='Modal participation factor `Γ = φ̂ᵀ·M·r` for this direction (mass-normalized `φ̂`).',
+    )
+    period: float = Field(..., description='Natural period `T = 2π/ω` (s).')
+    spectral_acceleration: float = Field(
+        ..., description='Design spectral acceleration `Sd(T)` (m/s²).'
+    )
+
+
 class ShapeCommand(BaseModel):
     center_y: float | None = None
     center_z: float | None = None
@@ -950,6 +1089,11 @@ class ShapePath(BaseModel):
 class SolverMessage(BaseModel):
     code: str
     message: str
+
+
+class SpectrumType(Enum):
+    TYPE1 = 'TYPE1'
+    TYPE2 = 'TYPE2'
 
 
 class SupportConditionType(Enum):
@@ -1104,6 +1248,10 @@ class AnalysisOptions(BaseModel):
         None,
         description='Global translational axes to exclude from P-Delta amplification.\n\nWhen a structure is near buckling in an out-of-plane direction,\nthe consistent P-Delta amplification can produce forces that differ\nsignificantly from commercial solvers which\ntypically only amplify in-plane sway.\n\nSet to `["Z"]` for in-plane racks/portal frames where Z is out-of-plane,\nor `["X","Z"]` to limit P-Delta to Y-sway only.  Empty (default) means\nall translational directions are amplified.\n\nMaps to global DOFs: "X"→0,7  "Y"→1,8  "Z"→2,9  per element.',
     )
+    render_unity_reports: bool | None = Field(
+        False,
+        description="When true, fill each unity check's per-entity `rendered_report` from its\n`report_template` (rendered against the entity's computed trace). Default\nfalse for speed; orthogonal to `include_report_html` — narratives appear in\nthe consolidated HTML only when this is also true.",
+    )
     rigid_strategy: RigidStrategy
     self_weight_load_case_id: conint(ge=0) | None = Field(
         None,
@@ -1111,6 +1259,43 @@ class AnalysisOptions(BaseModel):
     )
     solve_loadcases: bool
     tolerance: float
+
+
+class BucklingAnalysisSettings(BaseModel):
+    max_iterations: conint(ge=0) | None = Field(
+        None,
+        description='Maximum subspace-iteration sweeps. Defaults to 100 when omitted.',
+    )
+    num_modes: conint(ge=1) = Field(
+        ...,
+        description='Number of buckling modes (lowest positive critical factors) to extract.',
+    )
+    reference: EigenLoadRef = Field(
+        ...,
+        description='Reference load whose first-order stress state drives the geometric\nstiffness `K_g`.',
+    )
+    tolerance: float | None = Field(
+        None,
+        description='Eigen convergence tolerance (relative change in the tracked eigenvalues\nbetween subspace sweeps). Defaults to 1e-6 when omitted.',
+    )
+
+
+class BucklingMode(BaseModel):
+    critical_load_factor: float = Field(
+        ...,
+        description='Critical load factor `α_cr = λ`. The structure buckles when the reference\nload is scaled by this factor (EN 1993-1-1 §5.2.1).',
+    )
+    displacements: dict[constr(pattern=r'^[0-9]+$'), NodeDisplacement] = Field(
+        ...,
+        description='Buckling mode shape: per-node displacement pattern (normalized so the\nlargest translational component is 1).',
+    )
+    mode: conint(ge=0) = Field(
+        ..., description='1-based mode number (1 = lowest critical load factor).'
+    )
+
+
+class BucklingResults(BaseModel):
+    modes: list[BucklingMode]
 
 
 class DistributedLoad(BaseModel):
@@ -1291,6 +1476,34 @@ class MemberStiffnessCurve(BaseModel):
     )
 
 
+class ModeShape(BaseModel):
+    angular_frequency: float = Field(..., description='Angular frequency `ω` (rad/s).')
+    displacements: dict[constr(pattern=r'^[0-9]+$'), NodeDisplacement] = Field(
+        ...,
+        description='Mode shape: per-node displacement pattern (normalized so the largest\ntranslational component is 1).',
+    )
+    effective_mass: list[float] = Field(
+        ...,
+        description='Effective modal mass per global direction `[X, Y, Z, RX, RY, RZ]`\n(`Γ² / (φᵀ·M·φ)`, in kg). The sum across modes approaches the total\nfree mass of the structure in each direction.',
+    )
+    eigenvalue: float = Field(..., description='Eigenvalue `ω²` (rad²/s²).')
+    modal_mass: float = Field(
+        ...,
+        description='Generalized (modal) mass `φᵀ·M·φ` (kg) for the reported, max-translation\nnormalized shape.',
+    )
+    mode: conint(ge=0) = Field(
+        ..., description='1-based mode number (1 = lowest frequency).'
+    )
+    natural_frequency: float = Field(
+        ..., description='Natural frequency `f = ω / 2π` (Hz).'
+    )
+    participation_factors: list[float] = Field(
+        ...,
+        description='Modal participation factor per global direction\n`[X, Y, Z, RX, RY, RZ]` (`Γ = φᵀ·M·r`).',
+    )
+    period: float = Field(..., description='Period `T = 1 / f` (s).')
+
+
 class NodalLoad(BaseModel):
     direction: Vector3
     id: conint(ge=0)
@@ -1436,6 +1649,40 @@ class QuantitySource(
     )
 
 
+class EurocodeParametric(BaseModel):
+    ag: float = Field(
+        ...,
+        description='Design ground acceleration on type-A ground, `a_g = γ_I·a_gR` [m/s²].',
+    )
+    beta: float | None = Field(
+        None,
+        description='Lower-bound factor `β` for the design spectrum (default 0.2).',
+    )
+    ground_type: GroundType
+    q: float = Field(..., description='Behaviour factor `q` (≥ 1).')
+    spectrum_type: SpectrumType
+
+
+class ResponseSpectrum1(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    EurocodeParametric_1: EurocodeParametric = Field(
+        ...,
+        alias='EurocodeParametric',
+        description='EN 1998-1 parametric: shape parameters (S, Tb, Tc, Td) are looked up from\nthe ground type + spectrum type, scaled by `ag` and the behaviour factor\n`q`.',
+    )
+
+
+class ResponseSpectrum(
+    RootModel[ResponseSpectrum1 | ResponseSpectrum2 | ResponseSpectrum3]
+):
+    root: ResponseSpectrum1 | ResponseSpectrum2 | ResponseSpectrum3 = Field(
+        ...,
+        description='Design response spectrum definition. Externally tagged: exactly one of the\nthree variants.',
+    )
+
+
 class Results(BaseModel):
     displacement_nodes: dict[constr(pattern=r'^[0-9]+$'), NodeDisplacement]
     errors_and_warnings: ErrorsAndWarnings | None = Field(
@@ -1448,6 +1695,69 @@ class Results(BaseModel):
     reaction_nodes: dict[constr(pattern=r'^[0-9]+$'), ReactionNodeResult]
     result_type: ResultType
     summary: ResultsSummary
+
+
+class SeismicAnalysisSettings(BaseModel):
+    damping: float | None = Field(
+        0.05,
+        description='Viscous damping ratio `ξ` for the CQC correlation (default 0.05).',
+    )
+    directional_combination: DirectionalCombination | None = Field(
+        None, description='Directional combination rule (default SRSS).'
+    )
+    directions: list[SeismicDirection] | None = Field(
+        None, description='Excitation directions to analyze (default `[X, Y]`).'
+    )
+    include_structural_mass: bool | None = Field(
+        True,
+        description='Include structural self-mass (density·area + weight override) in the\nseismic mass. Default true.',
+    )
+    mass_formulation: MassFormulation | None = Field(
+        None,
+        description='Structural mass-matrix formulation (Consistent default, Lumped optional).',
+    )
+    mass_sources: list[SeismicMassSource] | None = Field(
+        None, description='Gravity load cases converted to seismic mass (`ΣG + ψE·Q`).'
+    )
+    max_iterations: conint(ge=0) | None = Field(
+        None, description='Maximum subspace-iteration sweeps (default 100).'
+    )
+    method: SeismicMethod
+    modal_combination: ModalCombination | None = Field(
+        None, description='Modal combination rule (default CQC).'
+    )
+    num_modes: conint(ge=1) = Field(
+        ..., description='Number of vibration modes to extract for MRSA.'
+    )
+    spectrum_x: ResponseSpectrum = Field(
+        ..., description='Design spectrum for the X excitation direction.'
+    )
+    spectrum_y: ResponseSpectrum | None = None
+    spectrum_z: ResponseSpectrum | None = None
+    tolerance: float | None = Field(
+        None, description='Eigen convergence tolerance (default 1e-6).'
+    )
+
+
+class SeismicDirectionResult(BaseModel):
+    base_shear: float = Field(
+        ..., description='Combined base shear in this direction (force units).'
+    )
+    combined: Results = Field(
+        ...,
+        description='Combined response for this direction alone (before directional combination).',
+    )
+    direction: SeismicDirection
+    modes: list[SeismicModeContribution] | None = Field(
+        None, description='Per-mode contributions (empty for the lateral-force method).'
+    )
+    participating_mass_ratio: float = Field(
+        ...,
+        description='Σ effective modal mass / total mass — the EN 1998-1 §4.3.3.3.1(3) ≥0.90\ncheck (1.0 for the lateral-force method).',
+    )
+    total_seismic_mass: float = Field(
+        ..., description='Total seismic mass excited in this direction (kg).'
+    )
 
 
 class SupportCondition(BaseModel):
@@ -1534,6 +1844,11 @@ class ImperfectionCase(BaseModel):
     translation_imperfections: list[TranslationImperfection]
 
 
+class LateralForceResults(BaseModel):
+    combined: Results
+    per_direction: list[SeismicDirectionResult]
+
+
 class LoadCase(BaseModel):
     distributed_loads: list[DistributedLoad] | None = Field([], validate_default=True)
     id: conint(ge=0)
@@ -1576,6 +1891,20 @@ class MemberHinge(BaseModel):
     translational_release_vz: float | None = None
 
 
+class ModalResults(BaseModel):
+    modes: list[ModeShape]
+
+
+class MrsaResults(BaseModel):
+    combined: Results = Field(
+        ..., description='Final envelope after directional combination.'
+    )
+    per_direction: list[SeismicDirectionResult] = Field(
+        ...,
+        description='Per excitation direction (base shear, modal-mass table, per-direction envelope).',
+    )
+
+
 class NodalSupport(BaseModel):
     RX: SupportCondition | None = None
     RY: SupportCondition | None = None
@@ -1590,18 +1919,9 @@ class NodalSupport(BaseModel):
     warping_condition: SupportCondition | None = None
 
 
-class ResultsBundle(BaseModel):
-    loadcases: dict[str, Results]
-    loadcombinations: dict[str, Results]
-    report_html: str | None = Field(
-        None,
-        description='Optional single consolidated HTML report (populated only when requested\nvia the CLI `--report` flag or `AnalysisOptions.include_report_html`).',
-    )
-    unity_check_results: list[UnityCheckResult] | None = Field(
-        [],
-        description='Unity-check results (one entry per check definition), enveloped over the\napplicable load combinations.',
-        validate_default=True,
-    )
+class SeismicResults(BaseModel):
+    lateral_force: LateralForceResults | None = None
+    modal_response_spectrum: MrsaResults | None = None
 
 
 class Settings(BaseModel):
@@ -1628,13 +1948,9 @@ class GenericSpec(BaseModel):
         ...,
         description='Demand (action effect) expression, e.g.\n`"bending_moment * fibre_distance / second_moment_of_area"`.',
     )
-    report_template: str | None = Field(
-        None,
-        description='Optional narrative report template (HTML/markdown with `{{name}}` and\n`{{= sub-expression}}` placeholders auto-filled with values).',
-    )
     variables: list[VarBinding] | None = Field(
         [],
-        description='Named variables referenced by `demand`/`capacity`/`report_template`.',
+        description="Named variables referenced by `demand`/`capacity` (and, via the computed\ntrace, by the check's `report_template`).",
         validate_default=True,
     )
 
@@ -1654,6 +1970,23 @@ class Model(BaseModel):
     sections: list[Section]
     shape_paths: list[ShapePath] | None = Field([], validate_default=True)
     workspace: Workspace | None = Field({}, validate_default=True)
+
+
+class ResultsBundle(BaseModel):
+    buckling: BucklingResults | None = None
+    loadcases: dict[str, Results]
+    loadcombinations: dict[str, Results]
+    modal: ModalResults | None = None
+    report_html: str | None = Field(
+        None,
+        description='Optional single consolidated HTML report (populated only when requested\nvia the CLI `--report` flag or `AnalysisOptions.include_report_html`).',
+    )
+    seismic: SeismicResults | None = None
+    unity_check_results: list[UnityCheckResult] | None = Field(
+        [],
+        description='Unity-check results (one entry per check definition), enveloped over the\napplicable load combinations.',
+        validate_default=True,
+    )
 
 
 class CheckSpec1(BaseModel):
@@ -1680,6 +2013,10 @@ class UnityCheckDefinition(BaseModel):
         description='Restrict to these combination ids (empty = all matching `limit_state`).',
     )
     name: str
+    report_template: str | None = Field(
+        None,
+        description="Optional narrative report template (authored HTML/markdown). Placeholders are\nfilled from each entity's computed trace: `{{label}}` → that step's display\nstring (number + unit) and `{{= expr}}` → `expr` evaluated over the trace\nvalues (display units). Rendered into each `EntityUnityResult.rendered_report`\nonly when `analysis.options.render_unity_reports` is true.",
+    )
     spec: CheckSpec
     thresholds: list[float] | None = Field(
         [0.8, 0.95, 1.0],
@@ -1688,13 +2025,16 @@ class UnityCheckDefinition(BaseModel):
 
 
 class Analysis(BaseModel):
+    buckling: BucklingAnalysisSettings | None = None
     imperfection_cases: list[ImperfectionCase] | None = Field([], validate_default=True)
     load_cases: list[LoadCase] | None = Field([], validate_default=True)
     load_combinations: list[LoadCombination] | None = Field([], validate_default=True)
+    modal: ModalAnalysisSettings | None = None
     options: AnalysisOptions = Field(
         ...,
         description='Solver options (first/second order, tolerances, self-weight, gravity, …).',
     )
+    seismic: SeismicAnalysisSettings | None = None
     unity_checks: list[UnityCheckDefinition] | None = Field(
         [],
         description='Post-processing unity checks evaluated against the results.',
@@ -1713,7 +2053,7 @@ class FERS(BaseModel):
     )
     results: ResultsBundle | None = None
     schema_version: conint(ge=0) | None = Field(
-        1,
+        2,
         description='Schema contract version (see [`SCHEMA_VERSION`]). Defaults to the current\nversion when omitted so older documents still parse.',
     )
     settings: Settings = Field(

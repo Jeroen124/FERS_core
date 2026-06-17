@@ -49,6 +49,17 @@ from .results.member import MemberResult
 from .results.nodes import NodeDisplacement, NodeForces, ReactionNodeResult
 from .cloud import FersCloudClient
 from .sections.steel_sections_en import resolve_section, list_sections
+from .analysis_settings import (
+    modal_analysis,
+    buckling_analysis,
+    seismic_analysis,
+    eurocode_spectrum,
+    direct_spectrum,
+    custom_spectrum,
+    load_case_ref,
+    load_combination_ref,
+    seismic_mass_source,
+)
 
 
 def __getattr__(name: str):
@@ -66,6 +77,15 @@ def __getattr__(name: str):
 __all__ = [
     "AnalysisOrder",
     "Dimensionality",
+    "modal_analysis",
+    "buckling_analysis",
+    "seismic_analysis",
+    "eurocode_spectrum",
+    "direct_spectrum",
+    "custom_spectrum",
+    "load_case_ref",
+    "load_combination_ref",
+    "seismic_mass_source",
     "DistributedLoad",
     "DistributionShape",
     "FERS",

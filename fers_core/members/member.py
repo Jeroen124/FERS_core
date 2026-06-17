@@ -68,6 +68,12 @@ class Member:
             float(unstretched_length) if unstretched_length is not None else None
         )
 
+        # Solver-units self-weight override (a gravity load **per unit length**,
+        # already including g). `None` means "derive from density·area·g" — the
+        # solver's sentinel for that is 0.0. Kept separate from the in-memory
+        # `self.weight` total-mass value (which legacy callers such as
+        # LoadCase self-weight UDLs rely on).
+        self._weight_override = float(weight) if weight is not None else None
         self.weight = float(weight) if weight is not None else self.weight()
 
         # Keep registry if you use it elsewhere
@@ -182,7 +188,11 @@ class Member:
             "start_hinge": self.start_hinge.id if self.start_hinge else None,
             "end_hinge": self.end_hinge.id if self.end_hinge else None,
             "classification": self.classification,
-            "weight": self.weight,
+            # Emit the solver-units override only when the user set one; otherwise
+            # 0.0 = "use the computed density·area·g self-weight / density·area
+            # mass" (emitting the in-memory total mass here corrupts both the
+            # generated self-weight and the modal/seismic mass).
+            "weight": self._weight_override if self._weight_override is not None else 0.0,
             "chi": self.chi,
             "reference_member": self.reference_member.id if self.reference_member else None,
             "reference_node": self.reference_node.id if self.reference_node else None,
@@ -284,7 +294,9 @@ class Member:
             classification=data.get("classification", "") or "",
             rotation_angle=float(data.get("rotation_angle", 0.0) or 0.0),
             mirror=bool(data.get("mirror", False)),
-            weight=data.get("weight"),
+            # 0.0 is the solver's "use computed self-weight" sentinel, not a real
+            # override — treat it as unset so the in-memory mass is re-derived.
+            weight=(data.get("weight") or None),
             chi=data.get("chi"),
             reference_member=reference_member,
             reference_node=reference_node,

@@ -1,0 +1,203 @@
+{
+    "schema_version": 1,
+    "settings": {
+        "unit_settings": {
+            "system": "metric",
+            "lengthUnit": "m",
+            "forceUnit": "N",
+            "densityUnit": "kg\/m3",
+            "weightUnit": "kg",
+            "pressureUnit": "Pa",
+            "temperatureUnit": "celsius"
+        },
+        "general_info": {
+            "project_name": "Unnamed Project",
+            "author": "Unknown",
+            "version": "1.0"
+        }
+    },
+    "model": {
+        "nodes": [
+            {
+                "id": 1,
+                "classification": "",
+                "X": 0,
+                "Y": 0,
+                "Z": 0,
+                "nodal_support": 1
+            },
+            {
+                "id": 2,
+                "classification": "",
+                "X": 0,
+                "Y": 4.0,
+                "Z": 0,
+                "nodal_support": null
+            }
+        ],
+        "members": [
+            {
+                "id": 1,
+                "start_node_id": 1,
+                "end_node_id": 2,
+                "start_offset": null,
+                "end_offset": null,
+                "section": 1,
+                "rotation_angle": 0.0,
+                "mirror": false,
+                "start_hinge": null,
+                "end_hinge": null,
+                "classification": "",
+                "weight": 0.0,
+                "chi": null,
+                "reference_member": null,
+                "reference_node": null,
+                "member_type": "Normal",
+                "pretension": null,
+                "unstretched_length": null
+            }
+        ],
+        "member_sets": [
+            {
+                "id": 1,
+                "classification": null,
+                "member_ids": [
+                    1
+                ],
+                "buckling_restraints": []
+            }
+        ],
+        "materials": [
+            {
+                "id": 1,
+                "name": "Steel",
+                "e_mod": 210000000000.0,
+                "g_mod": 80769000000.0,
+                "density": 7850,
+                "yield_stress": 235000000.0
+            }
+        ],
+        "sections": [
+            {
+                "id": 1,
+                "name": "SQ",
+                "material": 1,
+                "h": null,
+                "b": null,
+                "i_y": 0.0001,
+                "i_z": 0.0001,
+                "j": 1e-5,
+                "area": 0.01,
+                "shape_path": null
+            }
+        ],
+        "nodal_supports": [
+            {
+                "id": 1,
+                "classification": null,
+                "X": {
+                    "condition_type": "Fixed",
+                    "stiffness": null
+                },
+                "Y": {
+                    "condition_type": "Fixed",
+                    "stiffness": null
+                },
+                "Z": {
+                    "condition_type": "Fixed",
+                    "stiffness": null
+                },
+                "RX": {
+                    "condition_type": "Fixed",
+                    "stiffness": null
+                },
+                "RY": {
+                    "condition_type": "Fixed",
+                    "stiffness": null
+                },
+                "RZ": {
+                    "condition_type": "Fixed",
+                    "stiffness": null
+                },
+                "warping_condition": null
+            }
+        ],
+        "member_hinges": [],
+        "shape_paths": [],
+        "plate_surfaces": [],
+        "plate_elements": [],
+        "workspace": {
+            "work_axes": [],
+            "work_planes": [],
+            "entity_groups": []
+        }
+    },
+    "analysis": {
+        "options": {
+            "solve_loadcases": true,
+            "tolerance": 0.01,
+            "max_iterations": 30,
+            "dimensionality": "3D",
+            "order": "Nonlinear",
+            "rigid_strategy": "Rigid_Member",
+            "axial_slack": 500,
+            "include_shear_deformation": true,
+            "include_warping": true,
+            "include_shear_center_coupling": true
+        },
+        "load_cases": [
+            {
+                "id": 1,
+                "name": "Gravity",
+                "nodal_loads": [
+                    {
+                        "id": 1,
+                        "node": 2,
+                        "magnitude": 98100.0,
+                        "direction": [
+                            0,
+                            -1,
+                            0
+                        ],
+                        "load_type": "force"
+                    }
+                ],
+                "nodal_moments": [],
+                "distributed_loads": [],
+                "surface_loads": [],
+                "member_point_loads": [],
+                "member_point_moments": [],
+                "plate_pressures": []
+            }
+        ],
+        "load_combinations": [],
+        "imperfection_cases": [],
+        "unity_checks": [],
+        "seismic": {
+            "method": "BOTH",
+            "num_modes": 3,
+            "spectrum_x": {
+                "DirectParameters": {
+                    "ag": 1.0,
+                    "s": 1.0,
+                    "tb": 0.1,
+                    "tc": 0.5,
+                    "td": 2.0,
+                    "q": 1.0,
+                    "beta": 0.2
+                }
+            },
+            "mass_sources": [
+                {
+                    "load_case_id": 1,
+                    "psi": 1.0
+                }
+            ],
+            "directions": [
+                "X"
+            ],
+            "include_structural_mass": false
+        }
+    },
+    "results": null
+}

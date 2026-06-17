@@ -31,6 +31,12 @@ class ResultsBundle:
     unity_check_results: List[Dict[str, Any]] = field(default_factory=list)
     # Single consolidated HTML report, when the solver was asked to embed it.
     report_html: Optional[str] = None
+    # Optional eigenvalue / seismic analysis results (plain dicts mirroring the
+    # solver's ModalResults / BucklingResults / SeismicResults). Present only
+    # when the matching `analysis.{modal,buckling,seismic}` block was requested.
+    modal: Optional[Dict[str, Any]] = None
+    buckling: Optional[Dict[str, Any]] = None
+    seismic: Optional[Dict[str, Any]] = None
 
     # Factory from the generated Pydantic ResultsBundle
     @classmethod
@@ -48,6 +54,9 @@ class ResultsBundle:
         instance.loadcombinations = comb_map
         instance.unity_check_results = _to_plain(getattr(pyd_bundle, "unity_check_results", []) or [])
         instance.report_html = getattr(pyd_bundle, "report_html", None)
+        instance.modal = _to_plain(getattr(pyd_bundle, "modal", None))
+        instance.buckling = _to_plain(getattr(pyd_bundle, "buckling", None))
+        instance.seismic = _to_plain(getattr(pyd_bundle, "seismic", None))
 
         return instance
 
@@ -125,6 +134,9 @@ class ResultsBundle:
         instance.loadcombinations = comb_map
         instance.unity_check_results = list(raw.get("unity_check_results") or [])
         instance.report_html = raw.get("report_html")
+        instance.modal = raw.get("modal")
+        instance.buckling = raw.get("buckling")
+        instance.seismic = raw.get("seismic")
         return instance
 
     def to_dict(self) -> Dict[str, Any]:
@@ -133,4 +145,7 @@ class ResultsBundle:
             "loadcombinations": {k: v.to_dict() for k, v in self.loadcombinations.items()},
             "unity_check_results": self.unity_check_results,
             "report_html": self.report_html,
+            "modal": self.modal,
+            "buckling": self.buckling,
+            "seismic": self.seismic,
         }
