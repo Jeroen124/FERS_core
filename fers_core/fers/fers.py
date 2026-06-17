@@ -188,6 +188,39 @@ class _AnalysisView:
     def unity_checks(self):
         return self._f.unity_checks
 
+    @property
+    def modal(self):
+        return self._f.modal
+
+    @modal.setter
+    def modal(self, value):
+        self._f.modal = value
+
+    @property
+    def buckling(self):
+        return self._f.buckling
+
+    @buckling.setter
+    def buckling(self, value):
+        self._f.buckling = value
+
+    @property
+    def seismic(self):
+        return self._f.seismic
+
+    @seismic.setter
+    def seismic(self, value):
+        self._f.seismic = value
+
+    def set_modal(self, settings):
+        return self._f.set_modal(settings)
+
+    def set_buckling(self, settings):
+        return self._f.set_buckling(settings)
+
+    def set_seismic(self, settings):
+        return self._f.set_seismic(settings)
+
     def add_unity_check(self, *checks):
         return self._f.add_unity_check(*checks)
 
@@ -229,6 +262,11 @@ class FERS:
         # Unity-check definitions (plain dicts in the solver's schema shape; use
         # the builders in `fers_core.unity_checks` to construct them).
         self.unity_checks = []
+        # Optional eigenvalue / seismic analysis blocks (plain dicts in the
+        # solver's schema shape; use the builders in `fers_core.analysis_settings`).
+        self.modal = None
+        self.buckling = None
+        self.seismic = None
         self.settings = (
             settings if settings is not None else Settings()
         )  # Use provided settings or create default
@@ -347,6 +385,14 @@ class FERS:
                 ],
             },
         }
+        # Optional eigenvalue / seismic blocks: emit only when set so the wire
+        # JSON stays lean (the solver treats an absent key as "no such analysis").
+        if self.modal is not None:
+            data["analysis"]["modal"] = self.modal
+        if self.buckling is not None:
+            data["analysis"]["buckling"] = self.buckling
+        if self.seismic is not None:
+            data["analysis"]["seismic"] = self.seismic
         if include_results and self.resultsbundle is not None:
             data["results"] = self.resultsbundle.to_dict()
         else:
@@ -395,6 +441,9 @@ class FERS:
             "load_combinations": analysis.get("load_combinations", []),
             "imperfection_cases": analysis.get("imperfection_cases", []),
             "unity_checks": analysis.get("unity_checks", []),
+            "modal": analysis.get("modal"),
+            "buckling": analysis.get("buckling"),
+            "seismic": analysis.get("seismic"),
             "settings": settings_data,
             "results": data.get("results") or data.get("resultsbundle"),
         }
@@ -404,6 +453,10 @@ class FERS:
         fers.schema_version = schema_version
         # Unity-check definitions are carried through as plain dicts.
         fers.unity_checks = list(data.get("unity_checks") or [])
+        # Optional eigenvalue / seismic analysis blocks (plain dicts | None).
+        fers.modal = data.get("modal")
+        fers.buckling = data.get("buckling")
+        fers.seismic = data.get("seismic")
 
         # lookup tables as you already have...
         id_to_shape_path = {
@@ -583,6 +636,27 @@ class FERS:
         for c in checks:
             self.unity_checks.append(c.to_dict() if hasattr(c, "to_dict") else c)
 
+    def set_modal(self, settings):
+        """Request a modal (natural-frequency) analysis. `settings` is a plain
+        dict in the solver schema — build it with
+        `fers_core.analysis_settings.modal_analysis`. Pass None to clear."""
+        self.modal = settings
+        return settings
+
+    def set_buckling(self, settings):
+        """Request a linear (eigenvalue) buckling analysis. `settings` is a plain
+        dict — build it with `fers_core.analysis_settings.buckling_analysis`.
+        Pass None to clear."""
+        self.buckling = settings
+        return settings
+
+    def set_seismic(self, settings):
+        """Request a seismic analysis (EN 1998-1). `settings` is a plain dict —
+        build it with `fers_core.analysis_settings.seismic_analysis`. Pass None
+        to clear."""
+        self.seismic = settings
+        return settings
+
     def unity_check_results(self):
         """Unity-check results from the last analysis (list of dicts), or []."""
         if self.resultsbundle is None:
@@ -595,6 +669,25 @@ class FERS:
         if self.resultsbundle is None:
             return None
         return getattr(self.resultsbundle, "report_html", None)
+
+    def modal_results(self):
+        """Modal analysis results from the last run (dict with `modes`), or None."""
+        if self.resultsbundle is None:
+            return None
+        return getattr(self.resultsbundle, "modal", None)
+
+    def buckling_results(self):
+        """Linear-buckling results from the last run (dict with `modes`), or None."""
+        if self.resultsbundle is None:
+            return None
+        return getattr(self.resultsbundle, "buckling", None)
+
+    def seismic_results(self):
+        """Seismic results from the last run (dict with `modal_response_spectrum`
+        and/or `lateral_force`), or None."""
+        if self.resultsbundle is None:
+            return None
+        return getattr(self.resultsbundle, "seismic", None)
 
     def number_of_elements(self):
         """Returns the total number of unique members and plates in the model."""

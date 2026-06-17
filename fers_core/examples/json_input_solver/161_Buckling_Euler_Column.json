@@ -1,0 +1,474 @@
+{
+    "schema_version": 1,
+    "settings": {
+        "unit_settings": {
+            "system": "metric",
+            "lengthUnit": "m",
+            "forceUnit": "N",
+            "densityUnit": "kg\/m3",
+            "weightUnit": "kg",
+            "pressureUnit": "Pa",
+            "temperatureUnit": "celsius"
+        },
+        "general_info": {
+            "project_name": "Unnamed Project",
+            "author": "Unknown",
+            "version": "1.0"
+        }
+    },
+    "model": {
+        "nodes": [
+            {
+                "id": 1,
+                "classification": "",
+                "X": 0.0,
+                "Y": 0,
+                "Z": 0,
+                "nodal_support": 1
+            },
+            {
+                "id": 2,
+                "classification": "",
+                "X": 0.5,
+                "Y": 0,
+                "Z": 0,
+                "nodal_support": null
+            },
+            {
+                "id": 3,
+                "classification": "",
+                "X": 1.0,
+                "Y": 0,
+                "Z": 0,
+                "nodal_support": null
+            },
+            {
+                "id": 4,
+                "classification": "",
+                "X": 1.5,
+                "Y": 0,
+                "Z": 0,
+                "nodal_support": null
+            },
+            {
+                "id": 5,
+                "classification": "",
+                "X": 2.0,
+                "Y": 0,
+                "Z": 0,
+                "nodal_support": null
+            },
+            {
+                "id": 6,
+                "classification": "",
+                "X": 2.5,
+                "Y": 0,
+                "Z": 0,
+                "nodal_support": null
+            },
+            {
+                "id": 7,
+                "classification": "",
+                "X": 3.0,
+                "Y": 0,
+                "Z": 0,
+                "nodal_support": null
+            },
+            {
+                "id": 8,
+                "classification": "",
+                "X": 3.5,
+                "Y": 0,
+                "Z": 0,
+                "nodal_support": null
+            },
+            {
+                "id": 9,
+                "classification": "",
+                "X": 4.0,
+                "Y": 0,
+                "Z": 0,
+                "nodal_support": null
+            },
+            {
+                "id": 10,
+                "classification": "",
+                "X": 4.5,
+                "Y": 0,
+                "Z": 0,
+                "nodal_support": null
+            },
+            {
+                "id": 11,
+                "classification": "",
+                "X": 5.0,
+                "Y": 0,
+                "Z": 0,
+                "nodal_support": 2
+            }
+        ],
+        "members": [
+            {
+                "id": 1,
+                "start_node_id": 1,
+                "end_node_id": 2,
+                "start_offset": null,
+                "end_offset": null,
+                "section": 1,
+                "rotation_angle": 0.0,
+                "mirror": false,
+                "start_hinge": null,
+                "end_hinge": null,
+                "classification": "",
+                "weight": 0.0,
+                "chi": null,
+                "reference_member": null,
+                "reference_node": null,
+                "member_type": "Normal",
+                "pretension": null,
+                "unstretched_length": null
+            },
+            {
+                "id": 2,
+                "start_node_id": 2,
+                "end_node_id": 3,
+                "start_offset": null,
+                "end_offset": null,
+                "section": 1,
+                "rotation_angle": 0.0,
+                "mirror": false,
+                "start_hinge": null,
+                "end_hinge": null,
+                "classification": "",
+                "weight": 0.0,
+                "chi": null,
+                "reference_member": null,
+                "reference_node": null,
+                "member_type": "Normal",
+                "pretension": null,
+                "unstretched_length": null
+            },
+            {
+                "id": 3,
+                "start_node_id": 3,
+                "end_node_id": 4,
+                "start_offset": null,
+                "end_offset": null,
+                "section": 1,
+                "rotation_angle": 0.0,
+                "mirror": false,
+                "start_hinge": null,
+                "end_hinge": null,
+                "classification": "",
+                "weight": 0.0,
+                "chi": null,
+                "reference_member": null,
+                "reference_node": null,
+                "member_type": "Normal",
+                "pretension": null,
+                "unstretched_length": null
+            },
+            {
+                "id": 4,
+                "start_node_id": 4,
+                "end_node_id": 5,
+                "start_offset": null,
+                "end_offset": null,
+                "section": 1,
+                "rotation_angle": 0.0,
+                "mirror": false,
+                "start_hinge": null,
+                "end_hinge": null,
+                "classification": "",
+                "weight": 0.0,
+                "chi": null,
+                "reference_member": null,
+                "reference_node": null,
+                "member_type": "Normal",
+                "pretension": null,
+                "unstretched_length": null
+            },
+            {
+                "id": 5,
+                "start_node_id": 5,
+                "end_node_id": 6,
+                "start_offset": null,
+                "end_offset": null,
+                "section": 1,
+                "rotation_angle": 0.0,
+                "mirror": false,
+                "start_hinge": null,
+                "end_hinge": null,
+                "classification": "",
+                "weight": 0.0,
+                "chi": null,
+                "reference_member": null,
+                "reference_node": null,
+                "member_type": "Normal",
+                "pretension": null,
+                "unstretched_length": null
+            },
+            {
+                "id": 6,
+                "start_node_id": 6,
+                "end_node_id": 7,
+                "start_offset": null,
+                "end_offset": null,
+                "section": 1,
+                "rotation_angle": 0.0,
+                "mirror": false,
+                "start_hinge": null,
+                "end_hinge": null,
+                "classification": "",
+                "weight": 0.0,
+                "chi": null,
+                "reference_member": null,
+                "reference_node": null,
+                "member_type": "Normal",
+                "pretension": null,
+                "unstretched_length": null
+            },
+            {
+                "id": 7,
+                "start_node_id": 7,
+                "end_node_id": 8,
+                "start_offset": null,
+                "end_offset": null,
+                "section": 1,
+                "rotation_angle": 0.0,
+                "mirror": false,
+                "start_hinge": null,
+                "end_hinge": null,
+                "classification": "",
+                "weight": 0.0,
+                "chi": null,
+                "reference_member": null,
+                "reference_node": null,
+                "member_type": "Normal",
+                "pretension": null,
+                "unstretched_length": null
+            },
+            {
+                "id": 8,
+                "start_node_id": 8,
+                "end_node_id": 9,
+                "start_offset": null,
+                "end_offset": null,
+                "section": 1,
+                "rotation_angle": 0.0,
+                "mirror": false,
+                "start_hinge": null,
+                "end_hinge": null,
+                "classification": "",
+                "weight": 0.0,
+                "chi": null,
+                "reference_member": null,
+                "reference_node": null,
+                "member_type": "Normal",
+                "pretension": null,
+                "unstretched_length": null
+            },
+            {
+                "id": 9,
+                "start_node_id": 9,
+                "end_node_id": 10,
+                "start_offset": null,
+                "end_offset": null,
+                "section": 1,
+                "rotation_angle": 0.0,
+                "mirror": false,
+                "start_hinge": null,
+                "end_hinge": null,
+                "classification": "",
+                "weight": 0.0,
+                "chi": null,
+                "reference_member": null,
+                "reference_node": null,
+                "member_type": "Normal",
+                "pretension": null,
+                "unstretched_length": null
+            },
+            {
+                "id": 10,
+                "start_node_id": 10,
+                "end_node_id": 11,
+                "start_offset": null,
+                "end_offset": null,
+                "section": 1,
+                "rotation_angle": 0.0,
+                "mirror": false,
+                "start_hinge": null,
+                "end_hinge": null,
+                "classification": "",
+                "weight": 0.0,
+                "chi": null,
+                "reference_member": null,
+                "reference_node": null,
+                "member_type": "Normal",
+                "pretension": null,
+                "unstretched_length": null
+            }
+        ],
+        "member_sets": [
+            {
+                "id": 1,
+                "classification": null,
+                "member_ids": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "buckling_restraints": []
+            }
+        ],
+        "materials": [
+            {
+                "id": 1,
+                "name": "Steel",
+                "e_mod": 210000000000.0,
+                "g_mod": 80769000000.0,
+                "density": 7850,
+                "yield_stress": 235000000.0
+            }
+        ],
+        "sections": [
+            {
+                "id": 1,
+                "name": "Square 100x100",
+                "material": 1,
+                "h": null,
+                "b": null,
+                "i_y": 8.333333333333335e-6,
+                "i_z": 8.333333333333335e-6,
+                "j": 1.4060000000000003e-5,
+                "area": 0.010000000000000002,
+                "shape_path": null
+            }
+        ],
+        "nodal_supports": [
+            {
+                "id": 1,
+                "classification": null,
+                "X": {
+                    "condition_type": "Fixed",
+                    "stiffness": null
+                },
+                "Y": {
+                    "condition_type": "Fixed",
+                    "stiffness": null
+                },
+                "Z": {
+                    "condition_type": "Fixed",
+                    "stiffness": null
+                },
+                "RX": {
+                    "condition_type": "Fixed",
+                    "stiffness": null
+                },
+                "RY": {
+                    "condition_type": "Free",
+                    "stiffness": null
+                },
+                "RZ": {
+                    "condition_type": "Free",
+                    "stiffness": null
+                },
+                "warping_condition": null
+            },
+            {
+                "id": 2,
+                "classification": null,
+                "X": {
+                    "condition_type": "Free",
+                    "stiffness": null
+                },
+                "Y": {
+                    "condition_type": "Fixed",
+                    "stiffness": null
+                },
+                "Z": {
+                    "condition_type": "Fixed",
+                    "stiffness": null
+                },
+                "RX": {
+                    "condition_type": "Fixed",
+                    "stiffness": null
+                },
+                "RY": {
+                    "condition_type": "Free",
+                    "stiffness": null
+                },
+                "RZ": {
+                    "condition_type": "Free",
+                    "stiffness": null
+                },
+                "warping_condition": null
+            }
+        ],
+        "member_hinges": [],
+        "shape_paths": [],
+        "plate_surfaces": [],
+        "plate_elements": [],
+        "workspace": {
+            "work_axes": [],
+            "work_planes": [],
+            "entity_groups": []
+        }
+    },
+    "analysis": {
+        "options": {
+            "solve_loadcases": true,
+            "tolerance": 0.01,
+            "max_iterations": 30,
+            "dimensionality": "3D",
+            "order": "Nonlinear",
+            "rigid_strategy": "Rigid_Member",
+            "axial_slack": 500,
+            "include_shear_deformation": true,
+            "include_warping": true,
+            "include_shear_center_coupling": true
+        },
+        "load_cases": [
+            {
+                "id": 1,
+                "name": "Axial",
+                "nodal_loads": [
+                    {
+                        "id": 1,
+                        "node": 11,
+                        "magnitude": 1000.0,
+                        "direction": [
+                            -1,
+                            0,
+                            0
+                        ],
+                        "load_type": "force"
+                    }
+                ],
+                "nodal_moments": [],
+                "distributed_loads": [],
+                "surface_loads": [],
+                "member_point_loads": [],
+                "member_point_moments": [],
+                "plate_pressures": []
+            }
+        ],
+        "load_combinations": [],
+        "imperfection_cases": [],
+        "unity_checks": [],
+        "buckling": {
+            "num_modes": 2,
+            "reference": {
+                "LoadCase": 1
+            }
+        }
+    },
+    "results": null
+}
