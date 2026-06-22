@@ -112,6 +112,12 @@ class AnalysisOrder(Enum):
     NONLINEAR = 'NONLINEAR'
 
 
+class Axis(Enum):
+    X = 'X'
+    Y = 'Y'
+    Z = 'Z'
+
+
 class BucklingCurve(Enum):
     A0 = 'A0'
     A = 'A'
@@ -146,6 +152,12 @@ class CalcStep(BaseModel):
     substituted: str
     unit: str
     value: float
+
+
+class DeflectionComponent(Enum):
+    LocalY = 'LocalY'
+    LocalZ = 'LocalZ'
+    Magnitude = 'Magnitude'
 
 
 class DensityUnit(Enum):
@@ -240,6 +252,14 @@ class EntityGroup(BaseModel):
     support_ids: list[conint(ge=0)] | None = None
     work_axis_ids: list[conint(ge=0)] | None = None
     work_plane_ids: list[conint(ge=0)] | None = None
+
+
+class EntityNodeRef(Enum):
+    Start = 'Start'
+    End = 'End'
+    ReferenceMemberStart = 'ReferenceMemberStart'
+    ReferenceMemberEnd = 'ReferenceMemberEnd'
+    ReferenceNode = 'ReferenceNode'
 
 
 class Type6(Enum):
@@ -406,6 +426,11 @@ class EntitySelector(
         ...,
         description='Which entities a check applies to. Internally tagged (`{"type": …}`) so every\nvariant is an object (a mixed bare-string/object `oneOf` breaks the cloud TS\ngenerator).',
     )
+
+
+class EntityTarget(Enum):
+    SelfEntity = 'SelfEntity'
+    ReferenceMember = 'ReferenceMember'
 
 
 class ForceUnit(Enum):
@@ -795,6 +820,7 @@ class PressureUnit(Enum):
 class MemberForce(BaseModel):
     aggregation: Aggregation | None = None
     component: MemberForceComponent
+    of: EntityTarget | None = None
 
 
 class QuantitySource1(BaseModel):
@@ -823,27 +849,81 @@ class QuantitySource2(BaseModel):
     )
 
 
-class Material1(BaseModel):
-    property: MaterialProperty
+class NodeDisplacement1(BaseModel):
+    at: EntityNodeRef
+    component: DispComponent
+
+
+class QuantitySource3(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    NodeDisplacement: NodeDisplacement1 = Field(
+        ...,
+        description='Displacement (or rotation) of a node named relative to the entity — its own\nends, or the paired member/node via `reference_member` / `reference_node`.\nCompose two of these for relative drift / differential settlement.',
+    )
+
+
+class NodePosition(BaseModel):
+    at: EntityNodeRef
+    axis: Axis
 
 
 class QuantitySource4(BaseModel):
     model_config = ConfigDict(
         extra='forbid',
     )
-    Material: Material1 = Field(..., description="A property of the entity's material.")
+    NodePosition_1: NodePosition = Field(
+        ...,
+        alias='NodePosition',
+        description='Deflected position (undeformed coordinate + displacement) of a node named\nrelative to the entity, along a global axis. For clearance / "below a line"\nchecks: compare two positions to get the deflected gap.',
+    )
 
 
-class Geometry(BaseModel):
-    property: GeometryProperty
+class MemberDeflection(BaseModel):
+    aggregation: Aggregation | None = None
+    component: DeflectionComponent
 
 
 class QuantitySource5(BaseModel):
     model_config = ConfigDict(
         extra='forbid',
     )
+    MemberDeflection_1: MemberDeflection = Field(
+        ...,
+        alias='MemberDeflection',
+        description="Transverse deflection relative to the entity's end-to-end chord\n(support-to-support for a member-set). Removes support settlement and rigid\nchord rotation, leaving the member's own sag — the quantity SLS deflection\nlimits (e.g. `span/200`) are written against. The deflected shape is\nreconstructed by cubic Hermite interpolation and reduced by `aggregation`.",
+    )
+
+
+class Material1(BaseModel):
+    of: EntityTarget | None = None
+    property: MaterialProperty
+
+
+class QuantitySource7(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    Material: Material1 = Field(
+        ...,
+        description="A property of the entity's (or its reference member's) material.",
+    )
+
+
+class Geometry(BaseModel):
+    of: EntityTarget | None = None
+    property: GeometryProperty
+
+
+class QuantitySource8(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
     Geometry_1: Geometry = Field(
-        ..., alias='Geometry', description='A geometric quantity of the entity.'
+        ...,
+        alias='Geometry',
+        description='A geometric quantity of the entity (or its reference member).',
     )
 
 
@@ -851,7 +931,7 @@ class PlateStress(BaseModel):
     measure: PlateStressMeasure
 
 
-class QuantitySource6(BaseModel):
+class QuantitySource9(BaseModel):
     model_config = ConfigDict(
         extra='forbid',
     )
@@ -862,7 +942,7 @@ class QuantitySource6(BaseModel):
     )
 
 
-class QuantitySource7(BaseModel):
+class QuantitySource10(BaseModel):
     model_config = ConfigDict(
         extra='forbid',
     )
@@ -1668,14 +1748,18 @@ class PlateSurface(BaseModel):
 
 
 class Section1(BaseModel):
+    of: EntityTarget | None = None
     property: SectionProperty
 
 
-class QuantitySource3(BaseModel):
+class QuantitySource6(BaseModel):
     model_config = ConfigDict(
         extra='forbid',
     )
-    Section: Section1 = Field(..., description="A property of the entity's section.")
+    Section: Section1 = Field(
+        ...,
+        description="A property of the entity's (or its reference member's) section.",
+    )
 
 
 class QuantitySource(
@@ -1687,6 +1771,9 @@ class QuantitySource(
         | QuantitySource5
         | QuantitySource6
         | QuantitySource7
+        | QuantitySource8
+        | QuantitySource9
+        | QuantitySource10
     ]
 ):
     root: (
@@ -1697,6 +1784,9 @@ class QuantitySource(
         | QuantitySource5
         | QuantitySource6
         | QuantitySource7
+        | QuantitySource8
+        | QuantitySource9
+        | QuantitySource10
     ) = Field(
         ...,
         description='A bindable quantity — the source of a `{{variable}}` in a unity-check formula.',
