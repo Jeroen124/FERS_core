@@ -27,12 +27,29 @@ Example::
     )
     calc.add_unity_check(ec3_steel_check("ec3", "EC3 steel member", limit_state="ULS"))
 
+Cross-member / serviceability quantities (solver ≥ 0.2.39)::
+
+    # Chord-relative beam sag (settlement removed) — the SLS deflection quantity:
+    var("d", member_deflection("Magnitude"))            # demand: "abs(d)"
+
+    # Compare a member to the one it points at via `reference_member` — e.g.
+    # "has the rail sagged below the beam it hangs under?" (deflected clearance):
+    var("y_self", node_position("Start", "Y"))
+    var("y_ref",  node_position("ReferenceMemberStart", "Y"))
+    # ... with capacity="y_ref - y_self".  Reference-aware properties/forces too:
+    var("Lb", geometry("Length", of="ReferenceMember"))
+    var("Fb", member_force("My", of="ReferenceMember"))
+
 String enums (case-sensitive, matching the solver):
     component        N | Vy | Vz | Mx | My | Mz | Bimoment
     aggregation      MaxAbs | Max | Min | Start | End | AtFraction
     section property A·… → Area | Iy | Iz | J | Iw | WelY | WelZ | WplY | WplZ | H | B | Asy | Asz
     material         E | G | Fy | Density
     displacement     Dx | Dy | Dz | Rx | Ry | Rz | Magnitude
+    deflection       LocalY | LocalZ | Magnitude          (relative to the chord)
+    node ref (at)    Start | End | ReferenceMemberStart | ReferenceMemberEnd | ReferenceNode
+    axis             X | Y | Z
+    of (target)      SelfEntity | ReferenceMember          (omit for self)
     limit_state      SLS | ULS | FLS | ALS
 """
 
@@ -44,29 +61,64 @@ from typing import Any, Dict, List, Optional
 # ── variable sources ─────────────────────────────────────────────────────────
 
 
+def _with_of(inner: Dict[str, Any], of: Optional[str]) -> Dict[str, Any]:
+    """Attach a reference target (``of="ReferenceMember"``) to a property/force
+    quantity. Omitted (or ``"SelfEntity"``) keeps the default of the bound entity."""
+    if of is not None and of != "SelfEntity":
+        inner["of"] = of
+    return inner
+
+
 def member_force(
-    component: str, aggregation: str = "MaxAbs", fraction: Optional[float] = None
+    component: str,
+    aggregation: str = "MaxAbs",
+    fraction: Optional[float] = None,
+    of: Optional[str] = None,
 ) -> Dict[str, Any]:
     agg: Dict[str, Any] = {"type": aggregation}
     if aggregation == "AtFraction":
         agg["fraction"] = 0.5 if fraction is None else float(fraction)
-    return {"Quantity": {"MemberForce": {"component": component, "aggregation": agg}}}
+    inner = _with_of({"component": component, "aggregation": agg}, of)
+    return {"Quantity": {"MemberForce": inner}}
 
 
-def section(prop: str) -> Dict[str, Any]:
-    return {"Quantity": {"Section": {"property": prop}}}
+def section(prop: str, of: Optional[str] = None) -> Dict[str, Any]:
+    return {"Quantity": {"Section": _with_of({"property": prop}, of)}}
 
 
-def material(prop: str) -> Dict[str, Any]:
-    return {"Quantity": {"Material": {"property": prop}}}
+def material(prop: str, of: Optional[str] = None) -> Dict[str, Any]:
+    return {"Quantity": {"Material": _with_of({"property": prop}, of)}}
 
 
-def geometry(prop: str = "Length") -> Dict[str, Any]:
-    return {"Quantity": {"Geometry": {"property": prop}}}
+def geometry(prop: str = "Length", of: Optional[str] = None) -> Dict[str, Any]:
+    return {"Quantity": {"Geometry": _with_of({"property": prop}, of)}}
 
 
 def displacement(component: str) -> Dict[str, Any]:
     return {"Quantity": {"Displacement": {"component": component}}}
+
+
+def member_deflection(
+    component: str = "Magnitude", aggregation: str = "MaxAbs", fraction: Optional[float] = None
+) -> Dict[str, Any]:
+    """Chord-relative member deflection (support settlement + rigid chord rotation
+    removed) — the quantity SLS deflection limits are written against."""
+    agg: Dict[str, Any] = {"type": aggregation}
+    if aggregation == "AtFraction":
+        agg["fraction"] = 0.5 if fraction is None else float(fraction)
+    return {"Quantity": {"MemberDeflection": {"component": component, "aggregation": agg}}}
+
+
+def node_displacement(at: str, component: str) -> Dict[str, Any]:
+    """Displacement (or rotation) of a node named relative to the entity — its own
+    ends, or the paired member/node via ``reference_member`` / ``reference_node``."""
+    return {"Quantity": {"NodeDisplacement": {"at": at, "component": component}}}
+
+
+def node_position(at: str, axis: str) -> Dict[str, Any]:
+    """Deflected position (undeformed coordinate + displacement) of a node named
+    relative to the entity, along a global axis — for clearance / "below a line"."""
+    return {"Quantity": {"NodePosition": {"at": at, "axis": axis}}}
 
 
 def plate_stress(measure: str = "VonMises") -> Dict[str, Any]:
