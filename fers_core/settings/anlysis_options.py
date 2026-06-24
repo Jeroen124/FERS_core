@@ -1,5 +1,12 @@
-from typing import Optional
-from ..settings.enums import AnalysisOrder, Dimensionality, RigidStrategy
+from typing import List, Optional
+from ..settings.enums import (
+    AnalysisOrder,
+    Dimensionality,
+    NonlinearMethod,
+    PdeltaFormulation,
+    PdeltaMode,
+    RigidStrategy,
+)
 
 
 class AnalysisOptions:
@@ -19,6 +26,10 @@ class AnalysisOptions:
         include_shear_deformation: Optional[bool] = True,
         include_warping: Optional[bool] = True,
         include_shear_center_coupling: Optional[bool] = True,
+        nonlinear_method: Optional[NonlinearMethod] = None,
+        pdelta_formulation: Optional[PdeltaFormulation] = None,
+        pdelta_mode: Optional[PdeltaMode] = None,
+        pdelta_suppress_axes: Optional[List[str]] = None,
         enable_self_weight: Optional[bool] = None,
         gravity_direction: Optional[tuple] = None,
         gravity_factor: Optional[float] = None,
@@ -38,6 +49,13 @@ class AnalysisOptions:
         self.include_shear_deformation = include_shear_deformation
         self.include_warping = include_warping
         self.include_shear_center_coupling = include_shear_center_coupling
+        # Second-order / P-delta controls. Left as None by default so the solver
+        # applies its own defaults (nonlinear_method=COROTATIONAL, pdelta_mode=FULL,
+        # pdelta_formulation=CONSISTENT); only emitted when explicitly set.
+        self.nonlinear_method = nonlinear_method
+        self.pdelta_formulation = pdelta_formulation
+        self.pdelta_mode = pdelta_mode
+        self.pdelta_suppress_axes = list(pdelta_suppress_axes) if pdelta_suppress_axes is not None else None
         self.enable_self_weight = enable_self_weight
         self.gravity_direction = tuple(gravity_direction) if gravity_direction is not None else None
         self.gravity_factor = float(gravity_factor) if gravity_factor is not None else None
@@ -46,6 +64,7 @@ class AnalysisOptions:
     def to_dict(self):
         data = {
             "solve_loadcases": self.solve_loadcases,
+            "solver": self.solver,
             "tolerance": self.tolerance,
             "max_iterations": self.max_iterations,
             "dimensionality": self.dimensionality.value,
@@ -56,6 +75,17 @@ class AnalysisOptions:
             "include_warping": self.include_warping,
             "include_shear_center_coupling": self.include_shear_center_coupling,
         }
+        # Second-order / P-delta controls are only emitted when explicitly set so
+        # the solver falls back to its own defaults (each Rust field is
+        # `#[serde(default)]` and would reject an explicit null).
+        if self.nonlinear_method is not None:
+            data["nonlinear_method"] = self.nonlinear_method.value
+        if self.pdelta_formulation is not None:
+            data["pdelta_formulation"] = self.pdelta_formulation.value
+        if self.pdelta_mode is not None:
+            data["pdelta_mode"] = self.pdelta_mode.value
+        if self.pdelta_suppress_axes is not None:
+            data["pdelta_suppress_axes"] = list(self.pdelta_suppress_axes)
         # Self-weight options are only emitted when explicitly set, so the solver
         # falls back to its own defaults (its `enable_self_weight` is a plain bool
         # that rejects an explicit null).
@@ -117,6 +147,11 @@ class AnalysisOptions:
             RigidStrategy.RIGID_MEMBER,
         )
 
+        # Second-order / P-delta controls: absent → None (solver default applies).
+        nonlinear_method = parse_enum(NonlinearMethod, data.get("nonlinear_method"), None)
+        pdelta_formulation = parse_enum(PdeltaFormulation, data.get("pdelta_formulation"), None)
+        pdelta_mode = parse_enum(PdeltaMode, data.get("pdelta_mode"), None)
+
         return cls(
             id=data.get("id"),
             solve_loadcases=data.get("solve_loadcases", True),
@@ -130,6 +165,10 @@ class AnalysisOptions:
             include_shear_deformation=data.get("include_shear_deformation", True),
             include_warping=data.get("include_warping", True),
             include_shear_center_coupling=data.get("include_shear_center_coupling", True),
+            nonlinear_method=nonlinear_method,
+            pdelta_formulation=pdelta_formulation,
+            pdelta_mode=pdelta_mode,
+            pdelta_suppress_axes=data.get("pdelta_suppress_axes"),
             enable_self_weight=data.get("enable_self_weight"),
             gravity_direction=data.get("gravity_direction"),
             gravity_factor=data.get("gravity_factor"),

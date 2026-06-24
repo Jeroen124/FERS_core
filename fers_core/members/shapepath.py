@@ -57,7 +57,7 @@ class ShapePath:
         commands: List[ShapeCommand] = []
 
         for command_data in commands_data:
-            command_data = ShapeCommand.from_dict(command_data)
+            commands.append(ShapeCommand.from_dict(command_data))
 
         return cls(
             name=data["name"],
