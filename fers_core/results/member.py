@@ -23,6 +23,7 @@ class MemberResult:
         local_displacement_start_node: Optional[NodeDisplacement] = None,
         local_displacement_end_node: Optional[NodeDisplacement] = None,
         section_forces: Optional[List[SectionForce]] = None,
+        member_displacements: Optional[List[Tuple[float, Tuple[float, float, float]]]] = None,
     ) -> None:
         self.start_node_forces = start_node_forces if start_node_forces is not None else NodeForces()
         self.end_node_forces = end_node_forces if end_node_forces is not None else NodeForces()
@@ -39,6 +40,11 @@ class MemberResult:
             local_displacement_end_node if local_displacement_end_node is not None else NodeDisplacement()
         )
         self.section_forces: List[SectionForce] = section_forces if section_forces is not None else []
+        # Optional engine-sampled deflected shape: (x_frac, (dx, dy, dz)) per station
+        # in the global frame (present when include_member_deflected_shape was set).
+        self.member_displacements: List[Tuple[float, Tuple[float, float, float]]] = (
+            member_displacements if member_displacements is not None else []
+        )
 
     @classmethod
     def from_pydantic(cls, model_object: Any) -> "MemberResult":
@@ -49,6 +55,22 @@ class MemberResult:
                 section_forces.append(SectionForce.from_dict(sf))
             else:
                 section_forces.append(SectionForce.from_pydantic(sf))
+        raw_md = getattr(model_object, "member_displacements", None) or []
+        member_displacements: List[Tuple[float, Tuple[float, float, float]]] = []
+        for s in raw_md:
+            if isinstance(s, dict):
+                xf = s.get("x_frac")
+                d = s.get("displacement")
+            else:
+                xf = getattr(s, "x_frac", None)
+                d = getattr(s, "displacement", None)
+            # `displacement` may be a Vector3 RootModel (pydantic) or a raw list.
+            if hasattr(d, "root"):
+                d = d.root
+            if xf is None or d is None:
+                continue
+            member_displacements.append((float(xf), (float(d[0]), float(d[1]), float(d[2]))))
+
         return cls(
             start_node_forces=NodeForces.from_pydantic(getattr(model_object, "start_node_forces", None)),
             end_node_forces=NodeForces.from_pydantic(getattr(model_object, "end_node_forces", None)),
@@ -69,6 +91,7 @@ class MemberResult:
             if getattr(model_object, "local_displacement_end_node", None) is not None
             else None,
             section_forces=section_forces,
+            member_displacements=member_displacements,
         )
 
     def to_dict(self) -> Dict[str, Any]:
@@ -84,6 +107,9 @@ class MemberResult:
             "local_displacement_start_node": self.local_displacement_start_node.to_dict(),
             "local_displacement_end_node": self.local_displacement_end_node.to_dict(),
             "section_forces": [sf.to_dict() for sf in self.section_forces],
+            "member_displacements": [
+                {"x_frac": xf, "displacement": list(d)} for xf, d in self.member_displacements
+            ],
         }
 
     # ------------------------------------------------------------------
@@ -122,17 +148,34 @@ class MemberResult:
         import numpy as _np
         import pyvista as _pv
 
-        from fers_core.fers.deformation_utils import centerline_path_points
+        if self.member_displacements:
+            # Load-exact deflected shape from the engine (member_displacements): the
+            # member's global displacement sampled along its length; the undeformed
+            # station is the straight-member interpolation. Preferred over the
+            # simplified client-side Hermite below, which under-renders mid-span sag.
+            p0 = _np.array(
+                [member.start_node.X, member.start_node.Y, member.start_node.Z], dtype=float
+            )
+            p1 = _np.array(
+                [member.end_node.X, member.end_node.Y, member.end_node.Z], dtype=float
+            )
+            samples = sorted(self.member_displacements, key=lambda s: s[0])
+            xf = _np.array([s[0] for s in samples], dtype=float)
+            disp = _np.array([s[1] for s in samples], dtype=float)
+            original_curve = (1.0 - xf)[:, None] * p0 + xf[:, None] * p1
+            deformed_curve = original_curve + disp * scale
+        else:
+            from fers_core.fers.deformation_utils import centerline_path_points
 
-        original_curve, deformed_curve = centerline_path_points(
-            member,
-            disp_start,
-            rot_start,
-            disp_end,
-            rot_end,
-            num_points,
-            scale,
-        )
+            original_curve, deformed_curve = centerline_path_points(
+                member,
+                disp_start,
+                rot_start,
+                disp_end,
+                rot_end,
+                num_points,
+                scale,
+            )
 
         # Smooth the deformed curve with a spline
         spline_pts = _np.ascontiguousarray(

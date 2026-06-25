@@ -58,6 +58,9 @@ of the FERS structural-analysis library.  Examples are grouped by number range:
 ──────────────────────────────────────────────────────────────────
 101  Visual Cantilever with End Load
 103  Visual Cantilever with Uniform Distributed Load
+104  Visual Member Deflected Shape   – engine load-exact member_displacements vs
+                                    client Hermite on a uniformly-loaded cantilever
+                                    (set include_member_deflected_shape).
 111  Visual Simply Supported with Center Load
 181  Visual Double Cantilever
 182  Visual Double Cantilever – Double Supported

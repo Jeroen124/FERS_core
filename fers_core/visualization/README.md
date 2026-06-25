@@ -84,6 +84,14 @@ result_renderer.diagram_scale = 30.0
 result_renderer.show()
 ```
 
+> **Load-exact deflected shape (engine ≥ 0.2.40).** Set
+> `model.settings.analysis_options.include_member_deflected_shape = True` before
+> `run_analysis()`. The solver then returns each member's sampled deflected polyline
+> (`MemberResult.member_displacements`), and the `ResultRenderer` draws that
+> load-exact curve (quartic-accurate under span loads) in preference to the
+> simplified client-side cubic-Hermite reconstruction — falling back to Hermite
+> automatically when it is absent. See `examples/104_visual_member_deflected_shape.py`.
+
 ### Using Existing Visualization Methods
 
 FERS also maintains existing visualization methods for backward compatibility:

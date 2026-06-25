@@ -34,6 +34,7 @@ class AnalysisOptions:
         gravity_direction: Optional[tuple] = None,
         gravity_factor: Optional[float] = None,
         self_weight_load_case_id: Optional[int] = None,
+        include_member_deflected_shape: Optional[bool] = None,
     ):
         self.analysis_options_id = id or AnalysisOptions._analysis_options_counter
         if id is None:
@@ -60,6 +61,9 @@ class AnalysisOptions:
         self.gravity_direction = tuple(gravity_direction) if gravity_direction is not None else None
         self.gravity_factor = float(gravity_factor) if gravity_factor is not None else None
         self.self_weight_load_case_id = self_weight_load_case_id
+        # When set, the solver returns each member result's sampled deflected shape
+        # (`member_displacements`) for load-exact deformation plots. Off by default.
+        self.include_member_deflected_shape = include_member_deflected_shape
 
     def to_dict(self):
         data = {
@@ -97,6 +101,8 @@ class AnalysisOptions:
             data["gravity_factor"] = self.gravity_factor
         if self.self_weight_load_case_id is not None:
             data["self_weight_load_case_id"] = self.self_weight_load_case_id
+        if self.include_member_deflected_shape is not None:
+            data["include_member_deflected_shape"] = self.include_member_deflected_shape
         return data
 
     @classmethod
@@ -173,4 +179,5 @@ class AnalysisOptions:
             gravity_direction=data.get("gravity_direction"),
             gravity_factor=data.get("gravity_factor"),
             self_weight_load_case_id=data.get("self_weight_load_case_id"),
+            include_member_deflected_shape=data.get("include_member_deflected_shape"),
         )
