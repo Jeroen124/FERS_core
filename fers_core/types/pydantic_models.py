@@ -154,6 +154,15 @@ class CalcStep(BaseModel):
     value: float
 
 
+class ConstantDimension(Enum):
+    Length = 'Length'
+    Force = 'Force'
+    Moment = 'Moment'
+    Stress = 'Stress'
+    Area = 'Area'
+    Angle = 'Angle'
+
+
 class DeflectionComponent(Enum):
     LocalY = 'LocalY'
     LocalZ = 'LocalZ'
@@ -948,7 +957,23 @@ class QuantitySource10(BaseModel):
     )
     Constant: float = Field(
         ...,
-        description="A literal constant (in the model's units for its intended dimension).",
+        description='A literal, dimensionless constant — rendered raw (no unit, no scaling) in\nthe report trace. Use [`QuantitySource::DimensionedConstant`] instead when\nthe constant is compared against a dimensioned quantity (a moment capacity,\na deflection limit, …) so the trace stays unit-consistent.',
+    )
+
+
+class DimensionedConstant(BaseModel):
+    dimension: ConstantDimension
+    value: float
+
+
+class QuantitySource11(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    DimensionedConstant_1: DimensionedConstant = Field(
+        ...,
+        alias='DimensionedConstant',
+        description='A literal constant tagged with its physical [`ConstantDimension`]. The\n`value` is given in **SI** units for that dimension; the report trace then\nscales and labels it exactly like the quantities it is compared against, so\nthe `substituted` arithmetic stays consistent with the computed value and\nboth sides of a demand/capacity ratio share a unit. (A moment capacity of\n2 kN·m → `{ value: 2000.0, dimension: "Moment" }`.)',
     )
 
 
@@ -1320,7 +1345,11 @@ class AnalysisOptions(BaseModel):
     )
     gravity_factor: float | None = Field(
         -9.81,
-        description='Signed gravitational acceleration magnitude in length-units/s².\nDefault `-9.81` (m/s²).  Self-weight per unit length is\n`w = density · area · |gravity_factor|` applied along `gravity_direction`.',
+        description="Signed gravitational acceleration magnitude in **m/s² (SI)**, the same in\nevery unit system (it is NOT rescaled with the model's length unit).\nDefault `-9.81`.  Self-weight per unit length is\n`w = density · area · |gravity_factor|` applied along `gravity_direction`,\nand a member `weight` override maps to modal mass as `weight / |gravity_factor|`.",
+    )
+    include_member_deflected_shape: bool | None = Field(
+        False,
+        description="When true, each member result carries a sampled deflected-shape polyline\n(`member_displacements`): the member's global displacement at evenly-spaced\nstations, from cubic-Hermite interpolation of the end-node translations +\nrotations. Off by default to keep the result payload lean.",
     )
     include_report_html: bool | None = Field(
         False,
@@ -1520,6 +1549,16 @@ class Member(BaseModel):
     )
 
 
+class MemberDisplacementSample(BaseModel):
+    displacement: Vector3 = Field(
+        ...,
+        description='Global displacement `[dx, dy, dz]` at this station, in model length units.',
+    )
+    x_frac: float = Field(
+        ..., description='Fractional position along the member, 0 (start) … 1 (end).'
+    )
+
+
 class MemberPointLoad(BaseModel):
     axes: LoadAxes | None = Field(
         'global', description='Coordinate frame the `direction` is expressed in.'
@@ -1579,6 +1618,10 @@ class MemberResult(BaseModel):
     )
     maximums: NodeForces = Field(
         ..., description='Per-component maxima over the member (global frame).'
+    )
+    member_displacements: list[MemberDisplacementSample] | None = Field(
+        None,
+        description="Optional sampled deflected shape: the member's global displacement at\nevenly-spaced stations from `x_frac = 0` to `1`, reconstructed by\ncubic-Hermite interpolation of the end-node translations + rotations.\nEmpty unless `AnalysisOptions::include_member_deflected_shape` is enabled.\nThe interpolation is the end-DOF homogeneous cubic — exact for members with\nno span load; under a member UDL the true shape is quartic, so mid-span sag\nis slightly under-rendered (matching client-side Hermite reconstructions).",
     )
     minimums: NodeForces = Field(
         ..., description='Per-component minima over the member (global frame).'
@@ -1774,6 +1817,7 @@ class QuantitySource(
         | QuantitySource8
         | QuantitySource9
         | QuantitySource10
+        | QuantitySource11
     ]
 ):
     root: (
@@ -1787,6 +1831,7 @@ class QuantitySource(
         | QuantitySource8
         | QuantitySource9
         | QuantitySource10
+        | QuantitySource11
     ) = Field(
         ...,
         description='A bindable quantity — the source of a `{{variable}}` in a unity-check formula.',
@@ -1947,7 +1992,10 @@ class TranslationImperfection(BaseModel):
 
 
 class UnitSettings(BaseModel):
-    densityUnit: DensityUnit | None = None
+    densityUnit: DensityUnit | None = Field(
+        None,
+        description='Unit of every `Material.density`; independent of `lengthUnit`\n(a mm/N model may still declare `"kg/m3"`). See [`DensityUnit`].',
+    )
     forceUnit: ForceUnit | None = None
     lengthUnit: LengthUnit | None = None
     pressureUnit: PressureUnit | None = None

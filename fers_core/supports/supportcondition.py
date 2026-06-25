@@ -48,13 +48,37 @@ class SupportCondition:
     # Validation
     # ------------------------------------------------------------------
 
+    # Force/moment components valid for a *support* stiffness curve. Supports
+    # react in global axes, so only the global family is accepted; the
+    # member-local family (N/Vy/Vz) is for member hinges and the Rust solver
+    # rejects it deep in JSON at solve time. Catch it here with a clear error.
+    _SUPPORT_DEPENDS_ON = frozenset(
+        {
+            ForceComponent.Fx,
+            ForceComponent.Fy,
+            ForceComponent.Fz,
+            ForceComponent.Mx,
+            ForceComponent.My,
+            ForceComponent.Mz,
+        }
+    )
+
     def _validate(self) -> None:
         if self.condition_type == SupportConditionType.SPRING:
             if self.stiffness_curve is not None:
                 # Spring with a stiffness curve — constant stiffness is optional
-                # (the curve overrides it).  The curve validates itself in its
-                # own __init__.
-                pass
+                # (the curve overrides it).  The curve validates its points in its
+                # own __init__; here we additionally enforce the *support* context:
+                # depends_on must be a global reaction component.
+                depends_on = self.stiffness_curve.depends_on
+                if depends_on not in self._SUPPORT_DEPENDS_ON:
+                    raise ValueError(
+                        f"Support stiffness_curve.depends_on must be a global reaction "
+                        f"component (Fx/Fy/Fz/Mx/My/Mz); got member-local "
+                        f"'{depends_on.value}'. Member-local components (N/Vy/Vz) are "
+                        f"only valid for member hinges. For a support spring use the "
+                        f"global-axis equivalent (N->Fx, Vy->Fy, Vz->Fz)."
+                    )
             elif self.stiffness is None:
                 raise ValueError("SPRING requires a positive stiffness value or a stiffness_curve.")
             elif self.stiffness <= 0.0:
@@ -142,7 +166,7 @@ class SupportCondition:
             {
               "condition_type": "Spring",
               "stiffness": null,
-              "stiffness_curve": {"depends_on": "Vz", "points": [[0, 1e5], ...]}
+              "stiffness_curve": {"depends_on": "Fz", "points": [[0, 1e5], ...]}
             }
         """
         d: dict = {
@@ -173,8 +197,15 @@ class SupportCondition:
         stiffness = data.get("stiffness", None)
         raw_curve = data.get("stiffness_curve", None)
 
-        # Deserialize stiffness_curve — handles dict (new) and list (legacy)
-        stiffness_curve = StiffnessCurveConfig.from_dict(raw_curve)
+        # Deserialize stiffness_curve — handles dict (new) and list (legacy).
+        # A legacy bare list carries no depends_on; StiffnessCurveConfig.from_dict
+        # defaults it to the member-local Vz (the hinge default), which is invalid
+        # for a *support*. Default it to the global Fz instead so legacy support
+        # springs keep loading (and validate cleanly).
+        if isinstance(raw_curve, list):
+            stiffness_curve = StiffnessCurveConfig(depends_on=ForceComponent.Fz, points=raw_curve)
+        else:
+            stiffness_curve = StiffnessCurveConfig.from_dict(raw_curve)
 
         # Resolve condition_type
         if isinstance(raw_type, SupportConditionType):

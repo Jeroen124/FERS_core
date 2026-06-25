@@ -41,7 +41,14 @@ from .loads.distributionshape import DistributionShape
 from .supports.supportcondition import SupportCondition
 from .supports.supportcondition import SupportConditionType
 from .supports.stiffness_curve import ForceComponent, StiffnessCurveConfig
-from .settings.anlysis_options import AnalysisOrder, Dimensionality, RigidStrategy
+from .settings.anlysis_options import (
+    AnalysisOrder,
+    Dimensionality,
+    NonlinearMethod,
+    PdeltaFormulation,
+    PdeltaMode,
+    RigidStrategy,
+)
 from .members.memberhinge import MemberHinge
 from .results.resultsbundle import ResultsBundle
 from .results.singleresults import SingleResults
@@ -109,6 +116,9 @@ __all__ = [
     "NodalLoad",
     "NodalMoment",
     "NodalSupport",
+    "NonlinearMethod",
+    "PdeltaFormulation",
+    "PdeltaMode",
     "ReactionNodeResult",
     "ResultRenderer",
     "ResultsBundle",
