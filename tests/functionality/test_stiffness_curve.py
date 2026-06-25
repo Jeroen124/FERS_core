@@ -91,12 +91,32 @@ class TestStiffnessCurveConfigSerialization:
 
 class TestSpringCurveCreation:
     def test_create_spring_curve(self):
-        sc = SupportCondition.spring_curve(ForceComponent.Vz, [[0, 1e5], [100_000, 1e8]])
+        # Supports react in global axes, so a support spring uses Fx/Fy/Fz/Mx/My/Mz.
+        sc = SupportCondition.spring_curve(ForceComponent.Fz, [[0, 1e5], [100_000, 1e8]])
         assert sc.condition_type == SupportConditionType.SPRING
         assert sc.stiffness is None
         assert sc.stiffness_curve is not None
-        assert sc.stiffness_curve.depends_on == ForceComponent.Vz
+        assert sc.stiffness_curve.depends_on == ForceComponent.Fz
         assert len(sc.stiffness_curve.points) == 2
+
+    def test_support_spring_rejects_member_local_component(self):
+        # Member-local components (N/Vy/Vz) are only valid for member hinges; the
+        # Rust solver rejects them for a support. Catch it early with a clear error.
+        for fc in (ForceComponent.N, ForceComponent.Vy, ForceComponent.Vz):
+            with pytest.raises(ValueError, match="global reaction component"):
+                SupportCondition.spring_curve(fc, [[0, 1e5], [100_000, 1e8]])
+
+    def test_support_spring_accepts_global_components(self):
+        for fc in (
+            ForceComponent.Fx,
+            ForceComponent.Fy,
+            ForceComponent.Fz,
+            ForceComponent.Mx,
+            ForceComponent.My,
+            ForceComponent.Mz,
+        ):
+            sc = SupportCondition.spring_curve(fc, [[0, 1e5], [100_000, 1e8]])
+            assert sc.stiffness_curve.depends_on == fc
 
     def test_create_spring_curve_with_different_component(self):
         sc = SupportCondition.spring_curve(ForceComponent.My, [[0, 1e5], [100_000, 1e8]])
@@ -119,7 +139,7 @@ class TestSpringCurveCreation:
 
     def test_spring_with_curve_and_stiffness(self):
         """Both stiffness and curve on SPRING is allowed — curve overrides."""
-        curve = StiffnessCurveConfig(ForceComponent.Vz, [[0, 1e5], [100, 1e6]])
+        curve = StiffnessCurveConfig(ForceComponent.Fz, [[0, 1e5], [100, 1e6]])
         sc = SupportCondition(SupportConditionType.SPRING, stiffness=5e4, stiffness_curve=curve)
         assert sc.stiffness == 5e4
         assert sc.stiffness_curve is not None
@@ -130,25 +150,26 @@ class TestSpringCurveCreation:
 
 class TestSpringCurveSerialization:
     def test_to_dict(self):
-        sc = SupportCondition.spring_curve(ForceComponent.Vz, [[0, 1e5], [50000, 1e7]])
+        sc = SupportCondition.spring_curve(ForceComponent.Fz, [[0, 1e5], [50000, 1e7]])
         d = sc.to_dict()
         assert d["condition_type"] == "Spring"
         assert d["stiffness"] is None
-        assert d["stiffness_curve"] == {"depends_on": "Vz", "points": [[0, 1e5], [50000, 1e7]]}
+        assert d["stiffness_curve"] == {"depends_on": "Fz", "points": [[0, 1e5], [50000, 1e7]]}
 
     def test_from_dict_new_format(self):
         data = {
             "condition_type": "Spring",
             "stiffness": None,
-            "stiffness_curve": {"depends_on": "Vz", "points": [[0, 1e5], [50000, 1e7]]},
+            "stiffness_curve": {"depends_on": "Fz", "points": [[0, 1e5], [50000, 1e7]]},
         }
         sc = SupportCondition.from_dict(data)
         assert sc.condition_type == SupportConditionType.SPRING
-        assert sc.stiffness_curve.depends_on == ForceComponent.Vz
+        assert sc.stiffness_curve.depends_on == ForceComponent.Fz
         assert sc.stiffness_curve.points == [[0, 1e5], [50000, 1e7]]
 
     def test_from_dict_legacy_stiffnesscurve_type(self):
-        """Legacy JSON with condition_type='StiffnessCurve' maps to SPRING + Vz."""
+        """Legacy JSON with condition_type='StiffnessCurve' (a bare-list curve)
+        maps to SPRING; the support context defaults depends_on to the global Fz."""
         data = {
             "condition_type": "StiffnessCurve",
             "stiffness": None,
@@ -156,7 +177,7 @@ class TestSpringCurveSerialization:
         }
         sc = SupportCondition.from_dict(data)
         assert sc.condition_type == SupportConditionType.SPRING
-        assert sc.stiffness_curve.depends_on == ForceComponent.Vz
+        assert sc.stiffness_curve.depends_on == ForceComponent.Fz
         assert sc.stiffness_curve.points == [[0, 1e5], [50000, 1e7]]
 
     def test_round_trip(self):
@@ -179,18 +200,18 @@ class TestSpringCurveSerialization:
 
 class TestSpringCurveDisplay:
     def test_display_string(self):
-        sc = SupportCondition.spring_curve(ForceComponent.Vz, [[0, 1e5], [50000, 1e7]])
+        sc = SupportCondition.spring_curve(ForceComponent.Fz, [[0, 1e5], [50000, 1e7]])
         s = sc.to_display_string()
         assert "Spring curve" in s
         assert "2 points" in s
-        assert "Vz" in s
+        assert "Fz" in s
 
     def test_repr(self):
-        sc = SupportCondition.spring_curve(ForceComponent.Vz, [[0, 1e5], [50000, 1e7]])
+        sc = SupportCondition.spring_curve(ForceComponent.Fz, [[0, 1e5], [50000, 1e7]])
         r = repr(sc)
         assert "Spring" in r
         assert "2 points" in r
-        assert "Vz" in r
+        assert "Fz" in r
 
 
 # ── NodalSupport Integration ──────────────────────────────────────────────────
@@ -200,7 +221,7 @@ class TestNodalSupportSpringCurve:
     def test_explicit_condition(self):
         ns = NodalSupport(
             rotation_conditions={
-                "Y": SupportCondition.spring_curve(ForceComponent.Vz, [[0, 1e5], [100_000, 1e8]]),
+                "Y": SupportCondition.spring_curve(ForceComponent.My, [[0, 1e5], [100_000, 1e8]]),
             }
         )
         assert ns.rotation_conditions["Y"].condition_type == SupportConditionType.SPRING
