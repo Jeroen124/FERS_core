@@ -73,6 +73,10 @@ except Exception as e:
 # =============================================================================
 # Step 3: Save the model to the cloud
 # =============================================================================
+# Only the model inputs are uploaded — analysis results are NEVER stored in the
+# cloud. The FersCloud web viewer recomputes results in-browser when a model is
+# opened or shared, so running run_analysis() here is optional (kept only to
+# demonstrate the local solve). cloud_save() always uploads inputs only.
 model.run_analysis()
 saved_info = model.cloud_save(name="806_example_model")
 print(f"Saved to cloud: {saved_info}")
