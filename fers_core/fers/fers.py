@@ -3866,6 +3866,10 @@ class FERS:
     ) -> dict:
         """Save this FERS model to FersCloud.
 
+        Only the model inputs (geometry, loads, analysis setup) are uploaded.
+        Analysis **results are never stored in the cloud**: the FersCloud web
+        viewer recomputes them in-browser when a model is opened or shared.
+
         Parameters
         ----------
         name : str
@@ -3873,8 +3877,10 @@ class FERS:
         description : str, optional
             An optional description.
         include_results : bool
-            Whether to include analysis results in the saved JSON.
-            Defaults to ``False`` (model geometry + loads only).
+            Deprecated and ignored. Results are never uploaded regardless of
+            this value (the server also strips them defensively). Kept only for
+            backward compatibility with existing callers. To persist results
+            locally, use :meth:`save_to_json` instead.
 
         Returns
         -------
@@ -3888,9 +3894,11 @@ class FERS:
         >>> print(info["id"])
         """
         client = self._ensure_cloud()
+        # Always upload inputs only — results are recomputed in the web viewer
+        # and are never persisted in the cloud. `include_results` is ignored.
         return client.save_model(
             name,
-            self.to_dict(include_results=include_results),
+            self.to_dict(include_results=False),
             description=description,
         )
 

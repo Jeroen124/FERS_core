@@ -208,6 +208,8 @@ class FersCloudClient:
             Display name for the cloud model.
         model_dict : dict
             The model data, typically from ``fers.to_dict(include_results=False)``.
+            Any ``results`` key is stripped server-side and never stored — the
+            web viewer recomputes results in-browser.
         description : str, optional
             An optional description.
 
