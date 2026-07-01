@@ -51,7 +51,10 @@ from ..members.shapepath import ShapePath
 from ..nodes.node import Node
 from ..supports.nodalsupport import NodalSupport
 from ..settings.settings import Settings
+from pydantic import ValidationError as _PydValidationError
+
 from ..types.pydantic_models import ResultsBundle as ResultsBundleSchema
+from ..types.pydantic_models import FERS as FERSInputSchema
 
 
 class _WorkspaceView:
@@ -268,20 +271,26 @@ class FERS:
         except Exception as e:
             raise ValueError(f"Failed to parse or validate results: {e}")
 
-    def run_analysis(self):
+    def run_analysis(self, validate: bool = True):
         """
         Run the Rust-based FERS calculation without saving the input to a file.
         The input JSON is generated directly from the current FERS instance.
 
         Args:
-            calculation_module: Module to perform calculations (default is fers_calculations).
+            validate: When True (default), the assembled input is validated
+                against the generated pydantic ``FERS`` schema before solving, so
+                any drift between a hand-written ``to_dict()`` and the solver
+                contract fails fast with a clear error. Pass ``validate=False``
+                to skip (e.g. for intentionally partial models).
 
         Raises:
-            ValueError: If the validation of the results fails.
+            ValueError: If input schema validation or results validation fails.
         """
 
         # Generate the input JSON
         input_dict = self.to_dict()
+        if validate:
+            self._validate_input_dict(input_dict)
         input_json = ujson.dumps(input_dict)
 
         # Run the calculation
@@ -352,6 +361,25 @@ class FERS:
         else:
             data["results"] = None
         return data
+
+    def validate_schema(self) -> None:
+        """Validate this model's serialized input against the GENERATED pydantic
+        ``FERS`` schema — the single source of truth generated (via datamodel-
+        codegen) from the solver's OpenAPI. Raises ``ValueError`` on any drift
+        between a hand-written ``to_dict()`` and the schema (missing/renamed
+        fields, wrong enum value, wrong nesting, …). Mirrors how solver *output*
+        is already validated via ``ResultsBundleSchema``."""
+        self._validate_input_dict(self.to_dict(include_results=False))
+
+    def _validate_input_dict(self, data: dict[str, Any]) -> None:
+        """Validate an assembled input dict against the generated ``FERS`` schema
+        (results are checked separately via ``ResultsBundleSchema``)."""
+        try:
+            FERSInputSchema(**{**data, "results": None})
+        except _PydValidationError as e:
+            raise ValueError(
+                f"FERS model does not conform to the solver input schema:\n{e}"
+            ) from e
 
     def settings_to_dict(self):
         """Convert settings to a dictionary representation with additional information."""
