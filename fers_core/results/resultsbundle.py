@@ -29,6 +29,11 @@ class ResultsBundle:
     # Unity-check results: one entry per check definition (see the solver's
     # `UnityCheckResult` — utilization, status colour, per-entity + governing).
     unity_check_results: List[Dict[str, Any]] = field(default_factory=list)
+    # Eigenvalue results, carried as plain dicts mirroring the solver schema
+    # (`ModalResults` / `BucklingResults`: {"modes": [...]}), or None when the
+    # analysis was not requested.
+    modal: Optional[Dict[str, Any]] = None
+    buckling: Optional[Dict[str, Any]] = None
     # Single consolidated HTML report, when the solver was asked to embed it.
     report_html: Optional[str] = None
 
@@ -47,6 +52,9 @@ class ResultsBundle:
         instance.loadcases = lc_map
         instance.loadcombinations = comb_map
         instance.unity_check_results = _to_plain(getattr(pyd_bundle, "unity_check_results", []) or [])
+        # Eigenvalue result groups (None when the analysis was not requested).
+        instance.modal = _to_plain(getattr(pyd_bundle, "modal", None))
+        instance.buckling = _to_plain(getattr(pyd_bundle, "buckling", None))
         instance.report_html = getattr(pyd_bundle, "report_html", None)
 
         return instance
@@ -124,6 +132,8 @@ class ResultsBundle:
         instance.loadcases = lc_map
         instance.loadcombinations = comb_map
         instance.unity_check_results = list(raw.get("unity_check_results") or [])
+        instance.modal = raw.get("modal")
+        instance.buckling = raw.get("buckling")
         instance.report_html = raw.get("report_html")
         return instance
 
@@ -132,5 +142,7 @@ class ResultsBundle:
             "loadcases": {k: v.to_dict() for k, v in self.loadcases.items()},
             "loadcombinations": {k: v.to_dict() for k, v in self.loadcombinations.items()},
             "unity_check_results": self.unity_check_results,
+            "modal": self.modal,
+            "buckling": self.buckling,
             "report_html": self.report_html,
         }
