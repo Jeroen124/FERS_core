@@ -1,0 +1,15 @@
+{
+  "id": "LE1",
+  "results": [
+    {
+      "quantity": "tangential edge stress sigma_yy at D=(2,0)",
+      "target": 92700000.0,
+      "fers": 90160401.4,
+      "error_pct": 2.74,
+      "unit": "Pa",
+      "mesh_or_modes": "72x8 membrane"
+    }
+  ],
+  "convergence": "12x3:24.0%, 24x4:14.6%, 48x6:6.4%, 72x8:2.7%",
+  "matched": true
+}

@@ -1,6 +1,7 @@
 from typing import Optional
 from ..members.material import Material
 from ..members.shapepath import ShapePath
+
 try:
     from sectionproperties.pre.library.steel_sections import (
         i_section,
@@ -54,6 +55,10 @@ class Section:
         wagner_coeff: Optional[float] = None,
         a_sy: Optional[float] = None,
         a_sz: Optional[float] = None,
+        wel_y: Optional[float] = None,
+        wel_z: Optional[float] = None,
+        wpl_y: Optional[float] = None,
+        wpl_z: Optional[float] = None,
         principal_axis_angle: Optional[float] = None,
         i_yz: Optional[float] = None,
         centroid_y: Optional[float] = None,
@@ -102,6 +107,10 @@ class Section:
         self.wagner_coeff = wagner_coeff
         self.a_sy = a_sy
         self.a_sz = a_sz
+        self.wel_y = wel_y
+        self.wel_z = wel_z
+        self.wpl_y = wpl_y
+        self.wpl_z = wpl_z
         self.principal_axis_angle = principal_axis_angle
         self.i_yz = i_yz
         self.centroid_y = centroid_y
@@ -170,6 +179,27 @@ class Section:
         except (AttributeError, TypeError):
             props["centroid_y"] = None
             props["centroid_z"] = None
+        # Elastic + plastic section moduli. sectionproperties xx maps to FERS i_z
+        # (i_z = ixx_c) and yy to FERS i_y, so wel_z/wpl_z are the strong-axis
+        # (major) moduli for I-sections. Plastic moduli need an extra analysis pass.
+        try:
+            analysis_section.calculate_plastic_properties()
+        except Exception:  # noqa: BLE001 - plastic props are optional
+            pass
+        try:
+            z = analysis_section.get_z()  # (zxx+, zxx-, zyy+, zyy-)
+            props["wel_z"] = min(abs(float(z[0])), abs(float(z[1])))
+            props["wel_y"] = min(abs(float(z[2])), abs(float(z[3])))
+        except (AttributeError, TypeError, IndexError, ValueError):
+            props["wel_z"] = None
+            props["wel_y"] = None
+        try:
+            s = analysis_section.get_s()  # (sxx, syy) plastic moduli
+            props["wpl_z"] = float(s[0])
+            props["wpl_y"] = float(s[1])
+        except (AttributeError, TypeError, IndexError, ValueError):
+            props["wpl_z"] = None
+            props["wpl_y"] = None
         return props
 
     def to_dict(self):
@@ -197,6 +227,14 @@ class Section:
             d["a_sy"] = self.a_sy
         if self.a_sz is not None:
             d["a_sz"] = self.a_sz
+        if self.wel_y is not None:
+            d["wel_y"] = self.wel_y
+        if self.wel_z is not None:
+            d["wel_z"] = self.wel_z
+        if self.wpl_y is not None:
+            d["wpl_y"] = self.wpl_y
+        if self.wpl_z is not None:
+            d["wpl_z"] = self.wpl_z
         if self.principal_axis_angle is not None:
             d["principal_axis_angle"] = self.principal_axis_angle
         if self.i_yz is not None:
@@ -237,6 +275,10 @@ class Section:
             wagner_coeff=data.get("wagner_coeff"),
             a_sy=data.get("a_sy"),
             a_sz=data.get("a_sz"),
+            wel_y=data.get("wel_y"),
+            wel_z=data.get("wel_z"),
+            wpl_y=data.get("wpl_y"),
+            wpl_z=data.get("wpl_z"),
             principal_axis_angle=data.get("principal_axis_angle"),
             i_yz=data.get("i_yz"),
             centroid_y=data.get("centroid_y"),

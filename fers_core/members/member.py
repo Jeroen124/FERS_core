@@ -182,7 +182,13 @@ class Member:
             "start_hinge": self.start_hinge.id if self.start_hinge else None,
             "end_hinge": self.end_hinge.id if self.end_hinge else None,
             "classification": self.classification,
-            "weight": self.weight,
+            # The solver reads `weight` as a force/length self-weight OVERRIDE and,
+            # when it is 0, derives BOTH self-weight (density·area·g) and modal/seismic
+            # mass (density·area) itself. `self.weight` here is the member MASS
+            # (density·area·length) — used by the Python-side self-weight helper
+            # (loadcase.py) — so emitting it on the wire would mis-scale modal mass
+            # (by ~g/L_elem) and self-weight. Emit 0 and let the solver compute them.
+            "weight": 0.0,
             "chi": self.chi,
             "reference_member": self.reference_member.id if self.reference_member else None,
             "reference_node": self.reference_node.id if self.reference_node else None,

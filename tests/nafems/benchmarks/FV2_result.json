@@ -1,0 +1,60 @@
+{
+  "id": "FV2",
+  "results": [
+    {
+      "quantity": "nearest mode to 11.336 Hz",
+      "target": 11.336,
+      "fers": 11.3364,
+      "error_pct": 0.004,
+      "unit": "Hz",
+      "mesh_or_modes": "8 el/arm, 20 modes"
+    },
+    {
+      "quantity": "nearest mode to 17.709 Hz",
+      "target": 17.709,
+      "fers": 17.7101,
+      "error_pct": 0.006,
+      "unit": "Hz",
+      "mesh_or_modes": "8 el/arm, 20 modes"
+    },
+    {
+      "quantity": "nearest mode to 45.345 Hz",
+      "target": 45.345,
+      "fers": 45.3568,
+      "error_pct": 0.026,
+      "unit": "Hz",
+      "mesh_or_modes": "8 el/arm, 20 modes"
+    },
+    {
+      "quantity": "nearest mode to 57.39 Hz",
+      "target": 57.39,
+      "fers": 57.4136,
+      "error_pct": 0.041,
+      "unit": "Hz",
+      "mesh_or_modes": "8 el/arm, 20 modes"
+    }
+  ],
+  "matched": true,
+  "all_frequencies": [
+    11.3364,
+    17.6815,
+    17.6815,
+    17.7101,
+    17.7101,
+    17.7101,
+    17.7101,
+    17.7101,
+    45.3568,
+    57.098,
+    57.098,
+    57.4136,
+    57.4136,
+    57.4136,
+    57.4136,
+    57.4136,
+    102.1575,
+    118.2643,
+    118.2643,
+    119.9507
+  ]
+}

@@ -1,4 +1,5 @@
 from .nodes.node import Node
+from .nodes.nodalmass import NodalMass
 from .members.member import Member
 from .members.enums import MemberType
 from .fers.fers import FERS
@@ -56,6 +57,7 @@ from .results.member import MemberResult
 from .results.nodes import NodeDisplacement, NodeForces, ReactionNodeResult
 from .cloud import FersCloudClient
 from .sections.steel_sections_en import resolve_section, list_sections
+from .builders import create_beam, check_beam
 
 
 def __getattr__(name: str):
@@ -108,6 +110,7 @@ __all__ = [
     "WorkPlane",
     "ModelRenderer",
     "Node",
+    "NodalMass",
     "Plate",
     "PlateSurface",
     "PlateVertex",
@@ -135,4 +138,6 @@ __all__ = [
     "SupportConditionType",
     "SwayImperfection",
     "TranslationImperfection",
+    "check_beam",
+    "create_beam",
 ]

@@ -1,0 +1,77 @@
+{
+  "id": "FV3",
+  "results": [
+    {
+      "quantity": "elastic mode ~3.2616 Hz",
+      "target": 3.2616,
+      "fers": 3.2616,
+      "error_pct": 0.001,
+      "unit": "Hz",
+      "mesh_or_modes": "20 el/side"
+    },
+    {
+      "quantity": "elastic mode ~5.6652 Hz",
+      "target": 5.6652,
+      "fers": 5.6652,
+      "error_pct": 0.0,
+      "unit": "Hz",
+      "mesh_or_modes": "20 el/side"
+    },
+    {
+      "quantity": "elastic mode ~11.1424 Hz",
+      "target": 11.1424,
+      "fers": 11.1424,
+      "error_pct": 0.0,
+      "unit": "Hz",
+      "mesh_or_modes": "20 el/side"
+    },
+    {
+      "quantity": "elastic mode ~12.8201 Hz",
+      "target": 12.8201,
+      "fers": 12.8201,
+      "error_pct": 0.0,
+      "unit": "Hz",
+      "mesh_or_modes": "20 el/side"
+    },
+    {
+      "quantity": "elastic mode ~24.6001 Hz",
+      "target": 24.6001,
+      "fers": 24.6003,
+      "error_pct": 0.001,
+      "unit": "Hz",
+      "mesh_or_modes": "20 el/side"
+    },
+    {
+      "quantity": "elastic mode ~28.6665 Hz",
+      "target": 28.6665,
+      "fers": 28.6668,
+      "error_pct": 0.001,
+      "unit": "Hz",
+      "mesh_or_modes": "20 el/side"
+    },
+    {
+      "quantity": "elastic mode ~38.9328 Hz",
+      "target": 38.9328,
+      "fers": 38.9335,
+      "error_pct": 0.002,
+      "unit": "Hz",
+      "mesh_or_modes": "20 el/side"
+    }
+  ],
+  "matched": true,
+  "n_rigid_body": 3,
+  "all_frequencies": [
+    0.0,
+    0.0,
+    0.0,
+    3.2616,
+    5.6652,
+    11.1424,
+    11.1424,
+    12.8201,
+    24.6003,
+    28.6668,
+    28.6668,
+    38.9335
+  ]
+}
