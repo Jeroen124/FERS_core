@@ -43,6 +43,20 @@ class PdeltaFormulation(Enum):
     SIMPLIFIED = "SIMPLIFIED"
 
 
+class MassFormulation(Enum):
+    """Mass-matrix formulation for a modal (natural-frequency) analysis.
+
+    Values are the canonical solver/OpenAPI wire tokens (serialized
+    ``UPPERCASE``; the solver also accepts legacy ``"Consistent"``/``"Lumped"``
+    via serde aliases, but only the uppercase tokens pass the generated input
+    schema). ``CONSISTENT`` (solver default) uses the full element-consistent
+    mass matrix; ``LUMPED`` uses a diagonal (row-sum) lumping.
+    """
+
+    CONSISTENT = "CONSISTENT"
+    LUMPED = "LUMPED"
+
+
 class PdeltaMode(Enum):
     """High-level P-Delta amplification strategy.
 

@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.1.73
+
+### Added
+- **First-class modal & buckling analysis settings.** `ModalAnalysisSettings` and
+  `BucklingAnalysisSettings` (`from fers_core import ...`) map to the solver's
+  `analysis.modal` / `analysis.buckling` wire objects — set them via
+  `calc.analysis.modal = ModalAnalysisSettings(num_modes=6)` (or the
+  `modal_analysis` / `buckling_analysis` attributes) and `to_dict()` emits them;
+  `from_dict()` round-trips them. `mass_formulation` is normalized to the canonical
+  uppercase tokens (`"CONSISTENT"`/`"LUMPED"`, new `MassFormulation` enum) so the
+  document passes the generated-schema gate, and the buckling `reference` accepts a
+  `LoadCase`/`LoadCombination` object, a tagged dict, or a `(kind, id)` tuple and is
+  normalized to the externally-tagged `{"LoadCase": id}` / `{"LoadCombination": id}`
+  form. Optionals (`tolerance`, `max_iterations`) are omitted when unset.
+- **`ResultsBundle` now carries modal/buckling results.** Solver `results.modal` /
+  `results.buckling` (previously dropped in `from_pydantic`) are exposed as plain
+  dicts on `resultsbundle.modal` / `resultsbundle.buckling` (`None` when the
+  analysis was not requested) and survive `to_dict()` / `from_raw_dict()`.
+- `tests/functionality/test_modal_buckling_settings.py` — exact wire shapes,
+  reference normalization, round-trips, schema conformance, and an end-to-end
+  modal solve on a cantilever through the installed `fers_calculations` wheel.
+
+### Changed
+- The NAFEMS harness (`tests/nafems/nafems_harness.py`) now attaches the modal
+  request through the first-class API instead of injecting raw dicts into the
+  wire JSON (the `weight = 0` belt-and-braces guard remains).
+
 ## 0.1.72
 
 ### Fixed
