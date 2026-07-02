@@ -2,8 +2,10 @@ from enum import Enum
 
 
 class AnalysisOrder(Enum):
-    LINEAR = "Linear"
-    NONLINEAR = "Nonlinear"
+    # Values are the canonical solver/OpenAPI wire tokens (the solver also accepts
+    # the legacy "Linear"/"Nonlinear" spellings via serde aliases).
+    LINEAR = "LINEAR"
+    NONLINEAR = "NONLINEAR"
 
 
 class Dimensionality(Enum):
@@ -12,8 +14,10 @@ class Dimensionality(Enum):
 
 
 class RigidStrategy(Enum):
-    LINEAR_MPC = "Linear_MPC"
-    RIGID_MEMBER = "Rigid_Member"
+    # Canonical solver/OpenAPI wire tokens (legacy "Linear_MPC"/"Rigid_Member"
+    # still accepted by the solver via serde aliases).
+    LINEAR_MPC = "LinearMpc"
+    RIGID_MEMBER = "RigidMember"
 
 
 class NonlinearMethod(Enum):

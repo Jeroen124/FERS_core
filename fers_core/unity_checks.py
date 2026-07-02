@@ -57,6 +57,10 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
+from pydantic import ValidationError as _ValidationError
+
+from .types.pydantic_models import UnityCheckDefinition as _UnityCheckDefinition
+
 
 # ── variable sources ─────────────────────────────────────────────────────────
 
@@ -179,11 +183,19 @@ def generic_check(
     description: Optional[str] = None,
 ) -> Dict[str, Any]:
     """A user-authored templated-formula check (utilization = demand / capacity)."""
+    # NOTE: `report_template` is a field of UnityCheckDefinition (top level), NOT
+    # of GenericSpec (which the solver serialises with `deny_unknown_fields`).
     spec: Dict[str, Any] = {"variables": variables, "demand": demand, "capacity": capacity}
-    if report_template is not None:
-        spec["report_template"] = report_template
     return _check(
-        id, name, {"Generic": spec}, applies_to, limit_state, load_combination_ids, thresholds, description
+        id,
+        name,
+        {"Generic": spec},
+        applies_to,
+        limit_state,
+        load_combination_ids,
+        thresholds,
+        description,
+        report_template=report_template,
     )
 
 
@@ -198,6 +210,9 @@ def ec3_steel_check(
     include_buckling: bool = True,
     include_ltb: bool = True,
     c1: Optional[float] = None,
+    c2: Optional[float] = None,
+    c3: Optional[float] = None,
+    z_g: Optional[float] = None,
     interaction_method: str = "AnnexB",
     load_combination_ids: Optional[List[int]] = None,
     thresholds: Optional[List[float]] = None,
@@ -213,12 +228,28 @@ def ec3_steel_check(
     }
     if c1 is not None:
         spec["c1"] = c1
+    if c2 is not None:
+        spec["c2"] = c2
+    if c3 is not None:
+        spec["c3"] = c3
+    if z_g is not None:
+        spec["z_g"] = z_g
     return _check(
         id, name, {"Ec3Steel": spec}, applies_to, limit_state, load_combination_ids, thresholds, description
     )
 
 
-def _check(id, name, spec, applies_to, limit_state, load_combination_ids, thresholds, description):
+def _check(
+    id,
+    name,
+    spec,
+    applies_to,
+    limit_state,
+    load_combination_ids,
+    thresholds,
+    description,
+    report_template=None,
+):
     d: Dict[str, Any] = {
         "id": id,
         "name": name,
@@ -233,4 +264,18 @@ def _check(id, name, spec, applies_to, limit_state, load_combination_ids, thresh
         d["thresholds"] = list(thresholds)
     if description is not None:
         d["description"] = description
+    if report_template is not None:
+        d["report_template"] = report_template
+    _validate_check(d)
     return d
+
+
+def _validate_check(d: Dict[str, Any]) -> None:
+    """Validate a unity-check dict against the GENERATED ``UnityCheckDefinition``
+    (the single source of truth from the solver's OpenAPI). Raises ``ValueError``
+    on any drift — e.g. an unknown field, or a ``report_template`` misplaced
+    inside the ``extra='forbid'`` ``GenericSpec``."""
+    try:
+        _UnityCheckDefinition(**d)
+    except _ValidationError as e:
+        raise ValueError(f"Invalid unity check '{d.get('id')}': {e}") from e

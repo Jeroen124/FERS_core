@@ -1,0 +1,83 @@
+{
+  "id": "FV6",
+  "results": [
+    {
+      "quantity": "ring flexural ~51.849 Hz",
+      "target": 51.849,
+      "fers": 51.739,
+      "error_pct": 0.213,
+      "unit": "Hz",
+      "mesh_or_modes": "60 segments",
+      "nafems_fe": 52.29
+    },
+    {
+      "quantity": "ring flexural ~53.382 Hz",
+      "target": 53.382,
+      "fers": 53.218,
+      "error_pct": 0.307,
+      "unit": "Hz",
+      "mesh_or_modes": "60 segments",
+      "nafems_fe": 53.97
+    },
+    {
+      "quantity": "ring flexural ~148.77 Hz",
+      "target": 148.77,
+      "fers": 147.754,
+      "error_pct": 0.683,
+      "unit": "Hz",
+      "mesh_or_modes": "60 segments",
+      "nafems_fe": 149.7
+    },
+    {
+      "quantity": "ring flexural ~150.99 Hz",
+      "target": 150.99,
+      "fers": 149.815,
+      "error_pct": 0.778,
+      "unit": "Hz",
+      "mesh_or_modes": "60 segments",
+      "nafems_fe": 152.4
+    },
+    {
+      "quantity": "ring flexural ~286.98 Hz",
+      "target": 286.98,
+      "fers": 285.458,
+      "error_pct": 0.53,
+      "unit": "Hz",
+      "mesh_or_modes": "60 segments",
+      "nafems_fe": 288.3
+    },
+    {
+      "quantity": "ring flexural ~289.51 Hz",
+      "target": 289.51,
+      "fers": 285.458,
+      "error_pct": 1.399,
+      "unit": "Hz",
+      "mesh_or_modes": "60 segments",
+      "nafems_fe": 288.3
+    }
+  ],
+  "matched": true,
+  "n_rigid_body": 6,
+  "all_frequencies": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    51.739,
+    51.739,
+    53.218,
+    53.218,
+    147.754,
+    147.754,
+    149.815,
+    149.815,
+    283.225,
+    283.225,
+    285.458,
+    285.458,
+    455.828,
+    455.828
+  ]
+}

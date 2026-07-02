@@ -1,0 +1,15 @@
+{
+  "id": "LE5",
+  "results": [
+    {
+      "quantity": "axial warping stress sigma_xx at flange tip A (x=2.5 m), via 7-DOF warping beam",
+      "target": -108000000.0,
+      "fers": -107643284.3,
+      "error_pct": 0.33,
+      "unit": "Pa",
+      "mesh_or_modes": "1 warping beam, 4 elements"
+    }
+  ],
+  "matched": true,
+  "method": "Vlasov restrained-warping torsion; sigma = bimoment * omega_n / C_w"
+}

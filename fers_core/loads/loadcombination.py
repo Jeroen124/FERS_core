@@ -74,12 +74,13 @@ class LoadCombination:
             "id": self.id,
             "name": self.name,
             "load_case_factors": [
-                {"load_case_id": lc.id, "factor": factor}
-                for lc, factor in self.load_cases_factors.items()
+                {"load_case_id": lc.id, "factor": factor} for lc, factor in self.load_cases_factors.items()
             ],
             "situation": self.situation,
             "check": self.check,
-            "limit_state": self.limit_state,
+            "limit_state": (
+                self.limit_state.value if isinstance(self.limit_state, LimitState) else self.limit_state
+            ),
         }
 
     @staticmethod
