@@ -14,6 +14,7 @@ Out of scope by construction (no solver support): 3D solid (LE10/11), curved/axi
 shells (LE2/3/4/7/8/9), thermal, transient. (Flat thin-plate free vibration and rigid-link
 offset point masses are now supported — see FVP and the offset-mass Rust regression tests.)
 """
+
 import os
 import sys
 
@@ -93,12 +94,12 @@ def test_FV5_deep_timoshenko_beam():
     def nearest(t):
         return min(freqs, key=lambda f: abs(f - t))
 
-    assert H.rel_err_pct(nearest(77.542), 77.542) < 0.5   # torsional 1
-    assert H.rel_err_pct(nearest(125.00), 125.00) < 0.5   # extensional
-    assert H.rel_err_pct(nearest(233.10), 233.10) < 1.0   # torsional 2
-    assert H.rel_err_pct(nearest(42.649), 42.649) < 0.5   # flexural 1 (fit)
-    assert H.rel_err_pct(nearest(148.31), 148.31) < 5.0   # flexural 2
-    assert H.rel_err_pct(nearest(284.55), 284.55) < 5.0   # flexural 3
+    assert H.rel_err_pct(nearest(77.542), 77.542) < 0.5  # torsional 1
+    assert H.rel_err_pct(nearest(125.00), 125.00) < 0.5  # extensional
+    assert H.rel_err_pct(nearest(233.10), 233.10) < 1.0  # torsional 2
+    assert H.rel_err_pct(nearest(42.649), 42.649) < 0.5  # flexural 1 (fit)
+    assert H.rel_err_pct(nearest(148.31), 148.31) < 5.0  # flexural 2
+    assert H.rel_err_pct(nearest(284.55), 284.55) < 5.0  # flexural 3
 
 
 def test_FVP_plate_free_vibration():
@@ -140,7 +141,7 @@ def test_LE5_zsection_warping_beam():
     bw1, bw2 = LE5_build.bw_at_x25(res)
     bw = 0.5 * (abs(bw1) + abs(bw2))
     sigma = bw * LE5_build.OMEGA_TIP / LE5_build.CW
-    assert H.rel_err_pct(sigma, abs(LE5_build.TARGET)) < 3.0, f"LE5 warping stress {sigma/1e6:.2f} MPa"
+    assert H.rel_err_pct(sigma, abs(LE5_build.TARGET)) < 3.0, f"LE5 warping stress {sigma / 1e6:.2f} MPa"
 
 
 def _stress_le6(N):

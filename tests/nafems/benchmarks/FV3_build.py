@@ -7,11 +7,24 @@ elastic spectrum. In-plane isolation: fix uz, θx, θy at every node.
 Targets (converged Euler-Bernoulli; cross-checked vs NAFEMS R0015 via Autodesk republication):
   rigid body ×3 (0 Hz), then 3.2616, 5.6652, 11.1424(×2), 12.8201, 24.6001, 28.6665(×2), 38.9328
 """
-import sys, os, json, math
+
+import sys
+import os
+import json
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 import nafems_harness as H
-from fers_core import (FERS, Node, Member, MemberSet, NodalSupport, Material, Section,
-                       AnalysisOrder, SupportCondition)
+from fers_core import (
+    FERS,
+    Node,
+    Member,
+    MemberSet,
+    NodalSupport,
+    Material,
+    Section,
+    AnalysisOrder,
+    SupportCondition,
+)
 
 E, RHO, NU = 200e9, 8000.0, 0.29
 G = E / (2 * (1 + NU))
@@ -24,8 +37,8 @@ TARGETS = [3.2616, 5.6652, 11.1424, 12.8201, 24.6001, 28.6665, 38.9328]
 FX, FR = SupportCondition.fixed(), SupportCondition.free()
 # In-plane isolation (uz, rx, ry fixed); ux, uy, rz FREE (free-free in plane).
 INPLANE = NodalSupport(
-    displacement_conditions={"X": FR, "Y": FR, "Z": FX},
-    rotation_conditions={"X": FX, "Y": FX, "Z": FR})
+    displacement_conditions={"X": FR, "Y": FR, "Z": FX}, rotation_conditions={"X": FX, "Y": FX, "Z": FR}
+)
 
 # FERS's modal eigensolver Cholesky-factorises K, so a truly free-free (singular K)
 # model fails ("reduced K* lost positive-definiteness"). We lift the 3 in-plane
@@ -34,10 +47,13 @@ INPLANE = NodalSupport(
 # and the elastic spectrum is unchanged to <0.01%.
 K_SOFT = 10.0
 
+
 def grounded(k):
     return NodalSupport(
         displacement_conditions={"X": SupportCondition.spring(k), "Y": SupportCondition.spring(k), "Z": FX},
-        rotation_conditions={"X": FX, "Y": FX, "Z": FR})
+        rotation_conditions={"X": FX, "Y": FX, "Z": FR},
+    )
+
 
 def build(k_soft=0.0):
     # Native free-free: the solver's modal spectral shift (fers_calculations
@@ -69,6 +85,7 @@ def build(k_soft=0.0):
     c.add_member_set(MemberSet(members=members))
     return c
 
+
 def main():
     c = build()
     freqs, _ = H.modal_frequencies(c, num_modes=NUM_MODES)
@@ -82,8 +99,16 @@ def main():
         k = min((j for j in range(len(elastic)) if not used[j]), key=lambda j: abs(elastic[j] - t))
         used[k] = True
         err = H.rel_err_pct(elastic[k], t)
-        results.append({"quantity": f"elastic mode ~{t} Hz", "target": t, "fers": round(elastic[k], 4),
-                        "error_pct": round(err, 3), "unit": "Hz", "mesh_or_modes": f"{N_SIDE} el/side"})
+        results.append(
+            {
+                "quantity": f"elastic mode ~{t} Hz",
+                "target": t,
+                "fers": round(elastic[k], 4),
+                "error_pct": round(err, 3),
+                "unit": "Hz",
+                "mesh_or_modes": f"{N_SIDE} el/side",
+            }
+        )
         print(f"TARGET {t:8.3f} -> FERS {elastic[k]:8.4f}  err {err:.3f}%")
     matched = all(r["error_pct"] < 2.0 for r in results) and n_rigid == 3
     print("MATCHED (<2%, 3 rigid modes):", matched)
@@ -94,9 +119,18 @@ def main():
     d["results"] = None
     here = os.path.dirname(__file__)
     json.dump(d, open(os.path.join(here, "FV3.json"), "w"))
-    json.dump({"id": "FV3", "results": results, "matched": matched, "n_rigid_body": n_rigid,
-               "all_frequencies": [round(f, 4) for f in freqs]},
-              open(os.path.join(here, "FV3_result.json"), "w"), indent=2)
+    json.dump(
+        {
+            "id": "FV3",
+            "results": results,
+            "matched": matched,
+            "n_rigid_body": n_rigid,
+            "all_frequencies": [round(f, 4) for f in freqs],
+        },
+        open(os.path.join(here, "FV3_result.json"), "w"),
+        indent=2,
+    )
+
 
 if __name__ == "__main__":
     main()

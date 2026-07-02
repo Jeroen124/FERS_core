@@ -16,11 +16,11 @@ the exact same ``calculate_from_json`` entry point the WASM website uses -- afte
 (a) zeroing member weights and (b) injecting an ``analysis.modal`` /
 ``analysis.buckling`` request into the wire JSON.
 """
+
 from __future__ import annotations
 
 import copy
 import json
-from typing import Any
 
 import ujson
 import fers_calculations
@@ -29,6 +29,7 @@ G_STANDARD = 9.81  # m/s^2, the solver's default gravity for weight->mass
 
 
 # --- low-level solve -------------------------------------------------------
+
 
 def solve_dict(model_dict: dict) -> dict:
     """Send a fully-formed model dict through the real solver, return parsed JSON."""
@@ -46,6 +47,7 @@ def _zero_member_weights(model_dict: dict) -> None:
 
 
 # --- modal -----------------------------------------------------------------
+
 
 def modal_frequencies(calc, num_modes: int = 6, mass_formulation: str = "Consistent"):
     """Return (list_of_frequencies_Hz, raw_modal_dict) for a FERS calc.
@@ -68,6 +70,7 @@ def modal_frequencies(calc, num_modes: int = 6, mass_formulation: str = "Consist
 
 # --- static ----------------------------------------------------------------
 
+
 def static_results(calc) -> dict:
     """Run the model as-built (linear static) and return the raw results dict."""
     d = calc.to_dict(include_results=False)
@@ -75,6 +78,7 @@ def static_results(calc) -> dict:
 
 
 # --- utilities -------------------------------------------------------------
+
 
 def rel_err_pct(fers: float, target: float) -> float:
     denom = abs(target) if target != 0 else 1.0

@@ -16,7 +16,12 @@ Emits FVP.json (the wire model, with analysis.modal); the frequencies are comput
 by the 0.2.43 engine (the published 0.2.42 wheel has no plate mass), so this script
 does NOT solve — it only builds. Pass the mesh N as argv[1] (default 16).
 """
-import sys, os, json, math
+
+import sys
+import os
+import json
+import math
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from fers_core import FERS, Node, NodalSupport, Material, AnalysisOrder, Plate, SupportCondition
 
@@ -38,8 +43,8 @@ def _sup(uz):
     # In-plane (X,Y) and drilling (Z-rot) fixed -> pure transverse bending spectrum.
     # uz fixed on the simply-supported edges, free in the interior; bending rotations free.
     return NodalSupport(
-        displacement_conditions={"X": FX, "Y": FX, "Z": uz},
-        rotation_conditions={"X": FR, "Y": FR, "Z": FX})
+        displacement_conditions={"X": FX, "Y": FX, "Z": uz}, rotation_conditions={"X": FR, "Y": FR, "Z": FX}
+    )
 
 
 def build(n):
@@ -56,8 +61,21 @@ def build(n):
         for i in range(n):
             n00, n10, n11, n01 = nd[(i, j)], nd[(i + 1, j)], nd[(i + 1, j + 1)], nd[(i, j + 1)]
             c.add_plate(
-                Plate(nodes=[n00, n10, n11], material=mat, thickness=T, local_x_direction=(1, 0, 0), theory="Mindlin"),
-                Plate(nodes=[n00, n11, n01], material=mat, thickness=T, local_x_direction=(1, 0, 0), theory="Mindlin"))
+                Plate(
+                    nodes=[n00, n10, n11],
+                    material=mat,
+                    thickness=T,
+                    local_x_direction=(1, 0, 0),
+                    theory="Mindlin",
+                ),
+                Plate(
+                    nodes=[n00, n11, n01],
+                    material=mat,
+                    thickness=T,
+                    local_x_direction=(1, 0, 0),
+                    theory="Mindlin",
+                ),
+            )
     return c
 
 
@@ -76,7 +94,7 @@ def main():
         json.dump(d, fh)
     plates = n * n * 2
     print(f"FVP.json written: {n}x{n} mesh, {plates} triangular plates")
-    print(f"analytical targets (Hz): f11={f_mn(1,1):.3f}  f12=f21={f_mn(1,2):.3f}  f22={f_mn(2,2):.3f}")
+    print(f"analytical targets (Hz): f11={f_mn(1, 1):.3f}  f12=f21={f_mn(1, 2):.3f}  f22={f_mn(2, 2):.3f}")
 
 
 if __name__ == "__main__":

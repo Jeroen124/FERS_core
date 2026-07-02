@@ -9,11 +9,25 @@ Targets — classical thin-ring closed form (independently verified), pairs per 
   in-plane flexural            n=2/3/4: 53.382 / 150.99 / 289.51 Hz
 (NAFEMS R0015 FE targets are ~1% higher: 52.29/149.7/288.3 and 53.97/152.4/288.3.)
 """
-import sys, os, json, math
+
+import sys
+import os
+import json
+import math
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 import nafems_harness as H
-from fers_core import (FERS, Node, Member, MemberSet, NodalSupport, Material, Section,
-                       AnalysisOrder, SupportCondition)
+from fers_core import (
+    FERS,
+    Node,
+    Member,
+    MemberSet,
+    NodalSupport,
+    Material,
+    Section,
+    AnalysisOrder,
+    SupportCondition,
+)
 
 E, NU, RHO = 200e9, 0.3, 8000.0
 G = E / (2 * (1 + NU))
@@ -33,10 +47,13 @@ NAFEMS_FE = {51.849: 52.29, 53.382: 53.97, 148.77: 149.7, 150.99: 152.4, 286.98:
 
 FX, FR = SupportCondition.fixed(), SupportCondition.free()
 
+
 def grounded(k):
     s = SupportCondition.spring(k)
-    return NodalSupport(displacement_conditions={"X": s, "Y": s, "Z": s},
-                        rotation_conditions={"X": FR, "Y": FR, "Z": FR})
+    return NodalSupport(
+        displacement_conditions={"X": s, "Y": s, "Z": s}, rotation_conditions={"X": FR, "Y": FR, "Z": FR}
+    )
+
 
 def build(n_seg=N_SEG, k_soft=0.0):
     # Native free-free (fers_calculations >= 0.2.42): the modal spectral shift
@@ -54,15 +71,17 @@ def build(n_seg=N_SEG, k_soft=0.0):
         if k in ground_idx:
             nd.nodal_support = grounded(k_soft)
         nodes.append(nd)
-    members = [Member(start_node=nodes[k], end_node=nodes[(k + 1) % n_seg], section=sec)
-               for k in range(n_seg)]
+    members = [
+        Member(start_node=nodes[k], end_node=nodes[(k + 1) % n_seg], section=sec) for k in range(n_seg)
+    ]
     c.add_member_set(MemberSet(members=members))
     return c
+
 
 def main():
     c = build()
     freqs, _ = H.modal_frequencies(c, num_modes=NUM_MODES)
-    flex = [f for f in freqs if f > 5.0]     # drop the 6 near-zero rigid-body modes
+    flex = [f for f in freqs if f > 5.0]  # drop the 6 near-zero rigid-body modes
     n_rigid = len(freqs) - len(flex)
     print(f"FV6 rigid-body modes (<5 Hz): {n_rigid}")
     print("FV6 flexural (Hz):", [round(f, 3) for f in flex[:12]])
@@ -71,9 +90,17 @@ def main():
         k = min((j for j in range(len(flex)) if not used[j]), key=lambda j: abs(flex[j] - t))
         used[k] = True
         err = H.rel_err_pct(flex[k], t)
-        results.append({"quantity": f"ring flexural ~{t} Hz", "target": t, "fers": round(flex[k], 3),
-                        "error_pct": round(err, 3), "unit": "Hz", "mesh_or_modes": f"{N_SEG} segments",
-                        "nafems_fe": NAFEMS_FE[t]})
+        results.append(
+            {
+                "quantity": f"ring flexural ~{t} Hz",
+                "target": t,
+                "fers": round(flex[k], 3),
+                "error_pct": round(err, 3),
+                "unit": "Hz",
+                "mesh_or_modes": f"{N_SEG} segments",
+                "nafems_fe": NAFEMS_FE[t],
+            }
+        )
         print(f"TARGET {t:8.3f} (NAFEMS FE {NAFEMS_FE[t]:6.2f}) -> FERS {flex[k]:8.3f}  err {err:.3f}%")
     matched = all(r["error_pct"] < 2.0 for r in results) and n_rigid == 6
     print("MATCHED (<2% vs closed-form, 6 rigid modes):", matched)
@@ -84,9 +111,18 @@ def main():
     d["results"] = None
     here = os.path.dirname(__file__)
     json.dump(d, open(os.path.join(here, "FV6.json"), "w"))
-    json.dump({"id": "FV6", "results": results, "matched": matched, "n_rigid_body": n_rigid,
-               "all_frequencies": [round(f, 3) for f in freqs]},
-              open(os.path.join(here, "FV6_result.json"), "w"), indent=2)
+    json.dump(
+        {
+            "id": "FV6",
+            "results": results,
+            "matched": matched,
+            "n_rigid_body": n_rigid,
+            "all_frequencies": [round(f, 3) for f in freqs],
+        },
+        open(os.path.join(here, "FV6_result.json"), "w"),
+        indent=2,
+    )
+
 
 if __name__ == "__main__":
     main()

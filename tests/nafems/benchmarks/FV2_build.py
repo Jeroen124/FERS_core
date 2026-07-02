@@ -10,11 +10,25 @@ Targets (NAFEMS TNSB Rev.3, Euler-Bernoulli theory; corroborated Abaqus/DIANA/Al
   mode 9        : 45.345 Hz  (2nd pinwheel)
   modes 10-16 x7: 57.390 Hz  (2nd clamped-pinned)
 """
-import sys, os, json, math
+
+import sys
+import os
+import json
+import math
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 import nafems_harness as H
-from fers_core import (FERS, Node, Member, MemberSet, NodalSupport, Material, Section,
-                       AnalysisOrder, SupportCondition)
+from fers_core import (
+    FERS,
+    Node,
+    Member,
+    MemberSet,
+    NodalSupport,
+    Material,
+    Section,
+    AnalysisOrder,
+    SupportCondition,
+)
 
 E, RHO, NU = 200e9, 8000.0, 0.3
 G = E / (2 * (1 + NU))
@@ -24,17 +38,24 @@ I = B**4 / 12.0
 J = 0.1406 * B**4
 L_ARM = 5.0
 CX, CY = 5.0, 5.0
-N_SEG = 8            # elements per arm
+N_SEG = 8  # elements per arm
 NUM_MODES = 20
 TARGETS = [11.336, 17.709, 45.345, 57.390]
+
 
 # In-plane planarization support factories (free DOFs: ux, uy, theta_z as noted).
 def _sup(ux, uy):
     return NodalSupport(
         displacement_conditions={"X": ux, "Y": uy, "Z": SupportCondition.fixed()},
-        rotation_conditions={"X": SupportCondition.fixed(), "Y": SupportCondition.fixed(),
-                             "Z": SupportCondition.free()})
-FREE = _sup(SupportCondition.free(), SupportCondition.free())   # interior + centre
+        rotation_conditions={
+            "X": SupportCondition.fixed(),
+            "Y": SupportCondition.fixed(),
+            "Z": SupportCondition.free(),
+        },
+    )
+
+
+FREE = _sup(SupportCondition.free(), SupportCondition.free())  # interior + centre
 PIN = _sup(SupportCondition.fixed(), SupportCondition.fixed())  # arm tip: ux=uy=0
 
 
@@ -75,9 +96,16 @@ def main():
         best = min((j for j in range(len(freqs)) if not used[j]), key=lambda j: abs(freqs[j] - t))
         used[best] = True
         err = H.rel_err_pct(freqs[best], t)
-        results.append({"quantity": f"nearest mode to {t} Hz", "target": t,
-                        "fers": round(freqs[best], 4), "error_pct": round(err, 3),
-                        "unit": "Hz", "mesh_or_modes": f"{N_SEG} el/arm, {NUM_MODES} modes"})
+        results.append(
+            {
+                "quantity": f"nearest mode to {t} Hz",
+                "target": t,
+                "fers": round(freqs[best], 4),
+                "error_pct": round(err, 3),
+                "unit": "Hz",
+                "mesh_or_modes": f"{N_SEG} el/arm, {NUM_MODES} modes",
+            }
+        )
         print(f"TARGET {t:8.3f} Hz -> FERS {freqs[best]:8.4f} Hz  err {err:.3f}%")
     matched = all(r["error_pct"] < 2.0 for r in results)
     print("MATCHED (<2%%): %s" % matched)
@@ -92,8 +120,16 @@ def main():
     with open(os.path.join(here, "FV2.json"), "w") as fh:
         json.dump(d, fh)
     with open(os.path.join(here, "FV2_result.json"), "w") as fh:
-        json.dump({"id": "FV2", "results": results, "matched": matched,
-                   "all_frequencies": [round(f, 4) for f in freqs]}, fh, indent=2)
+        json.dump(
+            {
+                "id": "FV2",
+                "results": results,
+                "matched": matched,
+                "all_frequencies": [round(f, 4) for f in freqs],
+            },
+            fh,
+            indent=2,
+        )
 
 
 if __name__ == "__main__":
