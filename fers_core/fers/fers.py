@@ -223,6 +223,7 @@ class FERS:
         self.member_sets = []
         self.plate_surfaces = []
         self.plates = []
+        self.nodal_masses = []
         self.work_axes = []
         self.work_planes = []
         self.entity_groups = []
@@ -332,12 +333,11 @@ class FERS:
                 "nodal_supports": [
                     ns.to_dict() for ns in self.get_unique_nodal_support_from_all_member_sets()
                 ],
+                "nodal_masses": [nm.to_dict() for nm in self.nodal_masses],
                 "member_hinges": [
                     hinge.to_dict() for hinge in self.get_unique_member_hinges_from_all_member_sets()
                 ],
-                "shape_paths": [
-                    sp.to_dict() for sp in self.get_unique_shape_paths_from_all_member_sets()
-                ],
+                "shape_paths": [sp.to_dict() for sp in self.get_unique_shape_paths_from_all_member_sets()],
                 "plate_surfaces": [plate_surface.to_dict() for plate_surface in self.plate_surfaces],
                 "plate_elements": [plate.to_dict() for plate in self.plates],
                 "workspace": {
@@ -351,9 +351,7 @@ class FERS:
                 "load_cases": [load_case.to_dict() for load_case in self.load_cases],
                 "load_combinations": [load_comb.to_dict() for load_comb in self.load_combinations],
                 "imperfection_cases": [imp_case.to_dict() for imp_case in self.imperfection_cases],
-                "unity_checks": [
-                    c.to_dict() if hasattr(c, "to_dict") else c for c in self.unity_checks
-                ],
+                "unity_checks": [c.to_dict() if hasattr(c, "to_dict") else c for c in self.unity_checks],
             },
         }
         if include_results and self.resultsbundle is not None:
@@ -377,9 +375,7 @@ class FERS:
         try:
             FERSInputSchema(**{**data, "results": None})
         except _PydValidationError as e:
-            raise ValueError(
-                f"FERS model does not conform to the solver input schema:\n{e}"
-            ) from e
+            raise ValueError(f"FERS model does not conform to the solver input schema:\n{e}") from e
 
     def settings_to_dict(self):
         """Convert settings to a dictionary representation with additional information."""
@@ -574,6 +570,12 @@ class FERS:
     def add_plate(self, *plates):
         for plate in plates:
             self.plates.append(plate)
+
+    def add_nodal_mass(self, *nodal_masses):
+        """Attach one or more concentrated nodal masses (see `NodalMass`) for
+        modal / seismic analysis."""
+        for nodal_mass in nodal_masses:
+            self.nodal_masses.append(nodal_mass)
 
     def add_work_axis(self, *work_axes):
         for work_axis in work_axes:
@@ -3463,9 +3465,7 @@ class FERS:
         )
         plotter.view_isometric()
         plotter.show(
-            title=(
-                f'Interactive 3D Results: "{chosen.name}"  ' f"(displacement scale: {displacement_scale}×)"
-            )
+            title=(f'Interactive 3D Results: "{chosen.name}"  (displacement scale: {displacement_scale}×)')
         )
 
     def plot_model(

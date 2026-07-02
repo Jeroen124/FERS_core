@@ -1,0 +1,21 @@
+{
+  "id": "LE6",
+  "results": [
+    {
+      "quantity": "max principal stress sigma_1 at centre E, lower surface",
+      "target": 802000.0,
+      "fers": 785584.5,
+      "error_pct": 2.047,
+      "unit": "Pa",
+      "mesh_or_modes": "48x48 Mindlin (offline)"
+    }
+  ],
+  "live": {
+    "fers": 741737.1,
+    "error_pct": 7.514,
+    "mesh": "32x32",
+    "plates": 2048
+  },
+  "convergence": "8x8:50.6%, 16x16:27.9%, 24x24:14.4%, 32x32:7.5%, 48x48:2.0%; Richardson->0.831MPa (3.6%)",
+  "matched": true
+}

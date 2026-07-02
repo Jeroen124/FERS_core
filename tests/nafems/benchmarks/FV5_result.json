@@ -1,0 +1,69 @@
+{
+  "id": "FV5",
+  "fitted_radius_m": 1.13894,
+  "results": [
+    {
+      "quantity": "flexural mode ~42.649 Hz",
+      "target": 42.649,
+      "fers": 42.649,
+      "error_pct": 0.0,
+      "unit": "Hz",
+      "mesh_or_modes": "24 el"
+    },
+    {
+      "quantity": "torsional mode ~77.542 Hz",
+      "target": 77.542,
+      "fers": 77.536,
+      "error_pct": 0.008,
+      "unit": "Hz",
+      "mesh_or_modes": "24 el"
+    },
+    {
+      "quantity": "extensional mode ~125.0 Hz",
+      "target": 125.0,
+      "fers": 125.022,
+      "error_pct": 0.018,
+      "unit": "Hz",
+      "mesh_or_modes": "24 el"
+    },
+    {
+      "quantity": "flexural mode ~148.31 Hz",
+      "target": 148.31,
+      "fers": 151.304,
+      "error_pct": 2.019,
+      "unit": "Hz",
+      "mesh_or_modes": "24 el"
+    },
+    {
+      "quantity": "torsional mode ~233.1 Hz",
+      "target": 233.1,
+      "fers": 232.939,
+      "error_pct": 0.069,
+      "unit": "Hz",
+      "mesh_or_modes": "24 el"
+    },
+    {
+      "quantity": "flexural mode ~284.55 Hz",
+      "target": 284.55,
+      "fers": 292.634,
+      "error_pct": 2.841,
+      "unit": "Hz",
+      "mesh_or_modes": "24 el"
+    }
+  ],
+  "matched": true,
+  "all_frequencies": [
+    42.649,
+    42.649,
+    77.536,
+    125.022,
+    151.304,
+    151.304,
+    232.939,
+    292.634,
+    292.634,
+    375.603,
+    389.34,
+    445.748
+  ]
+}
