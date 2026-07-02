@@ -26,6 +26,16 @@
 - The NAFEMS harness (`tests/nafems/nafems_harness.py`) now attaches the modal
   request through the first-class API instead of injecting raw dicts into the
   wire JSON (the `weight = 0` belt-and-braces guard remains).
+- **Pin `fers_calculations==0.2.44`** (was `0.2.43`). Upstream, the Kirchhoff/DKT
+  plate element is rewritten to the canonical Batoz–Bathe–Ho formulation and
+  validated (exact constant-curvature patch test; SS square plate within 0.31%
+  at 16×16; clamped within 2%; converging), so `theory="Kirchhoff"` is no longer
+  grossly under-stiff. `Auto` still resolves to Mindlin/DSG3 as the
+  general-purpose default. The engine also gains a NAFEMS FV3 free-free
+  regression test. Stale "Kirchhoff/DKT is unreliable" and "plate modal is
+  unsupported" notes in the NAFEMS reference templates were refreshed
+  accordingly. **This release is gated on the `fers_calculations` 0.2.44
+  publish** (unreleased at the time of writing; CI publishes on merge).
 
 ## 0.1.72
 

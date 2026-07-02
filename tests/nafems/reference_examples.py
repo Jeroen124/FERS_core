@@ -13,13 +13,19 @@ Key gotchas these templates encode
    out-of-plane translation + the two out-of-plane rotations + torsion at every
    node, leaving only the in-plane bending DOF free, so spurious out-of-plane
    modes don't crowd the spectrum.
-3. PLATE BENDING: use ``theory="Mindlin"``. The Kirchhoff/DKT path is currently
-   unreliable (grossly under-stiff on these tests). Mindlin converges from the
-   stiff side (~7% at 16x16, improving with refinement) toward thin-plate theory.
+3. PLATE BENDING: these benchmarks use ``theory="Mindlin"`` (also what
+   ``Auto`` resolves to). As of engine 0.2.44 the Kirchhoff/DKT element is
+   rewritten to the canonical Batoz-Bathe-Ho formulation and validated
+   (constant-curvature patch test exact; SS square plate within 0.31% at
+   16x16), so it is no longer under-stiff — but the benchmarks stay on
+   Mindlin as the general-purpose default. Mindlin converges from the stiff
+   side (coarse-mesh stiff, improving with refinement) toward thin-plate
+   theory.
 4. PLATE STRESS: the solver returns stress RESULTANTS (nx.. [N/m], mx.. [N.m/m]).
    Recover stress with sigma_membrane = N/t and sigma_bending = 6M/t^2.
-5. PLATE MODAL IS UNSUPPORTED: the modal mass matrix is assembled from members
-   only, so plate/shell free-vibration has no mass -> do NOT attempt plate FV.
+5. PLATE MODAL: supported since engine 0.2.43 (plate/shell elements
+   contribute mass to the modal mass matrix, so plate free-vibration works).
+   Before 0.2.43 plate DOFs were massless and plate FV was impossible.
 """
 
 from __future__ import annotations
