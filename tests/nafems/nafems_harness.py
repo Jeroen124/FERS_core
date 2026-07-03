@@ -2,19 +2,19 @@
 
 Why this exists
 ---------------
-The hand-written FERS_core *input* builder does not expose modal/buckling
-analysis (only static/nonlinear), and it auto-fills each member's ``weight``
-field with the element *mass* (density·area·length).  The solver, however,
-treats ``member.weight`` as a *force per unit length* override and derives the
-modal mass as ``weight / g``.  Left alone this mis-scales every modal frequency
-(observed 4.43x on a validation cantilever).  Setting ``weight = 0`` makes the
-solver fall back to ``density * area`` for the mass, which reproduces closed-form
-eigenfrequencies to <0.01 %.
+This harness builds each benchmark with the normal Python API — including the
+first-class ``ModalAnalysisSettings`` request (``calc.analysis.modal``) — then
+talks to the exact same ``calculate_from_json`` entry point the WASM website
+uses.
 
-So this harness builds model *geometry* with the normal Python API, then talks to
-the exact same ``calculate_from_json`` entry point the WASM website uses -- after
-(a) zeroing member weights and (b) injecting an ``analysis.modal`` /
-``analysis.buckling`` request into the wire JSON.
+One belt-and-braces guard remains: the solver treats ``member.weight`` as a
+*force per unit length* override and derives the modal mass as ``weight / g``,
+so a mass-valued weight (density·area·length) mis-scales every modal frequency
+(observed 4.43x on a validation cantilever).  ``Member.to_dict()`` now emits
+``weight = 0`` itself (the solver then derives mass from ``density * area``,
+reproducing closed-form eigenfrequencies to <0.01 %), but
+``_zero_member_weights`` still enforces it on the assembled wire JSON in case a
+document carries explicit non-zero weights.
 """
 
 from __future__ import annotations
@@ -24,6 +24,8 @@ import json
 
 import ujson
 import fers_calculations
+
+from fers_core import MassFormulation, ModalAnalysisSettings
 
 G_STANDARD = 9.81  # m/s^2, the solver's default gravity for weight->mass
 
@@ -49,17 +51,20 @@ def _zero_member_weights(model_dict: dict) -> None:
 # --- modal -----------------------------------------------------------------
 
 
-def modal_frequencies(calc, num_modes: int = 6, mass_formulation: str = "Consistent"):
+def modal_frequencies(calc, num_modes: int = 6, mass_formulation=MassFormulation.CONSISTENT):
     """Return (list_of_frequencies_Hz, raw_modal_dict) for a FERS calc.
 
     ``calc`` is a fers_core ``FERS`` instance with geometry/supports already built.
+    The modal request is attached through the first-class API
+    (``calc.analysis.modal``), so the wire JSON is exactly what any client
+    using ``ModalAnalysisSettings`` would produce.
     """
+    calc.analysis.modal = ModalAnalysisSettings(
+        num_modes=num_modes,
+        mass_formulation=mass_formulation,
+    )
     d = calc.to_dict(include_results=False)
     _zero_member_weights(d)
-    d["analysis"]["modal"] = {
-        "num_modes": num_modes,
-        "mass_formulation": mass_formulation,
-    }
     results = solve_dict(d)["results"]
     modal = results.get("modal")
     if not modal:
