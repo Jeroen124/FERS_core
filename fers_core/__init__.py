@@ -50,6 +50,8 @@ from .settings.anlysis_options import (
     PdeltaMode,
     RigidStrategy,
 )
+from .settings.enums import MassFormulation
+from .settings.eigen_analysis import BucklingAnalysisSettings, ModalAnalysisSettings
 from .members.memberhinge import MemberHinge
 from .results.resultsbundle import ResultsBundle
 from .results.singleresults import SingleResults
@@ -93,7 +95,10 @@ __all__ = [
     "MemberPointLoad",
     "MemberPointMoment",
     "MemberResult",
+    "MassFormulation",
     "MemberSet",
+    "ModalAnalysisSettings",
+    "BucklingAnalysisSettings",
     "BucklingRestraint",
     "PlateElement",
     "PlatePressure",

@@ -51,6 +51,7 @@ from ..members.shapepath import ShapePath
 from ..nodes.node import Node
 from ..supports.nodalsupport import NodalSupport
 from ..settings.settings import Settings
+from ..settings.eigen_analysis import BucklingAnalysisSettings, ModalAnalysisSettings
 from pydantic import ValidationError as _PydValidationError
 
 from ..types.pydantic_models import ResultsBundle as ResultsBundleSchema
@@ -176,6 +177,24 @@ class _AnalysisView:
         self._f.settings.analysis_options = value
 
     @property
+    def modal(self):
+        """Modal analysis request (``ModalAnalysisSettings``), or ``None``."""
+        return self._f.modal_analysis
+
+    @modal.setter
+    def modal(self, value):
+        self._f.modal_analysis = value
+
+    @property
+    def buckling(self):
+        """Buckling analysis request (``BucklingAnalysisSettings``), or ``None``."""
+        return self._f.buckling_analysis
+
+    @buckling.setter
+    def buckling(self, value):
+        self._f.buckling_analysis = value
+
+    @property
     def load_cases(self):
         return self._f.load_cases
 
@@ -233,6 +252,10 @@ class FERS:
         # Unity-check definitions (plain dicts in the solver's schema shape; use
         # the builders in `fers_core.unity_checks` to construct them).
         self.unity_checks = []
+        # Eigenvalue analysis requests (wire: `analysis.modal` / `analysis.buckling`).
+        # None means "not requested" and the key is omitted from the document.
+        self.modal_analysis: Optional[ModalAnalysisSettings] = None
+        self.buckling_analysis: Optional[BucklingAnalysisSettings] = None
         self.settings = (
             settings if settings is not None else Settings()
         )  # Use provided settings or create default
@@ -354,6 +377,16 @@ class FERS:
                 "unity_checks": [c.to_dict() if hasattr(c, "to_dict") else c for c in self.unity_checks],
             },
         }
+        # Eigenvalue analysis requests are only emitted when set, so plain
+        # static models keep their exact wire shape (`modal`/`buckling` absent).
+        if self.modal_analysis is not None:
+            modal = self.modal_analysis
+            data["analysis"]["modal"] = modal.to_dict() if hasattr(modal, "to_dict") else modal
+        if self.buckling_analysis is not None:
+            buckling = self.buckling_analysis
+            data["analysis"]["buckling"] = (
+                buckling.to_dict() if hasattr(buckling, "to_dict") else buckling
+            )
         if include_results and self.resultsbundle is not None:
             data["results"] = self.resultsbundle.to_dict()
         else:
@@ -428,6 +461,11 @@ class FERS:
         fers.schema_version = schema_version
         # Unity-check definitions are carried through as plain dicts.
         fers.unity_checks = list(data.get("unity_checks") or [])
+        # Eigenvalue analysis requests (absent -> None, key omitted on re-serialize).
+        if analysis.get("modal") is not None:
+            fers.modal_analysis = ModalAnalysisSettings.from_dict(analysis["modal"])
+        if analysis.get("buckling") is not None:
+            fers.buckling_analysis = BucklingAnalysisSettings.from_dict(analysis["buckling"])
 
         # lookup tables as you already have...
         id_to_shape_path = {
