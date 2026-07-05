@@ -1,5 +1,57 @@
 # Changelog
 
+## 0.1.75
+
+### Changed
+- **Pin `fers_calculations==0.2.47`** (was `0.2.45`; 0.2.46 was published but
+  never pinned by a `fers` release). 0.2.47 fixes the second-order
+  load-combination warm start on models with tension-only / compression-only
+  members: with `solve_loadcases: true`, combination solves were seeded from a
+  superposition of the nonlinear load-case displacements and could converge —
+  reported as clean success — onto a spurious equilibrium branch (Solvinq
+  rack 1962: a tension-only diagonal carried 3.6× the correct force, a false
+  structural FAIL vs SkyCiv). Such models now cold-start each combination and
+  agree with the `solve_loadcases: false` answer; results on affected
+  tension-only braced models **change (become correct)**. New advisory
+  diagnostic `solver_diagnostics.unilateral_engagement_flips` + an
+  `unilateral_engagement_flip` warning identify engagement flips.
+
+### Migration note (P-Delta mode, fers_core ≤ 0.1.69 → ≥ 0.1.70)
+- `AnalysisOptions` could not express `pdelta_mode` before **0.1.70** — any
+  consumer that migrated from a hand-rolled wire (which typically wrote
+  `"pdelta_mode": "IN_PLANE_ONLY"`) to fers_core builder objects on ≤ 0.1.69
+  **silently switched to the engine default `FULL`** (all-direction P-Delta
+  amplification). The two modes diverge exactly on rack-style tension-only
+  braced structures. For commercial-solver parity set it explicitly:
+  `AnalysisOptions(pdelta_mode=PdeltaMode.IN_PLANE_ONLY)`. The same applies to
+  `nonlinear_method` / `pdelta_formulation` (engine defaults `COROTATIONAL` /
+  `CONSISTENT`; only emitted when explicitly set).
+
+- Upstream 0.2.46 completes the EC3
+  §6.3 member-buckling checks: the §6.3.3 member-buckling interaction is
+  implemented per Annex A (Method 1) and validated against ECCS N°119 Worked
+  Example 4; buckling lengths (`L_cr`, `l_LTB`, `l_T`) are now derived from the
+  `buckling_restraints` spacing — **results change:** models that already carry
+  buckling restraints now get the shorter, correct `L_cr` instead of the full
+  system length; §6.3.3 is evaluated in code axes, fixing the χ_LT pairing for
+  sections whose strong bending axis is local z; §6.3.1.4 torsional and
+  torsional-flexural buckling is added, with the new
+  `MemberSet.buckling_length_t` wire field to control the torsional buckling
+  length; the equivalent uniform moment factors implement Annex B
+  Tables B.1–B.3 in full, replacing the interim `Cm = 1.0` stopgap; and
+  `Ec3SteelSpec` gains `cmy` / `cmz` / `cm_lt` overrides.
+
+## 0.1.74
+
+### Changed
+- **Pin `fers_calculations==0.2.45`** (was `0.2.44`). Pin-bump-only release (no
+  library changes): 0.2.44 understated end-peaked unity-check demands by up to
+  ~25% (member-end sections were skipped when selecting the governing section)
+  and, due to an inverted compression gate, never ran the EC3 §6.3.1/§6.3.3
+  buckling checks on compressed members; 0.2.45 carries the fixes. The
+  `fers_calculations` 0.2.44 publish that 0.1.73 was gated on has since
+  shipped.
+
 ## 0.1.73
 
 ### Added
