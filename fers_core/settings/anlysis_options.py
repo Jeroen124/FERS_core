@@ -10,6 +10,22 @@ from ..settings.enums import (
 
 
 class AnalysisOptions:
+    """Solver analysis options; None-valued fields defer to engine defaults.
+
+    P-Delta migration hint: the engine's default ``pdelta_mode`` is ``FULL``
+    (P-Delta amplification in all directions). Most commercial solvers use an
+    in-plane-only sway approach — for parity, set it explicitly::
+
+        AnalysisOptions(pdelta_mode=PdeltaMode.IN_PLANE_ONLY)
+
+    The two modes diverge most on rack-style braced structures with
+    tension-only diagonals. NOTE: ``pdelta_mode`` (with ``nonlinear_method``,
+    ``pdelta_formulation``, ``pdelta_suppress_axes``) is expressible here since
+    fers_core 0.1.70 — wires built with ≤ 0.1.69 builder objects always ran
+    the engine default ``FULL``, even when the author intended
+    ``IN_PLANE_ONLY``.
+    """
+
     _analysis_options_counter = 1
 
     def __init__(

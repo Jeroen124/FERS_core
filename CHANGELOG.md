@@ -3,7 +3,31 @@
 ## 0.1.75
 
 ### Changed
-- **Pin `fers_calculations==0.2.46`** (was `0.2.45`). Upstream completes the EC3
+- **Pin `fers_calculations==0.2.47`** (was `0.2.45`; 0.2.46 was published but
+  never pinned by a `fers` release). 0.2.47 fixes the second-order
+  load-combination warm start on models with tension-only / compression-only
+  members: with `solve_loadcases: true`, combination solves were seeded from a
+  superposition of the nonlinear load-case displacements and could converge —
+  reported as clean success — onto a spurious equilibrium branch (Solvinq
+  rack 1962: a tension-only diagonal carried 3.6× the correct force, a false
+  structural FAIL vs SkyCiv). Such models now cold-start each combination and
+  agree with the `solve_loadcases: false` answer; results on affected
+  tension-only braced models **change (become correct)**. New advisory
+  diagnostic `solver_diagnostics.unilateral_engagement_flips` + an
+  `unilateral_engagement_flip` warning identify engagement flips.
+
+### Migration note (P-Delta mode, fers_core ≤ 0.1.69 → ≥ 0.1.70)
+- `AnalysisOptions` could not express `pdelta_mode` before **0.1.70** — any
+  consumer that migrated from a hand-rolled wire (which typically wrote
+  `"pdelta_mode": "IN_PLANE_ONLY"`) to fers_core builder objects on ≤ 0.1.69
+  **silently switched to the engine default `FULL`** (all-direction P-Delta
+  amplification). The two modes diverge exactly on rack-style tension-only
+  braced structures. For commercial-solver parity set it explicitly:
+  `AnalysisOptions(pdelta_mode=PdeltaMode.IN_PLANE_ONLY)`. The same applies to
+  `nonlinear_method` / `pdelta_formulation` (engine defaults `COROTATIONAL` /
+  `CONSISTENT`; only emitted when explicitly set).
+
+- Upstream 0.2.46 completes the EC3
   §6.3 member-buckling checks: the §6.3.3 member-buckling interaction is
   implemented per Annex A (Method 1) and validated against ECCS N°119 Worked
   Example 4; buckling lengths (`L_cr`, `l_LTB`, `l_T`) are now derived from the
