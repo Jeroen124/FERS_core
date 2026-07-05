@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.1.76
+
+### Added
+- **`AnalysisOptions.result_filter`** + **`ResultBlock`** enum (engine ≥
+  0.2.48): whitelist of result blocks the engine should emit. `None`
+  (default) keeps today's full output; a unity-check/envelope consumer
+  typically wants `[ResultBlock.LOCAL_ENVELOPES,
+  ResultBlock.NODE_DISPLACEMENTS, ResultBlock.REACTIONS]`, which shrinks
+  large responses ~85–90% (the fix for the `result-filtering` OOM feedback).
+  Older engines ignore the field. Unity checks always evaluate on the full
+  results regardless of the filter; `member_displacements` stays governed by
+  `include_member_deflected_shape`.
+- The engine wheel also gained `fers_calculations.calculate_to_file(
+  json_data, output_path, api_key=None)` — solve and stream the result JSON
+  to a file so the response string never lives in the Python heap; composes
+  with `result_filter`.
+
+### Changed
+- **Pin `fers_calculations==0.2.48`.** Schema loosening in 0.2.48: the ten
+  scalar `MemberResult` blocks are now `Optional` in the generated result
+  models (they are absent only when explicitly filtered out; unfiltered
+  output is unchanged).
+
 ## 0.1.75
 
 ### Changed
