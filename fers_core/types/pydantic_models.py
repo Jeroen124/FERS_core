@@ -546,9 +546,13 @@ class MemberId(RootModel[conint(ge=0)]):
 
 
 class MemberSet(BaseModel):
+    buckling_length_t: float | None = Field(
+        None,
+        description='Torsional buckling length `l_T` for `N_cr,T` (model length units). When\nabsent, derived from the torsional `buckling_restraints` spacing, else\nthe LTB length.',
+    )
     buckling_length_y: float | None = Field(
         None,
-        description='Buckling-length overrides for code checks (EN 1993-1-1 §6.3). When absent,\nthe unity-check evaluator derives L_cr from `buckling_restraints` spacing.\nExplicit lengths (m) take precedence over the factors.',
+        description='Buckling-length overrides for code checks (EN 1993-1-1 §6.3), in **model\nlength units**. Precedence per axis: explicit length → effective-length\nfactor → `buckling_restraints` spacing → member length.',
     )
     buckling_length_z: float | None = None
     buckling_restraints: list[BucklingRestraint] | None = Field(
@@ -562,12 +566,13 @@ class MemberSet(BaseModel):
     )
     effective_length_factor_y: float | None = Field(
         None,
-        description='Effective-length factor K_y (L_cr,y = K_y · L) when no explicit length given.',
+        description="Effective-length factor K_y (L_cr,y = K_y · L) when no explicit length\ngiven. NOTE: `L` here is the individual FE member's length (a\nsub-member length when the beam is split), whereas restraint-derived\nlengths measure along the whole physical chain — prefer explicit\nlengths or restraints for split members.",
     )
     effective_length_factor_z: float | None = None
     id: conint(ge=0)
     ltb_length: float | None = Field(
-        None, description='Unrestrained length for lateral-torsional buckling (m).'
+        None,
+        description='Unrestrained length for lateral-torsional buckling (model length units).\nWhen absent, derived from the torsional `buckling_restraints` spacing,\nelse the member length.',
     )
     member_ids: list[MemberId] = Field(
         ...,
@@ -619,6 +624,28 @@ class ModalAnalysisSettings(BaseModel):
 class ModalCombination(Enum):
     CQC = 'CQC'
     SRSS = 'SRSS'
+
+
+class NodalMass(BaseModel):
+    inertia_x: float | None = Field(
+        None,
+        description='Optional rotary inertia [kg·m²] about global X, added to the θx DOF.',
+    )
+    inertia_y: float | None = Field(
+        None,
+        description='Optional rotary inertia [kg·m²] about global Y, added to the θy DOF.',
+    )
+    inertia_z: float | None = Field(
+        None,
+        description='Optional rotary inertia [kg·m²] about global Z, added to the θz DOF.',
+    )
+    mass: float = Field(
+        ...,
+        description='Translational (isotropic) mass [kg], added to the ux, uy, uz DOFs.',
+    )
+    node: conint(ge=0) = Field(
+        ..., description='Id of the node the mass is attached to.'
+    )
 
 
 class Node(BaseModel):
@@ -1019,6 +1046,18 @@ class ResponseSpectrum3(BaseModel):
     )
 
 
+class ResultBlock(Enum):
+    local_envelopes = 'local_envelopes'
+    global_envelopes = 'global_envelopes'
+    local_end_forces = 'local_end_forces'
+    global_end_forces = 'global_end_forces'
+    section_forces = 'section_forces'
+    internal_force_series = 'internal_force_series'
+    local_displacements = 'local_displacements'
+    node_displacements = 'node_displacements'
+    reactions = 'reactions'
+
+
 class ResultType1(BaseModel):
     model_config = ConfigDict(
         extra='forbid',
@@ -1217,6 +1256,10 @@ class SolverDiagnostics(BaseModel):
         None,
         description='Wall-clock solve time for this result, in milliseconds. `None` when the\ntime is not individually attributable (e.g. a batch first-order solve\nthat shares one factorization across many load cases).',
     )
+    unilateral_engagement_flips: list[conint(ge=0)] | None = Field(
+        None,
+        description="Unilateral (tension-only / compression-only) members whose converged\nengagement (active vs slack) differs from the first-order starting\nstate of this second-order solve. Advisory — engagement may\nlegitimately evolve during the nonlinear iteration — but on braced\nframes with tension-only diagonals a flip is the signature of\nconverging onto a different equilibrium branch than the starting state\nsuggested; cross-check those members' axial forces. Absent when no\nunilateral member flipped (and for first-order solves).",
+    )
 
 
 class SolverMessage(BaseModel):
@@ -1389,6 +1432,10 @@ class AnalysisOptions(BaseModel):
         False,
         description="When true, fill each unity check's per-entity `rendered_report` from its\n`report_template` (rendered against the entity's computed trace). Default\nfalse for speed; orthogonal to `include_report_html` — narratives appear in\nthe consolidated HTML only when this is also true.",
     )
+    result_filter: list[ResultBlock] | None = Field(
+        None,
+        description='Whitelist of result blocks to emit. `None`/absent (default) = full output\n(backward compatible). When present, only the listed blocks are emitted:\nscalar force/displacement blocks are omitted from member results; list/map\nblocks (`section_forces`, `internal_force_series`, `displacement_nodes`,\n`reaction_nodes`) are emitted empty. Applies to load cases and load\ncombinations alike. Unity checks, `summary`, `solver_diagnostics`,\n`errors_and_warnings`, plate/modal/buckling/seismic results and\n`report_html` are never filtered, and unity checks always evaluate on the\nfull results (the filter is applied after them, just before\nserialization). `member_displacements` stays governed solely by\n`include_member_deflected_shape`. An empty list is a maximal strip.',
+    )
     rigid_strategy: RigidStrategy
     self_weight_load_case_id: conint(ge=0) | None = Field(
         None,
@@ -1458,6 +1505,18 @@ class Ec3SteelSpec(BaseModel):
         description='LTB factors C2 / C3 for the general `M_cr` (load height / mono-symmetry).\nDefault 0.0 → the doubly-symmetric form (no load-height or z_j term).',
     )
     c3: float | None = 0.0
+    cm_lt: float | None = Field(
+        None,
+        description='Equivalent uniform moment factor override for lateral-torsional buckling\n(`C_mLT`). When omitted it is computed (Annex A) or taken as the\nmajor-axis `C_m` (Annex B).',
+    )
+    cmy: float | None = Field(
+        None,
+        description="Equivalent uniform moment factor override for major-axis bending\n(`C_my`; Annex A Table A.2 `C_my,0`-based value or Annex B Table B.3).\nWhen omitted it is computed from the member's actual moment diagram.",
+    )
+    cmz: float | None = Field(
+        None,
+        description='Equivalent uniform moment factor override for minor-axis bending (`C_mz`).',
+    )
     gamma_m0: float | None = 1.0
     gamma_m1: float | None = 1.0
     include_buckling: bool | None = True
@@ -1507,7 +1566,7 @@ class Material(BaseModel):
 class Member(BaseModel):
     chi: float | None = Field(
         None,
-        description="Optional user-supplied buckling reduction factor χ (EN 1993-1-1 §6.3).\nCurrently informational: the EC3 unity-check evaluator computes its own χ\nfrom the section's buckling curve and does not yet read this override.",
+        description='Optional user-supplied flexural buckling reduction factor χ\n(EN 1993-1-1 §6.3). When set, the EC3 unity-check evaluator replaces the\nsection-curve χ with this value for BOTH flexural axes (the modeller\nowns the override); the slenderness λ̄ used by the §6.3.3 interaction\nstays physical.',
     )
     classification: str | None = Field(
         None,
@@ -1592,47 +1651,28 @@ class MemberPointMoment(BaseModel):
 
 
 class MemberResult(BaseModel):
-    end_node_forces: NodeForces = Field(
-        ...,
-        description="Member-end force at the end node, in the **global** frame (Newton's-3rd-law\nopposite of the start-node internal force).",
-    )
+    end_node_forces: NodeForces | None = None
     internal_force_series: list[SectionForce] | None = Field(
         None,
         description="Continuous, ready-to-plot internal force diagram from `x_frac = 0` (start) to\n`x_frac = 1` (end), in the local frame: `local_start_forces`, then\n`section_forces`, then the **negated** `local_end_forces` (converted from the\nNewton's-3rd-law node reaction to the internal-force convention) so the series\nis continuous with no sawtooth across shared nodes.",
     )
-    local_displacement_end_node: NodeDisplacement
-    local_displacement_start_node: NodeDisplacement
-    local_end_forces: NodeForces = Field(
-        ...,
-        description="Internal force at the end node, in the member **local centroidal** frame.\nThis is the nodal-reaction convention, i.e. the Newton's-3rd-law opposite of\nthe internal force at the end — negate it to get the continuous internal value.",
-    )
-    local_maximums: NodeForces = Field(
-        ..., description='Per-component maxima over the member, in the local frame.'
-    )
-    local_minimums: NodeForces = Field(
-        ..., description='Per-component minima over the member, in the local frame.'
-    )
-    local_start_forces: NodeForces = Field(
-        ...,
-        description='Internal force at the start node, in the member **local centroidal** frame\n(corotated frame for nonlinear results). Equals `internal_force_series[0]`.',
-    )
-    maximums: NodeForces = Field(
-        ..., description='Per-component maxima over the member (global frame).'
-    )
+    local_displacement_end_node: NodeDisplacement | None = None
+    local_displacement_start_node: NodeDisplacement | None = None
+    local_end_forces: NodeForces | None = None
+    local_maximums: NodeForces | None = None
+    local_minimums: NodeForces | None = None
+    local_start_forces: NodeForces | None = None
+    maximums: NodeForces | None = None
     member_displacements: list[MemberDisplacementSample] | None = Field(
         None,
         description="Optional sampled deflected shape: the member's global displacement at\nevenly-spaced stations from `x_frac = 0` to `1`, reconstructed by\ncubic-Hermite interpolation of the end-node translations + rotations.\nEmpty unless `AnalysisOptions::include_member_deflected_shape` is enabled.\nThe interpolation is the end-DOF homogeneous cubic — exact for members with\nno span load; under a member UDL the true shape is quartic, so mid-span sag\nis slightly under-rendered (matching client-side Hermite reconstructions).",
     )
-    minimums: NodeForces = Field(
-        ..., description='Per-component minima over the member (global frame).'
-    )
+    minimums: NodeForces | None = None
     section_forces: list[SectionForce] = Field(
         ...,
         description='Continuous internal forces at evenly-spaced **interior** fractions\n(`0 < x_frac < 1`), in the local frame. These already follow the internal-force\nconvention (no end-node flip). For a ready-to-plot 0→1 diagram including the\nendpoints use [`MemberResult::internal_force_series`].',
     )
-    start_node_forces: NodeForces = Field(
-        ..., description='Member-end force at the start node, in the **global** frame.'
-    )
+    start_node_forces: NodeForces | None = None
 
 
 class MemberStiffnessCurve(BaseModel):
@@ -2158,6 +2198,11 @@ class Model(BaseModel):
     members: list[Member] = Field(
         ...,
         description='Single source of truth for member objects. Member sets reference these by id.',
+    )
+    nodal_masses: list[NodalMass] | None = Field(
+        [],
+        description='Concentrated (lumped) nodal masses for modal & seismic analysis. Optional;\nSI units (kg, kg·m²). See [`NodalMass`].',
+        validate_default=True,
     )
     nodal_supports: list[NodalSupport]
     nodes: list[Node]

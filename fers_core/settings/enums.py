@@ -68,3 +68,26 @@ class PdeltaMode(Enum):
 
     FULL = "FULL"
     IN_PLANE_ONLY = "IN_PLANE_ONLY"
+
+
+class ResultBlock(Enum):
+    """Selectable result-block groups for ``AnalysisOptions.result_filter``.
+
+    Values match the Rust ``ResultBlock`` enum (engine >= 0.2.48; older
+    engines silently ignore ``result_filter`` and return the full output).
+    Each token names the member/result JSON block(s) it keeps: when a filter
+    list is present, only the listed blocks are emitted — scalar member
+    blocks are omitted, list/map blocks (``section_forces``,
+    ``internal_force_series``, ``displacement_nodes``, ``reaction_nodes``)
+    are emitted empty.
+    """
+
+    LOCAL_ENVELOPES = "local_envelopes"
+    GLOBAL_ENVELOPES = "global_envelopes"
+    LOCAL_END_FORCES = "local_end_forces"
+    GLOBAL_END_FORCES = "global_end_forces"
+    SECTION_FORCES = "section_forces"
+    INTERNAL_FORCE_SERIES = "internal_force_series"
+    LOCAL_DISPLACEMENTS = "local_displacements"
+    NODE_DISPLACEMENTS = "node_displacements"
+    REACTIONS = "reactions"

@@ -48,6 +48,7 @@ from .settings.anlysis_options import (
     NonlinearMethod,
     PdeltaFormulation,
     PdeltaMode,
+    ResultBlock,
     RigidStrategy,
 )
 from .settings.enums import MassFormulation
@@ -128,6 +129,7 @@ __all__ = [
     "PdeltaFormulation",
     "PdeltaMode",
     "ReactionNodeResult",
+    "ResultBlock",
     "ResultRenderer",
     "ResultsBundle",
     "RigidStrategy",
