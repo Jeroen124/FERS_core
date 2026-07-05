@@ -27,16 +27,22 @@ class AnalysisOptions:
     ``IN_PLANE_ONLY``.
 
     Result filtering (engine >= 0.2.48): ``result_filter`` is a whitelist of
-    result blocks to emit — ``None`` (default) returns the full output. A
-    unity-check/envelope consumer typically only needs::
+    result blocks to emit — ``None`` (default) returns the full output. The
+    smallest set that still feeds a full unity-check pipeline is::
 
         AnalysisOptions(result_filter=[
             ResultBlock.LOCAL_ENVELOPES,
+            ResultBlock.LOCAL_END_FORCES,
+            ResultBlock.LOCAL_DISPLACEMENTS,
             ResultBlock.NODE_DISPLACEMENTS,
             ResultBlock.REACTIONS,
         ])
 
-    which shrinks large responses ~85–90%. An empty list is a maximal strip;
+    which shrinks large responses ~60%. A token names the block it *keeps*,
+    not the check it serves — dropping ``LOCAL_END_FORCES`` or
+    ``LOCAL_DISPLACEMENTS`` silently zeroes start-node-force / chord-deflection
+    checks (no crash), while dropping ``NODE_DISPLACEMENTS`` is a hard
+    ``KeyError`` on node-displacement checks. An empty list is a maximal strip;
     the sampled deflected shape stays governed solely by
     ``include_member_deflected_shape``, and unity checks always evaluate on
     the full results regardless of the filter. Older engines ignore the field.
