@@ -1,10 +1,11 @@
-from typing import List, Optional
+from typing import List, Optional, Union
 from ..settings.enums import (
     AnalysisOrder,
     Dimensionality,
     NonlinearMethod,
     PdeltaFormulation,
     PdeltaMode,
+    ResultBlock,
     RigidStrategy,
 )
 
@@ -24,6 +25,27 @@ class AnalysisOptions:
     fers_core 0.1.70 — wires built with ≤ 0.1.69 builder objects always ran
     the engine default ``FULL``, even when the author intended
     ``IN_PLANE_ONLY``.
+
+    Result filtering (engine >= 0.2.48): ``result_filter`` is a whitelist of
+    result blocks to emit — ``None`` (default) returns the full output. The
+    smallest set that still feeds a full unity-check pipeline is::
+
+        AnalysisOptions(result_filter=[
+            ResultBlock.LOCAL_ENVELOPES,
+            ResultBlock.LOCAL_END_FORCES,
+            ResultBlock.LOCAL_DISPLACEMENTS,
+            ResultBlock.NODE_DISPLACEMENTS,
+            ResultBlock.REACTIONS,
+        ])
+
+    which shrinks large responses ~60%. A token names the block it *keeps*,
+    not the check it serves — dropping ``LOCAL_END_FORCES`` or
+    ``LOCAL_DISPLACEMENTS`` silently zeroes start-node-force / chord-deflection
+    checks (no crash), while dropping ``NODE_DISPLACEMENTS`` is a hard
+    ``KeyError`` on node-displacement checks. An empty list is a maximal strip;
+    the sampled deflected shape stays governed solely by
+    ``include_member_deflected_shape``, and unity checks always evaluate on
+    the full results regardless of the filter. Older engines ignore the field.
     """
 
     _analysis_options_counter = 1
@@ -51,6 +73,7 @@ class AnalysisOptions:
         gravity_factor: Optional[float] = None,
         self_weight_load_case_id: Optional[int] = None,
         include_member_deflected_shape: Optional[bool] = None,
+        result_filter: Optional[List[Union[ResultBlock, str]]] = None,
     ):
         self.analysis_options_id = id or AnalysisOptions._analysis_options_counter
         if id is None:
@@ -80,6 +103,9 @@ class AnalysisOptions:
         # When set, the solver returns each member result's sampled deflected shape
         # (`member_displacements`) for load-exact deformation plots. Off by default.
         self.include_member_deflected_shape = include_member_deflected_shape
+        # Whitelist of result blocks to emit (None = full output). Items may be
+        # ResultBlock members or their raw wire strings.
+        self.result_filter = list(result_filter) if result_filter is not None else None
 
     def to_dict(self):
         data = {
@@ -119,6 +145,14 @@ class AnalysisOptions:
             data["self_weight_load_case_id"] = self.self_weight_load_case_id
         if self.include_member_deflected_shape is not None:
             data["include_member_deflected_shape"] = self.include_member_deflected_shape
+        # Only emitted when set: the engine treats an absent filter as "emit
+        # everything" (and its `Option<Vec<..>>` accepts null, but omitting keeps
+        # wires clean and backward compatible with older engines).
+        if self.result_filter is not None:
+            data["result_filter"] = [
+                block.value if isinstance(block, ResultBlock) else str(block)
+                for block in self.result_filter
+            ]
         return data
 
     @classmethod
@@ -174,6 +208,15 @@ class AnalysisOptions:
         pdelta_formulation = parse_enum(PdeltaFormulation, data.get("pdelta_formulation"), None)
         pdelta_mode = parse_enum(PdeltaMode, data.get("pdelta_mode"), None)
 
+        # Result filter: absent → None (full output). Unknown tokens are kept
+        # as raw strings so newer-engine wires round-trip through older SDKs.
+        raw_filter = data.get("result_filter")
+        result_filter = (
+            [parse_enum(ResultBlock, item, item) for item in raw_filter]
+            if raw_filter is not None
+            else None
+        )
+
         return cls(
             id=data.get("id"),
             solve_loadcases=data.get("solve_loadcases", True),
@@ -196,4 +239,5 @@ class AnalysisOptions:
             gravity_factor=data.get("gravity_factor"),
             self_weight_load_case_id=data.get("self_weight_load_case_id"),
             include_member_deflected_shape=data.get("include_member_deflected_shape"),
+            result_filter=result_filter,
         )
