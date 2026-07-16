@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.1.77
+
+Pins engine `fers_calculations==0.2.50`, which fixes two silent,
+non-conservative correctness bugs. If you use linear buckling or EC3 member
+buckling, **α_cr and unity checks can change** — see the engine's 0.2.50
+changelog. Both changes move results toward the conservative side.
+
+### Changed
+
+- **Pin `fers_calculations==0.2.50`** (was `0.2.48`). Two fixes matter here:
+  P-Delta settings (`pdelta_suppress_axes`, `pdelta_mode`,
+  `pdelta_formulation`) no longer leak into linear buckling and inflate α_cr
+  (measured up to 4.9×); and EC3 `L_cr` for a member-set with no
+  `buckling_restraints` now uses the full member-set chain length instead of
+  the single FE member length, so buckling checks on meshed columns are no
+  longer mesh-dependent (measured UC 0.15 → 0.93 on a 12-element column).
+- **`types/pydantic_models.py` regenerated** from the 0.2.50 schema. New
+  output-only fields: `ResultsBundle.engine_version`,
+  `BucklingResults.warnings`. Both additive — `schema_version` stays 2.
+
+### Notes
+
+- The engine version is now queryable at runtime:
+  `import fers_calculations; fers_calculations.__version__`. Note this is the
+  *engine* version, distinct from this package's version — `pip show FERS`
+  reports the wrapper, which is what makes a capability check confusing.
+
 ## 0.1.76
 
 ### Added
