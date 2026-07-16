@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.78
+
+Pins engine `fers_calculations==0.2.51`. If you use linear buckling on models
+with reaction-dependent base springs (`stiffness_curve` supports), **α_cr
+rises** — the eigenproblem now linearizes those springs at the reference
+reactions (the loaded state the static solve converges to) instead of at
+force = 0, which had entered nearly rigid rack base plates as nearly pinned.
+Models without StiffnessCurve supports are unaffected. Also: exactly singular
+operators (unconstrained DOFs / mechanisms) now return a structured error
+instead of crashing the process. No schema change — no regenerated types.
+
 ## 0.1.77
 
 Pins engine `fers_calculations==0.2.50`, which fixes two silent,
