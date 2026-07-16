@@ -1236,6 +1236,19 @@ class ShapePath(BaseModel):
     shape_commands: list[ShapeCommand]
 
 
+class SolveFailure(BaseModel):
+    combination_id: conint(ge=0) = Field(
+        ..., description='Id of the load combination that failed to solve.'
+    )
+    error: str = Field(
+        ...,
+        description='Human-readable solver error (non-convergence, singular system, …).',
+    )
+    name: str = Field(
+        ..., description='Name of the load combination that failed to solve.'
+    )
+
+
 class SolverDiagnostics(BaseModel):
     analysis_method: str | None = Field(
         None,
@@ -1323,6 +1336,7 @@ class UnityStatus(Enum):
     Yellow = 'Yellow'
     Orange = 'Orange'
     Red = 'Red'
+    Indeterminate = 'Indeterminate'
 
 
 class VarSource2(BaseModel):
@@ -1418,15 +1432,15 @@ class AnalysisOptions(BaseModel):
     order: AnalysisOrder
     pdelta_formulation: PdeltaFormulation | None = Field(
         None,
-        description='Controls the geometric stiffness matrix formulation for P-Delta analysis.\n`Consistent` (default) uses full Przemieniecki K_g; `Simplified` uses\nP/L-only diagonal terms matching commercial solvers.',
+        description='Controls the geometric stiffness matrix formulation for P-Delta analysis.\n`Consistent` (default) uses full Przemieniecki K_g; `Simplified` uses\nP/L-only diagonal terms matching commercial solvers.\nOnly affects second-order (nonlinear) analysis: linear buckling always\nuses the consistent K_g.',
     )
     pdelta_mode: PdeltaMode | None = Field(
         None,
-        description="High-level P-Delta strategy.  `Full` (default) amplifies all directions.\n`InPlaneOnly` auto-detects the out-of-plane axis from the model's\nbounding box and suppresses it, matching commercial solver behavior.\nOverrides `pdelta_suppress_axes` when set to `InPlaneOnly`.",
+        description='High-level P-Delta strategy.  `Full` (default) amplifies all directions.\n`InPlaneOnly` auto-detects the out-of-plane axis by counting unique node\ncoordinate layers per axis and suppresses the thin one, matching\ncommercial solver behavior.\nOverrides `pdelta_suppress_axes` when set to `InPlaneOnly`.\nOnly affects second-order (nonlinear) analysis.',
     )
     pdelta_suppress_axes: list[str] | None = Field(
         None,
-        description='Global translational axes to exclude from P-Delta amplification.\n\nWhen a structure is near buckling in an out-of-plane direction,\nthe consistent P-Delta amplification can produce forces that differ\nsignificantly from commercial solvers which\ntypically only amplify in-plane sway.\n\nSet to `["Z"]` for in-plane racks/portal frames where Z is out-of-plane,\nor `["X","Z"]` to limit P-Delta to Y-sway only.  Empty (default) means\nall translational directions are amplified.\n\nMaps to global DOFs: "X"→0,7  "Y"→1,8  "Z"→2,9  per element.',
+        description='Global translational axes to exclude from P-Delta amplification.\nOnly affects second-order (nonlinear) analysis.\n\nWhen a structure is near buckling in an out-of-plane direction,\nthe consistent P-Delta amplification can produce forces that differ\nsignificantly from commercial solvers which\ntypically only amplify in-plane sway.\n\nSet to `["Z"]` for in-plane racks/portal frames where Z is out-of-plane,\nor `["X","Z"]` to limit P-Delta to Y-sway only.  Empty (default) means\nall translational directions are amplified.\n\nMaps to global DOFs: "X"→0,7  "Y"→1,8  "Z"→2,9  per element.\n\nThis is a P-Delta convergence aid, not a physical property: it is\ndeliberately ignored by linear buckling, where suppressing an axis would\nerase that axis\'s modes and inflate α_cr.',
     )
     render_unity_reports: bool | None = Field(
         False,
@@ -1480,6 +1494,11 @@ class BucklingMode(BaseModel):
 
 class BucklingResults(BaseModel):
     modes: list[BucklingMode]
+    warnings: list[SolverMessage] | None = Field(
+        [],
+        description='Advisories that qualify these results — e.g. model content the\ngeometric stiffness does not cover. Empty when α_cr is unqualified.',
+        validate_default=True,
+    )
 
 
 class DistributedLoad(BaseModel):
@@ -2050,6 +2069,10 @@ class UnityCheckResult(BaseModel):
     name: str
     per_entity: list[EntityUnityResult] | None = Field([], validate_default=True)
     status: UnityStatus
+    unsolved_combination_ids: list[conint(ge=0)] | None = Field(
+        [],
+        description='Applicable load combinations that failed to solve and therefore could\nnot be evaluated. Non-empty ⇒ `status` is `Indeterminate` and the\nreported utilizations cover only the combinations that solved.',
+    )
 
 
 class VarSource1(BaseModel):
@@ -2215,6 +2238,10 @@ class Model(BaseModel):
 
 class ResultsBundle(BaseModel):
     buckling: BucklingResults | None = None
+    engine_version: str | None = Field(
+        None,
+        description="Version of the `fers_calculations` engine that produced these results.\n\nThe input's `schema_version` says which contract the *caller* wrote to;\nthis says which engine answered. Stored results therefore record the\nsolver that produced them, and a caller can tell a fixed engine from a\nbroken one without inspecting the wheel.",
+    )
     loadcases: dict[str, Results]
     loadcombinations: dict[str, Results]
     modal: ModalResults | None = None
@@ -2223,6 +2250,11 @@ class ResultsBundle(BaseModel):
         description='Optional single consolidated HTML report (populated only when requested\nvia the CLI `--report` flag or `AnalysisOptions.include_report_html`).',
     )
     seismic: SeismicResults | None = None
+    solve_failures: list[SolveFailure] | None = Field(
+        [],
+        description='Load combinations that failed to solve and are therefore missing from\n`loadcombinations`. Always inspect before trusting envelopes or\nunity-check verdicts computed over the surviving combinations.',
+        validate_default=True,
+    )
     unity_check_results: list[UnityCheckResult] | None = Field(
         [],
         description='Unity-check results (one entry per check definition), enveloped over the\napplicable load combinations.',
