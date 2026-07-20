@@ -1,5 +1,48 @@
 # Changelog
 
+## 0.1.79
+
+Pins engine `fers_calculations==0.2.52` and exposes its new eigen-analysis
+surface from Python. Regenerated types.
+
+**Correctness — read this if you use `stiffness_curve` hinges or supports.**
+0.2.52 fixes bugs that affected ordinary *static* results, not just buckling:
+
+- second-order equilibrium was enforced at the **zero-force** hinge stiffness
+  while the tangent used the curve secant — the converged solution belonged to
+  the wrong structure (3.7× deflection error on a softening connector);
+- StiffnessCurve **support reactions were reported at `k(0)·u`** — a base plate
+  that converged nearly rigid reported its nearly-pinned reaction;
+- **hinge stiffness curves were never unit-normalized**, so non-SI models
+  consumed both curve axes in raw user units.
+
+Models without stiffness curves are unaffected.
+
+**Also fixed here:** `requirements.txt` still pinned `0.2.50` while
+`pyproject.toml` pinned `0.2.51`, so the engine you got depended on which file
+installed it. Both now agree.
+
+**New in `BucklingAnalysisSettings`:**
+
+- `references=[...]` and `all_combinations=True` — analyse many reference loads
+  in one call, each with its own linearization and geometric stiffness. Exactly
+  one reference form may be given; passing two raises rather than silently
+  resolving by precedence (`from_dict` still resolves stored documents the way
+  the solver does).
+- `member_effective_lengths=True` and `participation_threshold` — per-member
+  critical-load-method buckling lengths with relevant-mode assignment.
+
+**New in `ModalAnalysisSettings`:**
+
+- `stiffness_reference` — linearize StiffnessCurve supports/hinges (and
+  tension/compression engagement) at a load state rather than at force = 0.
+- `include_geometric_stiffness=True` — preloaded (stress-stiffened) modal
+  analysis. Requires `stiffness_reference`; raises at author time without it,
+  mirroring the solver's own guard.
+
+All new fields are omitted from the wire when unset, so existing documents and
+call sites are unchanged.
+
 ## 0.1.78
 
 Pins engine `fers_calculations==0.2.51`. If you use linear buckling on models
