@@ -222,3 +222,104 @@ def test_end_to_end_modal_solve_on_cantilever():
     # Modes come back sorted lowest-frequency first.
     freqs = [mode["natural_frequency"] for mode in modes]
     assert freqs == sorted(freqs)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Engine 0.2.52 surface: multi-reference buckling, effective lengths,
+#  modal stiffness_reference / preloaded modal.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_buckling_multi_reference_list_serializes():
+    s = BucklingAnalysisSettings(references=[("LoadCase", 1), ("LoadCombination", 2)], num_modes=3)
+    data = s.to_dict()
+    assert data["references"] == [{"LoadCase": 1}, {"LoadCombination": 2}]
+    assert "reference" not in data, "single reference must not be emitted alongside the list"
+    assert data["num_modes"] == 3
+
+
+def test_buckling_all_combinations_and_effective_lengths():
+    s = BucklingAnalysisSettings(
+        all_combinations=True,
+        member_effective_lengths=True,
+        participation_threshold=0.1,
+    )
+    data = s.to_dict()
+    assert data["all_combinations"] is True
+    assert data["member_effective_lengths"] is True
+    assert data["participation_threshold"] == 0.1
+    assert "reference" not in data and "references" not in data
+
+
+def test_buckling_requires_exactly_one_reference_form():
+    with pytest.raises(ValueError):
+        BucklingAnalysisSettings()  # none given
+    with pytest.raises(ValueError):
+        BucklingAnalysisSettings(reference=("LoadCase", 1), all_combinations=True)
+    with pytest.raises(ValueError):
+        BucklingAnalysisSettings(references=[("LoadCase", 1)], reference=("LoadCase", 2))
+    with pytest.raises(ValueError):
+        BucklingAnalysisSettings(references=[])  # empty list
+
+
+def test_buckling_optional_fields_omitted_when_unset():
+    # The Rust side uses skip_serializing_if and rejects explicit nulls.
+    data = BucklingAnalysisSettings(reference=("LoadCase", 1)).to_dict()
+    for absent in (
+        "references",
+        "all_combinations",
+        "member_effective_lengths",
+        "participation_threshold",
+        "tolerance",
+        "max_iterations",
+    ):
+        assert absent not in data, f"{absent} must be omitted when unset"
+
+
+def test_buckling_multi_reference_round_trip():
+    original = BucklingAnalysisSettings(
+        references=[("LoadCase", 1), ("LoadCombination", 7)],
+        num_modes=2,
+        member_effective_lengths=True,
+    )
+    assert BucklingAnalysisSettings.from_dict(original.to_dict()).to_dict() == original.to_dict()
+
+
+def test_buckling_from_dict_resolves_precedence_like_the_solver():
+    # A stored doc may carry several forms; the solver's precedence is
+    # all_combinations > references > reference. from_dict must resolve it
+    # rather than trip the stricter constructor check.
+    resolved = BucklingAnalysisSettings.from_dict(
+        {"num_modes": 1, "reference": {"LoadCase": 1}, "all_combinations": True}
+    ).to_dict()
+    assert resolved["all_combinations"] is True
+    assert "reference" not in resolved
+
+    resolved2 = BucklingAnalysisSettings.from_dict(
+        {"num_modes": 1, "reference": {"LoadCase": 1}, "references": [{"LoadCase": 5}]}
+    ).to_dict()
+    assert resolved2["references"] == [{"LoadCase": 5}]
+    assert "reference" not in resolved2
+
+
+def test_modal_stiffness_reference_and_preload():
+    s = ModalAnalysisSettings(
+        num_modes=4,
+        stiffness_reference=("LoadCombination", 9),
+        include_geometric_stiffness=True,
+    )
+    data = s.to_dict()
+    assert data["stiffness_reference"] == {"LoadCombination": 9}
+    assert data["include_geometric_stiffness"] is True
+    assert ModalAnalysisSettings.from_dict(data).to_dict() == data
+
+
+def test_modal_preload_requires_a_reference():
+    with pytest.raises(ValueError):
+        ModalAnalysisSettings(include_geometric_stiffness=True)
+
+
+def test_modal_omits_new_fields_when_unset():
+    data = ModalAnalysisSettings(num_modes=2).to_dict()
+    assert "stiffness_reference" not in data
+    assert "include_geometric_stiffness" not in data
