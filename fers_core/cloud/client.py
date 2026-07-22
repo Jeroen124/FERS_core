@@ -42,6 +42,12 @@ from typing import Any
 
 DEFAULT_BASE_URL = "https://ferscloud.com"
 
+# Seconds. Without an explicit timeout, urlopen inherits the global socket
+# default, which is normally None — so a server that accepts the connection and
+# then never answers blocks the caller forever. Same failure mode that hung the
+# engine's licence handshake before 0.2.53.
+DEFAULT_TIMEOUT = 30.0
+
 
 class FersCloudError(Exception):
     """Base exception for FersCloud operations."""
@@ -68,10 +74,14 @@ class FersCloudClient:
         The base URL of your FersCloud instance.
         Defaults to ``https://ferscloud.com``.
         For local development use ``http://localhost:3000``.
+    timeout : float
+        Seconds to wait on each request before giving up. Defaults to 30.
+        A stalled request raises ``CloudAPIError`` rather than blocking forever.
     """
 
-    def __init__(self, base_url: str = DEFAULT_BASE_URL) -> None:
+    def __init__(self, base_url: str = DEFAULT_BASE_URL, timeout: float = DEFAULT_TIMEOUT) -> None:
         self.base_url = base_url.rstrip("/")
+        self.timeout = timeout
         self._token: str | None = None
         self._api_key: str | None = None
         self._expires_at: datetime | None = None
@@ -302,7 +312,7 @@ class FersCloudClient:
         req = urllib.request.Request(url, data=data, headers=self._headers(auth), method=method)
 
         try:
-            with urllib.request.urlopen(req) as resp:
+            with urllib.request.urlopen(req, timeout=self.timeout) as resp:
                 if resp.status == 204:
                     return None
                 return json.loads(resp.read().decode("utf-8"))
@@ -316,6 +326,13 @@ class FersCloudClient:
             if exc.code == 401:
                 raise AuthenticationError(msg) from exc
             raise CloudAPIError(msg, status_code=exc.code) from exc
+        except TimeoutError as exc:
+            # A *read* timeout surfaces bare, not wrapped in URLError (which only
+            # covers the connect phase), so it needs its own arm or it escapes
+            # the client's error hierarchy entirely.
+            raise CloudAPIError(
+                f"FersCloud at {self.base_url} did not respond within {self.timeout:g} s"
+            ) from exc
         except urllib.error.URLError as exc:
             raise CloudAPIError(f"Cannot reach FersCloud at {self.base_url}: {exc.reason}") from exc
 
