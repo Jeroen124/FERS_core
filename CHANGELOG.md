@@ -1,5 +1,56 @@
 # Changelog
 
+## 0.1.80
+
+Pins engine `fers_calculations==0.2.53` and surfaces its bounded licence
+handshake. No solver behaviour changes; nothing in the model API moves.
+
+**No FERS call can hang on the network any more.** Engine 0.2.53 fixes a licence
+handshake that could block forever (it stalled one integrator's unattended batch
+run for ~6 hours at 0 % CPU). Two changes here make that reachable and useful
+from the SDK:
+
+- `run_analysis()` gains `api_key=` and `license_timeout=`. Both default to
+  `None`, which keeps today's behaviour exactly — without an API key the engine
+  makes no network call at all. `license_timeout` is seconds; on expiry the
+  engine raises `fers_calculations.FersTimeoutError` **before the solve starts**,
+  so retrying is safe.
+
+- **`FersTimeoutError` is no longer flattened.** `run_analysis()` wrapped every
+  exception in `RuntimeError(f"Failed to run calculation: {e}")`, which would
+  have turned the new typed error back into something you can only detect by
+  string-matching. It is now re-raised unchanged, while every other failure keeps
+  its existing `RuntimeError` wrapper. This is what makes a batch loop able to
+  tell "transient stall, retry" from "bad model, skip".
+
+**New:** `run_analysis_to_file(output_path, ...)` — wraps the engine's
+`calculate_to_file`, which has existed since 0.2.48 but was not reachable from
+the SDK. The result JSON is streamed straight to disk instead of passing through
+the Python heap, which is what makes multi-hundred-megabyte results survivable.
+`self.resultsbundle` is deliberately left untouched.
+
+**Also fixed, same failure class:** `FersCloudClient` called
+`urllib.request.urlopen(req)` with no timeout, so a stalled cloud request blocked
+forever — the same defect as the engine's, against the same `/api/sdk/me`
+endpoint. It now defaults to 30 s (`FersCloudClient(timeout=...)` to change it)
+and raises `CloudAPIError` on expiry. Read timeouts surface bare rather than
+wrapped in `URLError`, so they previously escaped the client's error hierarchy
+entirely; they are now caught explicitly.
+
+**Documented:** the README previously described no API at all. It now covers
+solving, `api_key`, `license_timeout`, `FersTimeoutError` and
+`FERS_LICENSE_TIMEOUT` — including why the timeout and the definitive-failure
+arms must be caught separately. New example
+`fers_core/examples/203_Premium_Batch_Solve.py` shows the unattended-batch
+pattern this release exists for: retry on `FersTimeoutError`, skip and record on
+`RuntimeError`, and always report what was skipped. It runs without an API key
+(at Free tier), so it is executable as-is.
+
+**Not changed:** `run_analysis_from_file()` takes neither new argument, because
+the engine's `calculate_from_file` accepts no API key and makes no network call —
+both would be inert there. `license_timeout` bounds the licence handshake, never
+the solve; for a hard ceiling on a whole solve, keep using a killable subprocess.
+
 ## 0.1.79
 
 Pins engine `fers_calculations==0.2.52` and exposes its new eigen-analysis

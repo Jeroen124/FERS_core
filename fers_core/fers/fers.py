@@ -57,6 +57,11 @@ from pydantic import ValidationError as _PydValidationError
 from ..types.pydantic_models import ResultsBundle as ResultsBundleSchema
 from ..types.pydantic_models import FERS as FERSInputSchema
 
+# Engine >= 0.2.53 raises a distinct, catchable error when the licence handshake
+# stalls. Resolved once, tolerantly: an older wheel simply has nothing to catch,
+# and `except ()` never matches, so the surrounding code stays identical.
+_ENGINE_TIMEOUT_ERROR = getattr(fers_calculations, "FersTimeoutError", ())
+
 
 class _WorkspaceView:
     """Nested-API view of the calculation-agnostic workspace
@@ -295,7 +300,12 @@ class FERS:
         except Exception as e:
             raise ValueError(f"Failed to parse or validate results: {e}")
 
-    def run_analysis(self, validate: bool = True):
+    def run_analysis(
+        self,
+        validate: bool = True,
+        api_key: Optional[str] = None,
+        license_timeout: Optional[float] = None,
+    ):
         """
         Run the Rust-based FERS calculation without saving the input to a file.
         The input JSON is generated directly from the current FERS instance.
@@ -306,9 +316,21 @@ class FERS:
                 any drift between a hand-written ``to_dict()`` and the solver
                 contract fails fast with a clear error. Pass ``validate=False``
                 to skip (e.g. for intentionally partial models).
+            api_key: Premium API key (engine >= 0.2.53). Omitted (``None``) keeps
+                the historical Free-tier behaviour, which never contacts the
+                network. Create a key at https://ferscloud.com/profile.
+            license_timeout: Seconds to wait for the licence handshake before
+                giving up (engine >= 0.2.53). Omitted (``None``) uses the engine
+                default of 30 s, or ``FERS_LICENSE_TIMEOUT``. Only meaningful
+                together with ``api_key``, since without one no network call is
+                made. It bounds the handshake, **not** the solve — for a hard
+                ceiling on the whole call, run it in a killable subprocess.
 
         Raises:
             ValueError: If input schema validation or results validation fails.
+            fers_calculations.FersTimeoutError: If the licence handshake does not
+                complete within ``license_timeout``. The solve has not started at
+                that point, so retrying is safe.
         """
 
         # Generate the input JSON
@@ -317,10 +339,23 @@ class FERS:
             self._validate_input_dict(input_dict)
         input_json = ujson.dumps(input_dict)
 
+        # Only forward what the caller asked for, so a wheel older than 0.2.53
+        # keeps working on the default path instead of raising TypeError.
+        engine_kwargs = {}
+        if api_key is not None:
+            engine_kwargs["api_key"] = api_key
+        if license_timeout is not None:
+            engine_kwargs["license_timeout"] = license_timeout
+
         # Run the calculation
         try:
             print("Running analysis with generated input JSON...")
-            result_string = fers_calculations.calculate_from_json(input_json)
+            result_string = fers_calculations.calculate_from_json(input_json, **engine_kwargs)
+        except _ENGINE_TIMEOUT_ERROR:
+            # Re-raise unchanged: the whole point of the typed error is that a
+            # batch caller can tell a retryable stall from a bad model. Wrapping
+            # it in RuntimeError would put that back behind string matching.
+            raise
         except Exception as e:
             raise RuntimeError(f"Failed to run calculation: {e}")
 
@@ -334,6 +369,55 @@ class FERS:
             self.resultsbundle = ResultsBundle.from_pydantic(validated)
         except Exception as e:
             raise ValueError(f"Failed to parse or validate results: {e}")
+
+    def run_analysis_to_file(
+        self,
+        output_path: str,
+        validate: bool = True,
+        api_key: Optional[str] = None,
+        license_timeout: Optional[float] = None,
+    ) -> None:
+        """
+        Solve and stream the result JSON straight to ``output_path`` (engine >= 0.2.53).
+
+        Unlike :meth:`run_analysis`, the result never passes through the Python
+        heap, so this is the entry point for models whose output runs to hundreds
+        of megabytes. Nothing is parsed and ``self.resultsbundle`` is left
+        untouched — load the file yourself if you need the values.
+
+        A solve failure raises and leaves any existing file at ``output_path``
+        unchanged.
+
+        Args:
+            output_path: Where to write the solved model JSON.
+            validate: As :meth:`run_analysis`.
+            api_key: As :meth:`run_analysis`.
+            license_timeout: As :meth:`run_analysis`.
+
+        Raises:
+            ValueError: If input schema validation fails.
+            fers_calculations.FersTimeoutError: If the licence handshake does not
+                complete within ``license_timeout``. The solve has not started at
+                that point, so retrying is safe.
+        """
+        input_dict = self.to_dict()
+        if validate:
+            self._validate_input_dict(input_dict)
+        input_json = ujson.dumps(input_dict)
+
+        engine_kwargs = {}
+        if api_key is not None:
+            engine_kwargs["api_key"] = api_key
+        if license_timeout is not None:
+            engine_kwargs["license_timeout"] = license_timeout
+
+        try:
+            print(f"Running analysis, writing results to {output_path}...")
+            fers_calculations.calculate_to_file(input_json, output_path, **engine_kwargs)
+        except _ENGINE_TIMEOUT_ERROR:
+            raise
+        except Exception as e:
+            raise RuntimeError(f"Failed to run calculation: {e}")
 
     def to_dict(self, include_results: bool = True) -> dict[str, Any]:
         # Settings now carries only general_info + unit_settings on the wire;
