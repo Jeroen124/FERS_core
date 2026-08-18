@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from enum import Enum
+import warnings
 from typing import List, Optional
 
 
@@ -40,14 +41,26 @@ class StiffnessCurveConfig:
         points: List of ``[force_value, stiffness]`` pairs, sorted by
             ascending ``force_value``.  At least 2 points are required and
             every stiffness value must be ≥ 0.
+        signed: When ``True`` the curve is driven by the **signed** force, so
+            tension and compression can have different stiffness and ``points``
+            may span negative force values.  When ``False`` (the default) the
+            curve is driven by ``abs(force)`` and is therefore symmetric --
+            which is the historical behaviour, and the only one this class could
+            express before.
 
     Raises:
         ValueError: If any validation constraint is violated.
     """
 
-    def __init__(self, depends_on: ForceComponent, points: List[List[float]]) -> None:
+    def __init__(
+        self,
+        depends_on: ForceComponent,
+        points: List[List[float]],
+        signed: bool = False,
+    ) -> None:
         self.depends_on = depends_on
         self.points = points
+        self.signed = bool(signed)
         self._validate()
 
     # ------------------------------------------------------------------
@@ -68,6 +81,19 @@ class StiffnessCurveConfig:
                     f"Points must be sorted by ascending force value. "
                     f"Point {i} ({self.points[i][0]}) < point {i - 1} ({self.points[i - 1][0]})."
                 )
+        # A symmetric curve is evaluated at abs(force), so points below zero can
+        # never be reached. The solver accepts them -- they are inert, not
+        # invalid -- and existing documents contain them, so this warns rather
+        # than raising: refusing to load a model the engine would happily solve
+        # would be the SDK being stricter than the contract.
+        if not self.signed and self.points[0][0] < 0:
+            warnings.warn(
+                f"StiffnessCurveConfig has negative force values (from {self.points[0][0]}) but "
+                "signed=False, so the curve is evaluated at abs(force) and those points are "
+                "unreachable. Pass signed=True for a genuinely asymmetric curve.",
+                UserWarning,
+                stacklevel=3,
+            )
 
     # ------------------------------------------------------------------
     # Serialization
@@ -75,16 +101,23 @@ class StiffnessCurveConfig:
 
     def to_dict(self) -> dict:
         """Serialize to a plain dict matching the Rust ``StiffnessCurveConfig`` JSON schema."""
-        return {
+        payload = {
             "depends_on": self.depends_on.value,
             "points": self.points,
         }
+        # Omitted when false so a symmetric curve serializes exactly as it
+        # always has -- the Rust field is `#[serde(default)]`, and this keeps
+        # existing documents and their fixtures byte-identical.
+        if self.signed:
+            payload["signed"] = True
+        return payload
 
     @classmethod
     def from_dict(cls, data) -> Optional["StiffnessCurveConfig"]:
         """Deserialize from a dict or a legacy plain list of ``[force, stiffness]`` pairs.
 
-        * **dict** (new format): ``{"depends_on": "Vz", "points": [[0, 1e5], ...]}``
+        * **dict** (new format): ``{"depends_on": "Vz", "points": [[0, 1e5], ...],
+          "signed": false}``
         * **list** (legacy format): ``[[0, 1e5], ...]`` — wrapped with
           ``ForceComponent.Vz`` as default ``depends_on``.
         * **None**: returns ``None``.
@@ -97,7 +130,7 @@ class StiffnessCurveConfig:
         # New format: dict with depends_on + points
         depends_on = ForceComponent(data["depends_on"])
         points = data["points"]
-        return cls(depends_on=depends_on, points=points)
+        return cls(depends_on=depends_on, points=points, signed=bool(data.get("signed", False)))
 
     # ------------------------------------------------------------------
     # Display
