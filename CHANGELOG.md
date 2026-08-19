@@ -1,5 +1,69 @@
 # Changelog
 
+## 0.1.81
+
+Pins engine `fers_calculations==0.2.54`, adds the analysis-request builders and
+signed stiffness curves, and puts a guard on the engine/schema coupling. No
+model API moves; the generated schema is byte-identical to 0.1.80's apart from
+the version stamp, because 0.2.54 changed no schema.
+
+**Engine 0.2.54** cuts the peak memory of a solve by roughly 4x (826 MB -> 203 MB
+on a 1058-member model) and adds `FERS_MAX_PARALLEL_SOLVES` to trade wall clock
+against peak. It also settles the "native memory leak" report: there is no leak,
+the engine frees everything after every solve. See the engine CHANGELOG.
+
+### Added
+
+- **`FERS.add_buckling_analysis()` / `FERS.add_modal_analysis()`** -- request an
+  eigenvalue analysis in one call, following the `add_load_case` /
+  `add_member_set` convention::
+
+      model.add_buckling_analysis(reference=combo, num_modes=5)
+      model.add_modal_analysis(num_modes=10, stiffness_reference=combo,
+                               include_geometric_stiffness=True)
+
+  `BucklingAnalysisSettings` already accepted a `LoadCase` or `LoadCombination`
+  directly, so the wire's externally-tagged reference dict never had to be
+  written by hand. What was missing was the last step: knowing the request has to
+  be assigned to `model.analysis.buckling`. Both forwarders accept every keyword
+  of the underlying settings class and keep its author-time validation, so a bad
+  reference still fails immediately rather than in the solver.
+
+- **`signed` on `StiffnessCurveConfig`** (and on `SupportCondition.spring_curve`)
+  -- an asymmetric curve, with different stiffness in tension and compression,
+  was unreachable from the SDK even though the engine has supported it for many
+  releases and the generated models carry the field. A base plate that bears hard
+  and lifts soft is now expressible.
+
+  The flag is omitted from `to_dict()` when false, so symmetric curves serialize
+  byte-identically and no existing document, fixture or test changes. A symmetric
+  curve carrying negative force values now warns rather than raising: those points
+  are evaluated at `abs(force)` and can never be reached, but the engine accepts
+  them and example `131_StiffnessCurve_Cantilever.json` contains them, so raising
+  would make the SDK stricter than the contract it wraps.
+
+- **`scripts/regenerate_types.py`** regenerates `fers_core/types/pydantic_models.py`
+  from a sibling `FERS_calculations` checkout (or any `openapi.json`) and stamps
+  the engine version into its header. There was no committed way to do this
+  before.
+
+- **`tests/functionality/test_engine_pin_consistency.py`** asserts four things
+  agree: the pins in `pyproject.toml` and `requirements.txt`, the stamp on the
+  generated models, the engine actually installed in the environment running the
+  tests, and the compiled extension's `__version__` against its distribution
+  metadata.
+
+  This is not hypothetical hygiene. The generated models were still stamped
+  0.2.52 against a 0.2.53 pin, and the check for the *installed* engine fails on
+  a machine where `fers_calculations 0.2.43` is installed against a 0.2.53 pin --
+  ten releases and a dozen correctness fixes behind, with nothing in a green run
+  to say so.
+
+  **Note the release ordering it enforces:** this version pins an engine that
+  must be on PyPI first. Until `fers_calculations 0.2.54` publishes, that check
+  fails by design.
+
+
 ## 0.1.80
 
 Pins engine `fers_calculations==0.2.53` and surfaces its bounded licence

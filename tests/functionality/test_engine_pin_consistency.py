@@ -79,11 +79,25 @@ def test_the_installed_engine_matches_the_pin(declared_pin):
             "fers_calculations is not installed in this environment, so nothing here is "
             f"exercising the real solver. Install the pin: pip install fers_calculations=={declared_pin}"
         )
-    assert actual == declared_pin, (
-        f"Installed engine is {actual} but the pin is {declared_pin}. Every test that "
-        "solves is exercising the wrong solver, so a green run here does not mean what "
-        f"it looks like. Fix with: pip install fers_calculations=={declared_pin}"
-    )
+    if actual != declared_pin:
+        # Two very different situations produce this, and conflating them sends
+        # the reader to the wrong fix.
+        raise AssertionError(
+            "\n".join(
+                [
+                    f"Installed engine is {actual} but the pin is {declared_pin}.",
+                    "Two things look like this, and they have different fixes:",
+                    "  (a) The environment is stale, so every test that solves is"
+                    " exercising the wrong solver and a green run does not mean what it"
+                    f" looks like. Fix: pip install fers_calculations=={declared_pin}",
+                    "  (b) The pin is ahead of what is published, because this release is"
+                    " waiting on the engine. That is the intended ordering: publish"
+                    f" fers_calculations {declared_pin} first, then this. The check goes"
+                    " green on a re-run once it is on PyPI, and nothing here should be"
+                    " merged before then.",
+                ]
+            )
+        )
 
 
 def test_the_engine_module_agrees_with_its_package_metadata():
