@@ -44,9 +44,9 @@ upe200 = Section.from_name("UPE200", steel)
 # Print basic properties
 for sec in [ipe200, heb300, rhs_200x100, shs_100, angle_100, chs_168, upe200]:
     print(
-        f"{sec.name:25s}  A={sec.area*1e4:8.2f} cm²  "
-        f"I_y={sec.i_y*1e8:10.2f} cm⁴  I_z={sec.i_z*1e8:10.2f} cm⁴  "
-        f"J={sec.j*1e8:10.4f} cm⁴"
+        f"{sec.name:25s}  A={sec.area * 1e4:8.2f} cm²  "
+        f"I_y={sec.i_y * 1e8:10.2f} cm⁴  I_z={sec.i_z * 1e8:10.2f} cm⁴  "
+        f"J={sec.j * 1e8:10.4f} cm⁴"
     )
 
 
@@ -84,7 +84,7 @@ print("\nRunning analysis with IPE200 from library...")
 model.run_analysis()
 
 dy = model.resultsbundle.loadcases["Tip load"].displacement_nodes["2"].dy
-print(f"Tip deflection dy = {dy*1e3:.3f} mm")
+print(f"Tip deflection dy = {dy * 1e3:.3f} mm")
 
 
 # =============================================================================

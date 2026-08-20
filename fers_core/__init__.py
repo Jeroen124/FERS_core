@@ -66,10 +66,12 @@ from .builders import create_beam, check_beam
 def __getattr__(name: str):
     if name == "ModelRenderer":
         from .visualization.model_renderer import ModelRenderer
+
         globals()["ModelRenderer"] = ModelRenderer
         return ModelRenderer
     if name == "ResultRenderer":
         from .visualization.result_renderer import ResultRenderer
+
         globals()["ResultRenderer"] = ResultRenderer
         return ResultRenderer
     raise AttributeError(f"module 'fers_core' has no attribute {name!r}")

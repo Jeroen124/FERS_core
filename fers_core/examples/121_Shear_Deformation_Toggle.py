@@ -108,20 +108,20 @@ print(f"\n{'':30s} {'FERS':>14s} {'Analytical':>14s} {'Diff':>10s}")
 print("-" * 72)
 
 print(
-    f"{'Euler-Bernoulli δ_y [mm]':30s} {dy_eb*1e3:14.4f} {delta_eb_analytical*1e3:14.4f} "
-    f"{abs(dy_eb - delta_eb_analytical)*1e3:10.6f}"
+    f"{'Euler-Bernoulli δ_y [mm]':30s} {dy_eb * 1e3:14.4f} {delta_eb_analytical * 1e3:14.4f} "
+    f"{abs(dy_eb - delta_eb_analytical) * 1e3:10.6f}"
 )
 
 print(
-    f"{'Timoshenko δ_y [mm]':30s} {dy_timo*1e3:14.4f} {delta_timo_analytical*1e3:14.4f} "
-    f"{abs(dy_timo - delta_timo_analytical)*1e3:10.6f}"
+    f"{'Timoshenko δ_y [mm]':30s} {dy_timo * 1e3:14.4f} {delta_timo_analytical * 1e3:14.4f} "
+    f"{abs(dy_timo - delta_timo_analytical) * 1e3:10.6f}"
 )
 
 shear_pct = (abs(dy_timo) - abs(dy_eb)) / abs(dy_eb) * 100 if dy_eb != 0 else 0
 shear_analytical_pct = abs(delta_shear) / abs(delta_eb_analytical) * 100 if delta_eb_analytical != 0 else 0
 
 print(f"\nShear contribution:  FERS = {shear_pct:.2f}%    Analytical = {shear_analytical_pct:.2f}%")
-print(f"  (PL/(GA_s) = {abs(delta_shear)*1e3:.4f} mm)")
+print(f"  (PL/(GA_s) = {abs(delta_shear) * 1e3:.4f} mm)")
 
 print("\n--- Validation ---")
 tol_eb = 1e-6
@@ -136,5 +136,5 @@ if abs(dy_timo - delta_timo_analytical) / abs(delta_timo_analytical) < 0.01:
 else:
     print(
         f"Timoshenko deflection differs by "
-        f"{abs(dy_timo - delta_timo_analytical)/abs(delta_timo_analytical)*100:.2f}% ❌"
+        f"{abs(dy_timo - delta_timo_analytical) / abs(delta_timo_analytical) * 100:.2f}% ❌"
     )

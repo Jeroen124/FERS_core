@@ -75,9 +75,7 @@ def _build_model() -> FERS:
 
     model.add_work_axis(WorkAxis(name="X", origin_x=0, direction_x=1))
     model.add_work_plane(WorkPlane(name="Ground", normal_z=1))
-    model.add_entity_group(
-        EntityGroup(name="Frame", member_ids=[cable.id], node_ids=[n1.id, n2.id])
-    )
+    model.add_entity_group(EntityGroup(name="Frame", member_ids=[cable.id], node_ids=[n1.id, n2.id]))
 
     lc = LoadCase(name="Pressure")
     model.add_load_case(lc)

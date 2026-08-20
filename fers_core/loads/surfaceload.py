@@ -56,9 +56,7 @@ class SurfaceLoad:
         if isinstance(vertex, (tuple, list)) and len(vertex) == 3:
             x, y, z = vertex
             return SurfaceLoadVertex(float(x), float(y), float(z))
-        raise TypeError(
-            "SurfaceLoad polygon vertices must be SurfaceLoadVertex, dict, or 3-item tuple/list."
-        )
+        raise TypeError("SurfaceLoad polygon vertices must be SurfaceLoadVertex, dict, or 3-item tuple/list.")
 
     @classmethod
     def reset_counter(cls) -> None:

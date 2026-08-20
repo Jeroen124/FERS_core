@@ -36,9 +36,9 @@ print("-" * 90)
 for name in Section.list_available("IPE"):
     sec = Section.from_name(name, steel)
     print(
-        f"{sec.name:<12s}  {sec.h*1e3:8.1f}  {sec.b*1e3:8.1f}  "
-        f"{sec.area*1e4:10.2f}  {sec.i_y*1e8:12.2f}  "
-        f"{sec.i_z*1e8:12.2f}  {sec.j*1e8:10.4f}"
+        f"{sec.name:<12s}  {sec.h * 1e3:8.1f}  {sec.b * 1e3:8.1f}  "
+        f"{sec.area * 1e4:10.2f}  {sec.i_y * 1e8:12.2f}  "
+        f"{sec.i_z * 1e8:12.2f}  {sec.j * 1e8:10.4f}"
     )
 
 
@@ -55,10 +55,10 @@ delta_max = L / 300  # allowable deflection (m)
 I_min = F * L**3 / (3 * E * delta_max)
 
 print(
-    f"\n--- Lightest IPE for cantilever {L:.0f} m, F = {F/1e3:.0f} kN, "
-    f"δ_max = L/300 = {delta_max*1e3:.2f} mm ---"
+    f"\n--- Lightest IPE for cantilever {L:.0f} m, F = {F / 1e3:.0f} kN, "
+    f"δ_max = L/300 = {delta_max * 1e3:.2f} mm ---"
 )
-print(f"    Required I_z ≥ {I_min*1e8:.2f} cm⁴\n")
+print(f"    Required I_z ≥ {I_min * 1e8:.2f} cm⁴\n")
 
 found = None
 for name in Section.list_available("IPE"):
@@ -70,8 +70,8 @@ for name in Section.list_available("IPE"):
 if found:
     delta = F * L**3 / (3 * E * found.i_z)
     print(
-        f"  ✓ {found.name}  I_z = {found.i_z*1e8:.2f} cm⁴  "
-        f"δ = {delta*1e3:.2f} mm  (limit = {delta_max*1e3:.2f} mm)"
+        f"  ✓ {found.name}  I_z = {found.i_z * 1e8:.2f} cm⁴  "
+        f"δ = {delta * 1e3:.2f} mm  (limit = {delta_max * 1e3:.2f} mm)"
     )
 else:
     print("  ✗ No IPE section is large enough — consider HEB or a welded section.")
@@ -93,6 +93,6 @@ for series_name in ["HEA300", "HEB300", "HEM300"]:
     sec = Section.from_name(series_name, steel)
     weight_per_m = sec.area * steel.density  # kg/m
     print(
-        f"{sec.name:<12s}  {sec.h*1e3:8.1f}  {sec.b*1e3:8.1f}  "
-        f"{sec.area*1e4:10.2f}  {sec.i_z*1e8:12.2f}  {weight_per_m:14.2f}"
+        f"{sec.name:<12s}  {sec.h * 1e3:8.1f}  {sec.b * 1e3:8.1f}  "
+        f"{sec.area * 1e4:10.2f}  {sec.i_z * 1e8:12.2f}  {weight_per_m:14.2f}"
     )

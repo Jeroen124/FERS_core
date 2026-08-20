@@ -19,8 +19,12 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
         with: { python-version: "3.11" }
-      - run: pip install ruff
+      - run: pip install ruff==0.15.12
       - run: ruff check .
+      # Formatting was never gated, so the repo drifted 53 files out of shape
+      # against current ruff while pre-commit sat on v0.6.7. Pinned above and
+      # checked here so the two cannot disagree again.
+      - run: ruff format --check .
 
   test:
     name: 🧪 Pytest

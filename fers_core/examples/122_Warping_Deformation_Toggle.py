@@ -158,7 +158,7 @@ if abs(theta_sv - theta_sv_analytical) / abs(theta_sv_analytical) < 0.01:
 else:
     print(
         f"St. Venant twist differs by "
-        f"{abs(theta_sv - theta_sv_analytical)/abs(theta_sv_analytical)*100:.2f}% ❌"
+        f"{abs(theta_sv - theta_sv_analytical) / abs(theta_sv_analytical) * 100:.2f}% ❌"
     )
 
 if abs(theta_vlasov - theta_vlasov_analytical) / abs(theta_vlasov_analytical) < 0.02:
@@ -166,5 +166,5 @@ if abs(theta_vlasov - theta_vlasov_analytical) / abs(theta_vlasov_analytical) < 
 else:
     print(
         f"Vlasov twist differs by "
-        f"{abs(theta_vlasov - theta_vlasov_analytical)/abs(theta_vlasov_analytical)*100:.2f}% ❌"
+        f"{abs(theta_vlasov - theta_vlasov_analytical) / abs(theta_vlasov_analytical) * 100:.2f}% ❌"
     )
