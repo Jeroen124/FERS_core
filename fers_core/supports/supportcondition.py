@@ -128,6 +128,7 @@ class SupportCondition:
         cls,
         depends_on: ForceComponent,
         points: List[List[float]],
+        signed: bool = False,
     ) -> "SupportCondition":
         """Create a Spring condition whose stiffness varies with an internal-force component.
 
@@ -136,8 +137,11 @@ class SupportCondition:
                 that the stiffness depends on.
             points: List of ``[force_value, stiffness]`` pairs, sorted by
                 ascending ``force_value``.  At least 2 points required.
+            signed: Pass ``True`` for a curve driven by the signed reaction, so
+                uplift and bearing can have different stiffness. The default is
+                the symmetric ``abs(force)`` behaviour.
         """
-        curve = StiffnessCurveConfig(depends_on=depends_on, points=points)
+        curve = StiffnessCurveConfig(depends_on=depends_on, points=points, signed=signed)
         return cls(SupportConditionType.SPRING, stiffness_curve=curve)
 
     @classmethod
