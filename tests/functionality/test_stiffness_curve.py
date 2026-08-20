@@ -366,3 +366,92 @@ class TestBackwardCompatibility:
         assert sc.condition_type == SupportConditionType.SPRING
         assert sc.stiffness_curve.depends_on == ForceComponent.Fz
         assert sc.stiffness_curve.points == [[0, 1e5], [50000, 1e7]]
+
+
+# ── Asymmetric (signed) curves ────────────────────────────────────────────────
+
+
+class TestSignedCurves:
+    """`signed` reaches the solver's asymmetric-curve support.
+
+    The engine has had `signed` since 0.2.x, and the generated pydantic models
+    carry it, but this hand-written class never modelled it -- so an asymmetric
+    curve (different stiffness in tension and compression, e.g. a base plate
+    that bears hard and lifts soft) was simply unreachable from the SDK.
+    """
+
+    def test_defaults_to_symmetric(self):
+        curve = StiffnessCurveConfig(depends_on=ForceComponent.Fz, points=[[0, 1e5], [5e4, 1e7]])
+        assert curve.signed is False
+
+    def test_symmetric_curve_serializes_exactly_as_before(self):
+        """No `signed` key when false, so existing documents stay byte-identical."""
+        curve = StiffnessCurveConfig(depends_on=ForceComponent.Fz, points=[[0, 1e5], [5e4, 1e7]])
+        assert curve.to_dict() == {"depends_on": "Fz", "points": [[0, 1e5], [5e4, 1e7]]}
+
+    def test_signed_curve_emits_the_flag(self):
+        curve = StiffnessCurveConfig(
+            depends_on=ForceComponent.Fz,
+            points=[[-5e4, 1e7], [0, 1e5], [5e4, 1e6]],
+            signed=True,
+        )
+        assert curve.to_dict() == {
+            "depends_on": "Fz",
+            "points": [[-5e4, 1e7], [0, 1e5], [5e4, 1e6]],
+            "signed": True,
+        }
+
+    def test_round_trip(self):
+        original = StiffnessCurveConfig(
+            depends_on=ForceComponent.Vz,
+            points=[[-100.0, 2e6], [0.0, 1e5], [100.0, 5e5]],
+            signed=True,
+        )
+        restored = StiffnessCurveConfig.from_dict(original.to_dict())
+        assert restored.signed is True
+        assert restored.points == original.points
+        assert restored.depends_on == original.depends_on
+
+    def test_from_dict_defaults_signed_to_false(self):
+        restored = StiffnessCurveConfig.from_dict({"depends_on": "Fz", "points": [[0, 1e5], [1, 2e5]]})
+        assert restored.signed is False
+
+    def test_negative_abscissa_on_a_symmetric_curve_warns(self):
+        """Those points are unreachable, but the solver accepts them.
+
+        Warn rather than raise: existing documents carry such curves, and
+        refusing to load a model the engine would solve happily would make the
+        SDK stricter than the contract it wraps.
+        """
+        with pytest.warns(UserWarning, match="signed=True"):
+            curve = StiffnessCurveConfig(
+                depends_on=ForceComponent.Fz,
+                points=[[-5e4, 1e7], [0, 1e5], [5e4, 1e6]],
+            )
+        assert curve.signed is False
+
+    def test_no_warning_when_the_curve_is_signed(self):
+        import warnings as _warnings
+
+        with _warnings.catch_warnings():
+            _warnings.simplefilter("error")
+            StiffnessCurveConfig(
+                depends_on=ForceComponent.Fz,
+                points=[[-5e4, 1e7], [0, 1e5], [5e4, 1e6]],
+                signed=True,
+            )
+
+    def test_spring_curve_factory_passes_signed_through(self):
+        sc = SupportCondition.spring_curve(
+            ForceComponent.Fz, [[-1.0, 2e6], [0.0, 1e5], [1.0, 5e5]], signed=True
+        )
+        assert sc.stiffness_curve.signed is True
+        assert sc.to_dict()["stiffness_curve"]["signed"] is True
+
+    def test_member_hinge_carries_a_signed_curve(self):
+        curve = StiffnessCurveConfig(
+            depends_on=ForceComponent.Mz, points=[[-1e6, 5e8], [0.0, 1e8], [1e6, 2e8]], signed=True
+        )
+        hinge = MemberHinge(id=1, rotational_release_mz=1e8, stiffness_curve_mz=curve)
+        assert hinge.to_dict()["stiffness_curve_mz"]["signed"] is True
+        assert MemberHinge.from_dict(hinge.to_dict()).stiffness_curve_mz.signed is True
