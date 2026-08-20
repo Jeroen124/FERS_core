@@ -323,3 +323,73 @@ def test_modal_omits_new_fields_when_unset():
     data = ModalAnalysisSettings(num_modes=2).to_dict()
     assert "stiffness_reference" not in data
     assert "include_geometric_stiffness" not in data
+
+
+# ── add_buckling_analysis / add_modal_analysis ────────────────────────────────
+
+
+class TestAnalysisRequestBuilders:
+    """The settings classes always hid the wire shape; these hide the last step.
+
+    Constructing `BucklingAnalysisSettings(...)` was never the hard part -- it
+    already accepts a LoadCase or LoadCombination object directly. What was
+    missing was knowing that the request has to be assigned to
+    `model.analysis.buckling` (or the equivalent `model.buckling_analysis`).
+    These follow the `add_load_case` / `add_member_set` convention the rest of
+    the model uses.
+    """
+
+    def test_add_buckling_analysis_attaches_and_returns(self):
+        m = _beam()
+        combo = LoadCombination(name="ULS", load_cases_factors={m.load_cases[0]: 1.5})
+        m.add_load_combination(combo)
+        settings = m.add_buckling_analysis(reference=combo, num_modes=4)
+
+        assert isinstance(settings, BucklingAnalysisSettings)
+        assert m.buckling_analysis is settings
+        assert m.analysis.buckling is settings
+        assert m.to_dict()["analysis"]["buckling"]["num_modes"] == 4
+
+    def test_add_buckling_analysis_forwards_every_keyword(self):
+        m = _beam()
+        lc = m.load_cases[0]
+        m.add_buckling_analysis(
+            reference=lc,
+            num_modes=3,
+            member_effective_lengths=True,
+            participation_threshold=0.1,
+        )
+        wire = m.to_dict()["analysis"]["buckling"]
+        assert wire["reference"] == {"LoadCase": lc.id}
+        assert wire["member_effective_lengths"] is True
+        assert wire["participation_threshold"] == 0.1
+
+    def test_add_buckling_analysis_still_validates_at_author_time(self):
+        """A bad request fails here, not three minutes into a solve."""
+        m = _beam()
+        with pytest.raises(ValueError, match="reference"):
+            m.add_buckling_analysis(num_modes=2)
+
+    def test_add_modal_analysis_attaches_and_returns(self):
+        m = _beam()
+        settings = m.add_modal_analysis(num_modes=6, mass_formulation=MassFormulation.CONSISTENT)
+
+        assert isinstance(settings, ModalAnalysisSettings)
+        assert m.modal_analysis is settings
+        wire = m.to_dict()["analysis"]["modal"]
+        assert wire["num_modes"] == 6
+        assert wire["mass_formulation"] == "CONSISTENT"
+
+    def test_add_modal_analysis_carries_a_stiffness_reference(self):
+        m = _beam()
+        lc = m.load_cases[0]
+        m.add_modal_analysis(num_modes=2, stiffness_reference=lc, include_geometric_stiffness=True)
+        wire = m.to_dict()["analysis"]["modal"]
+        assert wire["stiffness_reference"] == {"LoadCase": lc.id}
+        assert wire["include_geometric_stiffness"] is True
+
+    def test_the_analysis_view_delegates(self):
+        m = _beam()
+        lc = m.load_cases[0]
+        settings = m.analysis.add_buckling_analysis(reference=lc, num_modes=2)
+        assert m.buckling_analysis is settings

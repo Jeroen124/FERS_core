@@ -199,6 +199,14 @@ class _AnalysisView:
     def buckling(self, value):
         self._f.buckling_analysis = value
 
+    def add_buckling_analysis(self, reference=None, num_modes: int = 1, **kwargs):
+        """Delegate to :meth:`FERS.add_buckling_analysis`."""
+        return self._f.add_buckling_analysis(reference=reference, num_modes=num_modes, **kwargs)
+
+    def add_modal_analysis(self, num_modes: int = 1, **kwargs):
+        """Delegate to :meth:`FERS.add_modal_analysis`."""
+        return self._f.add_modal_analysis(num_modes=num_modes, **kwargs)
+
     @property
     def load_cases(self):
         return self._f.load_cases
@@ -728,6 +736,42 @@ class FERS:
 
     def add_imperfection_case(self, imperfection_case):
         self.imperfection_cases.append(imperfection_case)
+
+    def add_buckling_analysis(self, reference=None, num_modes: int = 1, **kwargs):
+        """Request a linear buckling analysis, and return its settings object.
+
+        The settings classes already accept a ``LoadCase``/``LoadCombination``
+        directly, so the wire's externally-tagged reference dict never has to be
+        written by hand. What was still missing was the last step: you had to
+        know that the request lives on ``model.analysis.buckling`` (or the
+        equivalent ``model.buckling_analysis``) and assign it yourself. This
+        follows the ``add_load_case`` / ``add_member_set`` convention instead::
+
+            model.add_buckling_analysis(reference=load_combination, num_modes=5)
+
+        Accepts every :class:`BucklingAnalysisSettings` keyword -- ``references``,
+        ``all_combinations``, ``member_effective_lengths``,
+        ``participation_threshold``, ``tolerance``, ``max_iterations`` -- and
+        raises the same author-time errors, so a bad reference fails here rather
+        than in the solver.
+        """
+        settings = BucklingAnalysisSettings(reference=reference, num_modes=num_modes, **kwargs)
+        self.buckling_analysis = settings
+        return settings
+
+    def add_modal_analysis(self, num_modes: int = 1, **kwargs):
+        """Request a modal (natural-frequency) analysis, and return its settings.
+
+        Companion to :meth:`add_buckling_analysis`. Accepts every
+        :class:`ModalAnalysisSettings` keyword, including ``stiffness_reference``
+        and ``include_geometric_stiffness`` for a preloaded modal analysis::
+
+            model.add_modal_analysis(num_modes=10, stiffness_reference=combo,
+                                     include_geometric_stiffness=True)
+        """
+        settings = ModalAnalysisSettings(num_modes=num_modes, **kwargs)
+        self.modal_analysis = settings
+        return settings
 
     def add_unity_check(self, *checks):
         """Register one or more unity-check definitions (plain dicts in the
