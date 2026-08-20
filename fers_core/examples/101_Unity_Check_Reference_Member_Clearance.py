@@ -44,9 +44,7 @@ calculation = FERS()
 calculation.settings.analysis_options.order = AnalysisOrder.LINEAR
 
 steel = Material(name="Steel", e_mod=210e9, g_mod=80.769e9, density=7850, yield_stress=235e6)
-section = Section(
-    name="IPE 180", material=steel, i_y=1.01e-6, i_z=13.21e-6, j=0.027e-6, area=0.00196
-)
+section = Section(name="IPE 180", material=steel, i_y=1.01e-6, i_z=13.21e-6, j=0.027e-6, area=0.00196)
 
 # Beam (the reference), fixed at its base.
 b1 = Node(0, 0.5, 0)

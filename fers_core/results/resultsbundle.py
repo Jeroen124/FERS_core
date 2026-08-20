@@ -87,8 +87,7 @@ class ResultsBundle:
                     for k, v in (value.get("member_results") or {}).items()
                 },
                 plate_results={
-                    str(k): PlateResult.from_dict(v)
-                    for k, v in (value.get("plate_results") or {}).items()
+                    str(k): PlateResult.from_dict(v) for k, v in (value.get("plate_results") or {}).items()
                 },
                 summary=ResultsSummary(**(value.get("summary") or {})) if value.get("summary") else None,
                 result_type=value.get("result_type"),
@@ -120,8 +119,7 @@ class ResultsBundle:
                     for k, v in (value.get("member_results") or {}).items()
                 },
                 plate_results={
-                    str(k): PlateResult.from_dict(v)
-                    for k, v in (value.get("plate_results") or {}).items()
+                    str(k): PlateResult.from_dict(v) for k, v in (value.get("plate_results") or {}).items()
                 },
                 summary=ResultsSummary(**(value.get("summary") or {})) if value.get("summary") else None,
                 result_type=value.get("result_type"),

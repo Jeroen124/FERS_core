@@ -91,9 +91,15 @@ _sp_col = ShapePath(
     shape_commands=ShapePath.create_he_profile(h=0.133, b=0.140, t_f=0.0085, t_w=0.0055, r=0.012),
 )
 sec_column = Section(
-    name="HEA140", material=S235,
-    area=31.4e-4, i_z=1033e-8, i_y=389.3e-8, j=8.13e-8,
-    h=0.133, b=0.140, shape_path=_sp_col,
+    name="HEA140",
+    material=S235,
+    area=31.4e-4,
+    i_z=1033e-8,
+    i_y=389.3e-8,
+    j=8.13e-8,
+    h=0.133,
+    b=0.140,
+    shape_path=_sp_col,
 )
 
 # ---------------------------------------------------------------------------
@@ -105,9 +111,15 @@ _sp_raf = ShapePath(
     shape_commands=ShapePath.create_ipe_profile(h=0.160, b=0.082, t_f=0.0074, t_w=0.0050, r=0.009),
 )
 sec_rafter = Section(
-    name="IPE160", material=S235,
-    area=20.1e-4, i_z=869e-8, i_y=68.3e-8, j=3.60e-8,
-    h=0.160, b=0.082, shape_path=_sp_raf,
+    name="IPE160",
+    material=S235,
+    area=20.1e-4,
+    i_z=869e-8,
+    i_y=68.3e-8,
+    j=3.60e-8,
+    h=0.160,
+    b=0.082,
+    shape_path=_sp_raf,
 )
 
 # ---------------------------------------------------------------------------
@@ -119,9 +131,15 @@ _sp_purl = ShapePath(
     shape_commands=ShapePath.create_ipe_profile(h=0.120, b=0.064, t_f=0.0063, t_w=0.0044, r=0.007),
 )
 sec_purlin = Section(
-    name="IPE120", material=S235,
-    area=13.2e-4, i_z=318e-8, i_y=27.7e-8, j=1.74e-8,
-    h=0.120, b=0.064, shape_path=_sp_purl,
+    name="IPE120",
+    material=S235,
+    area=13.2e-4,
+    i_z=318e-8,
+    i_y=27.7e-8,
+    j=1.74e-8,
+    h=0.120,
+    b=0.064,
+    shape_path=_sp_purl,
 )
 
 # ---------------------------------------------------------------------------
@@ -133,9 +151,15 @@ _sp_tie = ShapePath(
     shape_commands=ShapePath.create_ipe_profile(h=0.100, b=0.055, t_f=0.0057, t_w=0.0041, r=0.007),
 )
 sec_tie = Section(
-    name="IPE100", material=S235,
-    area=10.3e-4, i_z=171e-8, i_y=15.9e-8, j=1.27e-8,
-    h=0.100, b=0.055, shape_path=_sp_tie,
+    name="IPE100",
+    material=S235,
+    area=10.3e-4,
+    i_z=171e-8,
+    i_y=15.9e-8,
+    j=1.27e-8,
+    h=0.100,
+    b=0.055,
+    shape_path=_sp_tie,
 )
 
 # ---------------------------------------------------------------------------
@@ -147,9 +171,15 @@ _sp_brace = ShapePath(
     shape_commands=ShapePath.create_chs_profile(d=0.0483, t=0.0032),
 )
 sec_brace = Section(
-    name="CHS 48.3x3.2", material=S235,
-    area=4.53e-4, i_z=11.6e-8, i_y=11.6e-8, j=23.2e-8,
-    h=0.0483, b=0.0483, shape_path=_sp_brace,
+    name="CHS 48.3x3.2",
+    material=S235,
+    area=4.53e-4,
+    i_z=11.6e-8,
+    i_y=11.6e-8,
+    j=23.2e-8,
+    h=0.0483,
+    b=0.0483,
+    shape_path=_sp_brace,
 )
 
 # Pinned base: translations fixed, all rotations free
@@ -162,69 +192,69 @@ pinned_base = NodalSupport(
 # 1.  Nodes  (Y = vertical up)
 # =============================================================================
 # Portal frame at Z = 0
-n1  = Node(0, 0,   0, nodal_support=pinned_base)   # left  column base
-n2  = Node(6, 0,   0, nodal_support=pinned_base)   # right column base
-n3  = Node(0, 3.0, 0)                               # left  eave
-n4  = Node(3, 4.2, 0)                               # ridge
-n5  = Node(6, 3.0, 0)                               # right eave
+n1 = Node(0, 0, 0, nodal_support=pinned_base)  # left  column base
+n2 = Node(6, 0, 0, nodal_support=pinned_base)  # right column base
+n3 = Node(0, 3.0, 0)  # left  eave
+n4 = Node(3, 4.2, 0)  # ridge
+n5 = Node(6, 3.0, 0)  # right eave
 
 # Portal frame at Z = 8
-n6  = Node(0, 0,   8, nodal_support=pinned_base)   # left  column base
-n7  = Node(6, 0,   8, nodal_support=pinned_base)   # right column base
-n8  = Node(0, 3.0, 8)                               # left  eave
-n9  = Node(3, 4.2, 8)                               # ridge
-n10 = Node(6, 3.0, 8)                               # right eave
+n6 = Node(0, 0, 8, nodal_support=pinned_base)  # left  column base
+n7 = Node(6, 0, 8, nodal_support=pinned_base)  # right column base
+n8 = Node(0, 3.0, 8)  # left  eave
+n9 = Node(3, 4.2, 8)  # ridge
+n10 = Node(6, 3.0, 8)  # right eave
 
 # =============================================================================
 # 2.  Members
 # =============================================================================
 
 # --- Portal frames -----------------------------------------------------------
-col_L1    = Member(n1,  n3,  section=sec_column)
-col_R1    = Member(n2,  n5,  section=sec_column)
-rafter_L1 = Member(n3,  n4,  section=sec_rafter)
-rafter_R1 = Member(n4,  n5,  section=sec_rafter)
+col_L1 = Member(n1, n3, section=sec_column)
+col_R1 = Member(n2, n5, section=sec_column)
+rafter_L1 = Member(n3, n4, section=sec_rafter)
+rafter_R1 = Member(n4, n5, section=sec_rafter)
 
-col_L2    = Member(n6,  n8,  section=sec_column)
-col_R2    = Member(n7,  n10, section=sec_column)
-rafter_L2 = Member(n8,  n9,  section=sec_rafter)
-rafter_R2 = Member(n9,  n10, section=sec_rafter)
+col_L2 = Member(n6, n8, section=sec_column)
+col_R2 = Member(n7, n10, section=sec_column)
+rafter_L2 = Member(n8, n9, section=sec_rafter)
+rafter_R2 = Member(n9, n10, section=sec_rafter)
 
 # --- Purlins (eaves + ridge) -------------------------------------------------
-purlin_eave_L = Member(n3,  n8,  section=sec_purlin)
-purlin_eave_R = Member(n5,  n10, section=sec_purlin)
-purlin_ridge  = Member(n4,  n9,  section=sec_purlin)
+purlin_eave_L = Member(n3, n8, section=sec_purlin)
+purlin_eave_R = Member(n5, n10, section=sec_purlin)
+purlin_ridge = Member(n4, n9, section=sec_purlin)
 
 # --- Base tie beams (IPE 100, connecting column bases along Z) ---------------
-tie_L = Member(n1, n6, section=sec_tie)   # left  base tie
-tie_R = Member(n2, n7, section=sec_tie)   # right base tie
+tie_L = Member(n1, n6, section=sec_tie)  # left  base tie
+tie_R = Member(n2, n7, section=sec_tie)  # right base tie
 
 # --- Side wall cross-bracing (CHS 48.3x3.2, X-brace each side wall) ---------
 # Left wall  (X = 0): base-to-opposite-eave diagonals
-brace_wall_L1 = Member(n1, n8,  section=sec_brace)   # base Z=0 -> eave Z=8
-brace_wall_L2 = Member(n3, n6,  section=sec_brace)   # eave Z=0 -> base Z=8
+brace_wall_L1 = Member(n1, n8, section=sec_brace)  # base Z=0 -> eave Z=8
+brace_wall_L2 = Member(n3, n6, section=sec_brace)  # eave Z=0 -> base Z=8
 
 # Right wall (X = 6): base-to-opposite-eave diagonals
-brace_wall_R1 = Member(n2, n10, section=sec_brace)   # base Z=0 -> eave Z=8
-brace_wall_R2 = Member(n5, n7,  section=sec_brace)   # eave Z=0 -> base Z=8
+brace_wall_R1 = Member(n2, n10, section=sec_brace)  # base Z=0 -> eave Z=8
+brace_wall_R2 = Member(n5, n7, section=sec_brace)  # eave Z=0 -> base Z=8
 
 # --- Roof cross-bracing (CHS 48.3x3.2, X-brace each roof panel) -------------
 # Left roof panel  (eave L <-> ridge): eave/ridge at Z=0 vs Z=8
-brace_roof_L1 = Member(n3, n9,  section=sec_brace)   # eave Z=0 -> ridge Z=8
-brace_roof_L2 = Member(n4, n8,  section=sec_brace)   # ridge Z=0 -> eave Z=8
+brace_roof_L1 = Member(n3, n9, section=sec_brace)  # eave Z=0 -> ridge Z=8
+brace_roof_L2 = Member(n4, n8, section=sec_brace)  # ridge Z=0 -> eave Z=8
 
 # Right roof panel (ridge <-> eave R):
-brace_roof_R1 = Member(n4, n10, section=sec_brace)   # ridge Z=0 -> eave Z=8
-brace_roof_R2 = Member(n5, n9,  section=sec_brace)   # eave Z=0 -> ridge Z=8
+brace_roof_R1 = Member(n4, n10, section=sec_brace)  # ridge Z=0 -> eave Z=8
+brace_roof_R2 = Member(n5, n9, section=sec_brace)  # eave Z=0 -> ridge Z=8
 
 # =============================================================================
 # 3.  Member sets
 # =============================================================================
-ms_frame1  = MemberSet(
+ms_frame1 = MemberSet(
     members=[col_L1, col_R1, rafter_L1, rafter_R1],
     classification="Frame Z=0",
 )
-ms_frame2  = MemberSet(
+ms_frame2 = MemberSet(
     members=[col_L2, col_R2, rafter_L2, rafter_R2],
     classification="Frame Z=8",
 )
@@ -246,7 +276,8 @@ ms_roof_bracing = MemberSet(
 )
 
 model.add_member_set(
-    ms_frame1, ms_frame2,
+    ms_frame1,
+    ms_frame2,
     ms_purlins,
     ms_ties,
     ms_wall_bracing,
@@ -310,8 +341,10 @@ for label, node_id in [("Z=0", n4.id), ("Z=8", n9.id)]:
 
 print("\n--- Column base reactions (ULS: 1.35G + 1.5S) ---")
 support_labels = {
-    str(n1.id): "n1 left  Z=0", str(n2.id): "n2 right Z=0",
-    str(n6.id): "n6 left  Z=8", str(n7.id): "n7 right Z=8",
+    str(n1.id): "n1 left  Z=0",
+    str(n2.id): "n2 right Z=0",
+    str(n6.id): "n6 left  Z=8",
+    str(n7.id): "n7 right Z=8",
 }
 for k, rn in uls_res.reaction_nodes.items():
     f = rn.nodal_forces
@@ -322,9 +355,7 @@ for k, rn in uls_res.reaction_nodes.items():
 # 7.  Save JSON
 # =============================================================================
 _here = os.path.dirname(os.path.abspath(__file__))
-_cloud_public = os.path.normpath(
-    os.path.join(_here, "..", "..", "..", "FERS_cloud", "public")
-)
+_cloud_public = os.path.normpath(os.path.join(_here, "..", "..", "..", "FERS_cloud", "public"))
 json_path = os.path.join(_cloud_public, "201_Simple_Shed.json")
 os.makedirs(os.path.dirname(json_path), exist_ok=True)
 model.save_to_json(json_path, indent=4)

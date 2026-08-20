@@ -86,8 +86,7 @@ class SupportCondition:
         else:
             if self.stiffness_curve is not None:
                 raise ValueError(
-                    f"{self.condition_type.value} must not specify stiffness_curve "
-                    f"(only SPRING supports it)."
+                    f"{self.condition_type.value} must not specify stiffness_curve (only SPRING supports it)."
                 )
             if self.condition_type in (
                 SupportConditionType.POSITIVE_ONLY,

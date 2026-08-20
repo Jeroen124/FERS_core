@@ -54,9 +54,7 @@ class PlatePressure:
         elif self.plate_element_id is not None:
             target = {"kind": "Element", "plate_element_id": self.plate_element_id}
         else:
-            raise ValueError(
-                "PlatePressure requires exactly one of surface_id or plate_element_id."
-            )
+            raise ValueError("PlatePressure requires exactly one of surface_id or plate_element_id.")
         data: Dict[str, Any] = {
             "id": self.id,
             "target": target,

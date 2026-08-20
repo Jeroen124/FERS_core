@@ -153,12 +153,8 @@ class MemberResult:
             # member's global displacement sampled along its length; the undeformed
             # station is the straight-member interpolation. Preferred over the
             # simplified client-side Hermite below, which under-renders mid-span sag.
-            p0 = _np.array(
-                [member.start_node.X, member.start_node.Y, member.start_node.Z], dtype=float
-            )
-            p1 = _np.array(
-                [member.end_node.X, member.end_node.Y, member.end_node.Z], dtype=float
-            )
+            p0 = _np.array([member.start_node.X, member.start_node.Y, member.start_node.Z], dtype=float)
+            p1 = _np.array([member.end_node.X, member.end_node.Y, member.end_node.Z], dtype=float)
             samples = sorted(self.member_displacements, key=lambda s: s[0])
             xf = _np.array([s[0] for s in samples], dtype=float)
             disp = _np.array([s[1] for s in samples], dtype=float)

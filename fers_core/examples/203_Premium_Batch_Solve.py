@@ -84,8 +84,10 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 solved: list[str] = []
 skipped: list[tuple[str, str]] = []
 
-print(f"Solving {len(CONFIGURATIONS)} configurations "
-      f"({'Premium' if API_KEY else 'Free tier — set FERS_API_KEY for Premium'})\n")
+print(
+    f"Solving {len(CONFIGURATIONS)} configurations "
+    f"({'Premium' if API_KEY else 'Free tier — set FERS_API_KEY for Premium'})\n"
+)
 
 for config in CONFIGURATIONS:
     model = create_beam(config["span"], "IPE180", udl=config["udl"])
@@ -108,8 +110,7 @@ for config in CONFIGURATIONS:
         except fers_calculations.FersTimeoutError as error:
             # Transient: the licence server stalled and the solve never started.
             if attempt < MAX_ATTEMPTS:
-                print(f"  {config['name']}: licence timeout, retrying "
-                      f"({attempt}/{MAX_ATTEMPTS})")
+                print(f"  {config['name']}: licence timeout, retrying ({attempt}/{MAX_ATTEMPTS})")
                 continue
             skipped.append((config["name"], f"licence timeout after {attempt} attempts: {error}"))
 
