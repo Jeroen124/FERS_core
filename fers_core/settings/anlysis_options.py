@@ -150,8 +150,7 @@ class AnalysisOptions:
         # wires clean and backward compatible with older engines).
         if self.result_filter is not None:
             data["result_filter"] = [
-                block.value if isinstance(block, ResultBlock) else str(block)
-                for block in self.result_filter
+                block.value if isinstance(block, ResultBlock) else str(block) for block in self.result_filter
             ]
         return data
 
@@ -212,9 +211,7 @@ class AnalysisOptions:
         # as raw strings so newer-engine wires round-trip through older SDKs.
         raw_filter = data.get("result_filter")
         result_filter = (
-            [parse_enum(ResultBlock, item, item) for item in raw_filter]
-            if raw_filter is not None
-            else None
+            [parse_enum(ResultBlock, item, item) for item in raw_filter] if raw_filter is not None else None
         )
 
         return cls(

@@ -207,7 +207,7 @@ class TestAluminiumProperties:
             MaterialLibrary.aluminum_5083,
         ]:
             e = factory().e_mod
-            assert 60e9 <= e <= 80e9, f"{factory()} E={e/1e9:.1f} GPa outside 60–80 GPa"
+            assert 60e9 <= e <= 80e9, f"{factory()} E={e / 1e9:.1f} GPa outside 60–80 GPa"
 
     def test_density_range(self):
         """Aluminium alloys: ρ typically 2600–2900 kg/m³."""

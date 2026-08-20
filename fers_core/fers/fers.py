@@ -476,9 +476,7 @@ class FERS:
             data["analysis"]["modal"] = modal.to_dict() if hasattr(modal, "to_dict") else modal
         if self.buckling_analysis is not None:
             buckling = self.buckling_analysis
-            data["analysis"]["buckling"] = (
-                buckling.to_dict() if hasattr(buckling, "to_dict") else buckling
-            )
+            data["analysis"]["buckling"] = buckling.to_dict() if hasattr(buckling, "to_dict") else buckling
         if include_results and self.resultsbundle is not None:
             data["results"] = self.resultsbundle.to_dict()
         else:

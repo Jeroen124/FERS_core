@@ -1,5 +1,6 @@
 import os
-from fers_core import (AnalysisOrder,
+from fers_core import (
+    AnalysisOrder,
     Node,
     Member,
     FERS,

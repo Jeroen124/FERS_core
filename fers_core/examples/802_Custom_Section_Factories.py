@@ -114,12 +114,12 @@ cfs_z = Section.create_cfs_z(
 # =============================================================================
 sections = [rhs, shs, angle, angle_uneq, welded_i, cfs_c, cfs_z]
 
-print(f"{'Section':<30s}  {'A (cm²)':>10s}  {'I_y (cm⁴)':>12s}  " f"{'I_z (cm⁴)':>12s}  {'J (cm⁴)':>12s}")
+print(f"{'Section':<30s}  {'A (cm²)':>10s}  {'I_y (cm⁴)':>12s}  {'I_z (cm⁴)':>12s}  {'J (cm⁴)':>12s}")
 print("-" * 85)
 for sec in sections:
     print(
-        f"{sec.name:<30s}  {sec.area*1e4:10.2f}  {sec.i_y*1e8:12.2f}  "
-        f"{sec.i_z*1e8:12.2f}  {sec.j*1e8:12.4f}"
+        f"{sec.name:<30s}  {sec.area * 1e4:10.2f}  {sec.i_y * 1e8:12.2f}  "
+        f"{sec.i_z * 1e8:12.2f}  {sec.j * 1e8:12.4f}"
     )
 
 
@@ -144,7 +144,7 @@ print("\nRunning analysis with welded I 600×300...")
 model.run_analysis()
 
 dy = model.resultsbundle.loadcases["End load"].displacement_nodes["2"].dy
-print(f"Tip deflection dy = {dy*1e3:.3f} mm")
+print(f"Tip deflection dy = {dy * 1e3:.3f} mm")
 
 
 # =============================================================================

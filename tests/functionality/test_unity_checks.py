@@ -44,9 +44,9 @@ def test_unity_checks_serialize_into_analysis():
     gen = next(c for c in checks if c["id"] == "bending_stress")
     assert gen["applies_to"] == {"type": "AllMembers"}
     assert gen["spec"]["Generic"]["demand"] == "M * c / I"
-    assert gen["spec"]["Generic"]["variables"][0]["source"]["Quantity"]["MemberForce"][
-        "aggregation"
-    ] == {"type": "MaxAbs"}
+    assert gen["spec"]["Generic"]["variables"][0]["source"]["Quantity"]["MemberForce"]["aggregation"] == {
+        "type": "MaxAbs"
+    }
 
     ec3 = next(c for c in checks if c["id"] == "ec3")
     assert ec3["spec"]["Ec3Steel"]["include_buckling"] is True

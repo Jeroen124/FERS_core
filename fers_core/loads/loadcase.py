@@ -167,7 +167,7 @@ class LoadCase:
                     kwargs = {
                         k: v
                         for k, v in dl_data.items()
-                            if k not in {"id", "member", "member_id", "load_case"}
+                        if k not in {"id", "member", "member_id", "load_case"}
                     }
                     DistributedLoad(member=member, load_case=load_case, **kwargs)
 

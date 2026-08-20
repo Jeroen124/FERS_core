@@ -64,9 +64,7 @@ class Member:
         self.start_offset = self._normalize_offset(start_offset)
         self.end_offset = self._normalize_offset(end_offset)
         self.pretension = float(pretension) if pretension is not None else None
-        self.unstretched_length = (
-            float(unstretched_length) if unstretched_length is not None else None
-        )
+        self.unstretched_length = float(unstretched_length) if unstretched_length is not None else None
 
         self.weight = float(weight) if weight is not None else self.weight()
 
