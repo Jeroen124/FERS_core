@@ -37,9 +37,7 @@ node2 = Node(3, 0, 0)  # mid-span
 node3 = Node(6, 0, 0)
 
 steel = Material(name="Steel", e_mod=210e9, g_mod=80.769e9, density=7850, yield_stress=235e6)
-section = Section(
-    name="IPE 180", material=steel, i_y=1.01e-6, i_z=13.21e-6, j=0.027e-6, area=0.00196
-)
+section = Section(name="IPE 180", material=steel, i_y=1.01e-6, i_z=13.21e-6, j=0.027e-6, area=0.00196)
 
 beam1 = Member(start_node=node1, end_node=node2, section=section, classification="Beam")
 beam2 = Member(start_node=node2, end_node=node3, section=section, classification="Beam")

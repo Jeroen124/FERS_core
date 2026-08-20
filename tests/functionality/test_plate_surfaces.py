@@ -70,9 +70,7 @@ def test_plate_surface_local_mesh_generates_plate_elements():
     assert len(generated) == 2
     assert len(model.plates) == 2
     assert all(element.source_surface_id == model.plate_surfaces[0].id for element in generated)
-    assert model.plate_surfaces[0].generated_plate_element_ids == [
-        element.id for element in generated
-    ]
+    assert model.plate_surfaces[0].generated_plate_element_ids == [element.id for element in generated]
 
     data = model.to_dict(include_results=False)
     assert len(data["model"]["plate_elements"]) == 2

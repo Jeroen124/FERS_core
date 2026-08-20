@@ -125,10 +125,10 @@ for n_kn in range(10, 90, 10):
 # ── Summary table ─────────────────────────────────────────────────────────────
 
 print("\n" + "─" * 60)
-print(f"  {'N [kN]':>8}  │ {'dx [mm]':>10}  │" f" {'φy [mrad]':>10}  │ {'Fz [kN]':>10}")
+print(f"  {'N [kN]':>8}  │ {'dx [mm]':>10}  │ {'φy [mrad]':>10}  │ {'Fz [kN]':>10}")
 print("─" * 60)
 for n_kn, dx, ry, fz in results:
-    print(f"  {n_kn:>8}  │ {dx:>10.2f}  │" f" {ry:>10.3f}  │ {fz:>10.1f}")
+    print(f"  {n_kn:>8}  │ {dx:>10.2f}  │ {ry:>10.3f}  │ {fz:>10.1f}")
 print("─" * 60)
 
 print(

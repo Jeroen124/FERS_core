@@ -60,9 +60,7 @@ class MemberSet:
             except KeyError:
                 raise KeyError(f"Member with id={mid} not found when building MemberSet.")
 
-        buckling_restraints = [
-            BucklingRestraint.from_dict(br) for br in data.get("buckling_restraints", [])
-        ]
+        buckling_restraints = [BucklingRestraint.from_dict(br) for br in data.get("buckling_restraints", [])]
 
         return cls(
             members=members,

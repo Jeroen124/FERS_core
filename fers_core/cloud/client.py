@@ -285,8 +285,7 @@ class FersCloudClient:
     def _ensure_auth(self) -> None:
         if not self.is_authenticated:
             raise AuthenticationError(
-                "Not authenticated or token expired. "
-                "Call connect(api_key) or login(email, password) first."
+                "Not authenticated or token expired. Call connect(api_key) or login(email, password) first."
             )
 
     def _headers(self, auth: bool = True) -> dict[str, str]:

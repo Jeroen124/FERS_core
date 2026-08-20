@@ -500,7 +500,7 @@ def resolve_section(name: str, material: Material) -> Section:
 
     if key not in idx:
         available = ", ".join(sorted(idx.keys())[:20]) + " …"
-        raise ValueError(f"Section '{name}' not found in library. " f"Available (first 20): {available}")
+        raise ValueError(f"Section '{name}' not found in library. Available (first 20): {available}")
 
     family, params = idx[key]
 

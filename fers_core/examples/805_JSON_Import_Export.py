@@ -82,7 +82,7 @@ print("\nRunning analysis on reloaded model...")
 reloaded.run_analysis()
 
 dy = reloaded.resultsbundle.loadcases["Center load"].displacement_nodes["2"].dy
-print(f"Mid-span deflection dy = {dy*1e3:.4f} mm")
+print(f"Mid-span deflection dy = {dy * 1e3:.4f} mm")
 
 
 # =============================================================================
@@ -105,4 +105,4 @@ model_copy = FERS.from_dict(data)
 print(f"from_dict() → Nodes: {model_copy.number_of_nodes()}, Members: {model_copy.number_of_elements()}")
 model_copy.run_analysis()
 dy3 = model_copy.resultsbundle.loadcases["Center load"].displacement_nodes["2"].dy
-print(f"from_dict() analysis deflection: {dy3*1e3:.4f} mm  (matches: {abs(dy - dy3) < 1e-12})")
+print(f"from_dict() analysis deflection: {dy3 * 1e3:.4f} mm  (matches: {abs(dy - dy3) < 1e-12})")

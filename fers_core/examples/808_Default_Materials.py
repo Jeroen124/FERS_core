@@ -82,8 +82,8 @@ for group_name, factories in groups.items():
     for factory in factories:
         mat = factory()
         print(
-            f"  {mat.name:<33s}  {mat.e_mod/1e9:9.1f}  {mat.g_mod/1e9:9.1f}"
-            f"  {mat.density:10.0f}  {mat.yield_stress/1e6:9.1f}"
+            f"  {mat.name:<33s}  {mat.e_mod / 1e9:9.1f}  {mat.g_mod / 1e9:9.1f}"
+            f"  {mat.density:10.0f}  {mat.yield_stress / 1e6:9.1f}"
         )
 
 
@@ -91,7 +91,7 @@ for group_name, factories in groups.items():
 # Step 3: Look up a material by name (useful when reading from config / JSON)
 # =============================================================================
 mat_by_name = MaterialLibrary.get("Aluminium 6061-T6")
-print(f"\nLooked up by name: '{mat_by_name.name}'  E = {mat_by_name.e_mod/1e9:.1f} GPa")
+print(f"\nLooked up by name: '{mat_by_name.name}'  E = {mat_by_name.e_mod / 1e9:.1f} GPa")
 
 
 # =============================================================================
@@ -123,4 +123,4 @@ for factory in comparison_materials:
     # Analytical cantilever tip deflection: δ = F·L³ / (3·E·I)
     delta = F * L**3 / (3 * mat.e_mod * I_y)
 
-    print(f"  {mat.name:<33s}  {mat.e_mod/1e9:9.1f}  {delta*1e3:9.3f}")
+    print(f"  {mat.name:<33s}  {mat.e_mod / 1e9:9.1f}  {delta * 1e3:9.3f}")
