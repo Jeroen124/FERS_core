@@ -1,5 +1,45 @@
 # Changelog
 
+## 0.1.85
+
+Pins engine `fers_calculations==0.2.57` and adds the builder for native
+moment-rotation connectors. Additive: no existing API moves.
+
+**Engine 0.2.57** accepts a beam-end connector as its moment-rotation diagram,
+`M(phi)`, rather than only as stiffness against end force. See the engine CHANGELOG.
+
+### Added
+
+- **`MomentRotationCurve` and `CurveEndBehaviour`**, plus
+  `MemberHinge(moment_rotation_mx=..., _my=..., _mz=...)`.
+
+  `StiffnessCurveConfig` describes a connector as `k(M)`, which the solver
+  interpolates linearly in `M` while the real characteristic is linear in `phi` —
+  so the two agree only at the tabulated points. An integrator measured 9.6 % in
+  deflection between them and had to densify each curve to ~50–100 points to get
+  within 0.03 %. Prefer `MomentRotationCurve` wherever you have a test curve; the
+  four tabulated points now reproduce the closed form exactly.
+
+  Rotation is in **radians** in every unit system. Connector looseness — EN 15512's
+  free play before the connector takes any moment — needs no special field: it is a
+  flat first segment, `[[0, 0], [0.002, 0], ...]`.
+
+  Validated on construction (ascending rotations, non-decreasing moments, a
+  symmetric curve starting at the origin) so a malformed diagram is refused where it
+  was written rather than at solve time. The solver validates again on its side.
+
+- **End behaviours**: `CONTINUOUS` (default), `STOP` and `YIELDING`. `FAILURE` is
+  present in the enum for schema stability but is **refused by both this builder and
+  the solver** — failure is irreversible, and the solver's secant linearization
+  carries no path-dependent state, so a released connector re-engages on the next
+  iterate and the solve degenerates without reporting it. Use `YIELDING` for a
+  connector that stops taking more moment.
+
+### Notes
+
+- `tests/functionality/test_engine_pin_consistency.py` fails until 0.2.57 is on
+  PyPI. That is the gate working as intended — publish the engine first.
+
 ## 0.1.84
 
 Pins engine `fers_calculations==0.2.56` and corrects example 104, which had been
