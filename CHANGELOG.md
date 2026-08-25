@@ -1,5 +1,45 @@
 # Changelog
 
+## 0.1.84
+
+Pins engine `fers_calculations==0.2.56` and corrects example 104, which had been
+advertising a guarantee the engine did not yet keep. No model API moves.
+
+**Engine 0.2.56** makes `member_displacements` load-exact. Until 0.2.55 it was a
+cubic-Hermite interpolation of the end DOFs, so a member carrying a span load
+under-reported its own mid-span sag by `w·L⁴/(384·E·I)` — 20 % on a single simply
+supported element. The same reconstruction sat behind the `MemberDeflection`
+serviceability check, which therefore reported 80 % of the real sag on an
+undivided UDL span. It also makes `ModeShape.period` and
+`SeismicModeContribution.period` nullable: a rigid-body mode has no finite
+period, and the engine had been emitting a `null` its own types could not read
+back. See the engine CHANGELOG.
+
+### Fixed
+
+- **`examples/104_visual_member_deflected_shape.py` documented a property the
+  engine did not have.** It described `member_displacements` as "load-exact" and
+  "quartic-accurate under member loads" while the array was the very Hermite
+  reconstruction it claimed to replace — and its assertions only checked
+  `x/L = 0` and `x/L = 1`, which are nodal values and exact by construction under
+  either scheme. The example passed while demonstrating nothing about the
+  interior.
+
+  It now states which engine version the guarantee arrived in, and checks every
+  station against the textbook cantilever-under-UDL curve
+  `w(x) = −q·x²(6L² − 4Lx + x²)/24EI`. It also prints what a Hermite curve would
+  have reported at mid-span (−9.387 mm against the true −9.974 mm on this model,
+  ~6 % short), so the difference the example exists to show is on screen rather
+  than asserted out of sight.
+
+### Notes
+
+- No Python-side API change accompanies the nullable `period`: nothing in
+  `fers_core` reads that field outside the generated models, which regenerate
+  from the engine's OpenAPI.
+- `tests/functionality/test_engine_pin_consistency.py` fails until 0.2.56 is on
+  PyPI. That is the gate working as intended — publish the engine first.
+
 ## 0.1.81
 
 Pins engine `fers_calculations==0.2.54`, adds the analysis-request builders and

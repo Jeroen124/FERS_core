@@ -15,13 +15,20 @@ from fers_core import (
 # =============================================================================
 # Example: load-exact member deflected shape (member_displacements)
 # =============================================================================
-# Engine >= 0.2.40 can return, per member, a sampled deflected shape
-# (`member_displacements`) reconstructed from the element shape functions.
-# Enable it with `analysis_options.include_member_deflected_shape = True`; the
-# ResultRenderer then draws that load-exact curve instead of the simplified
-# client-side cubic-Hermite reconstruction. The difference is most visible under
-# a span load, where the true shape is quartic and Hermite under-renders the
-# mid-span sag — so we use a uniformly-loaded cantilever here.
+# The solver can return, per member, a sampled deflected shape
+# (`member_displacements`). Enable it with
+# `analysis_options.include_member_deflected_shape = True`; the ResultRenderer
+# then draws that curve instead of the client-side cubic-Hermite reconstruction.
+#
+# Requires fers_calculations >= 0.2.56. Between 0.2.40 and 0.2.55 the array
+# existed but was itself a Hermite reconstruction, so under a span load it
+# under-rendered the mid-span sag by w*L^4/(384*E*I) — the very thing this
+# example claimed it fixed. Since 0.2.56 the shape is integrated from the
+# member's internal force field and is exact, shear deformation included.
+#
+# The difference only shows up *between* the nodes: a finite-element solution has
+# exact nodal displacements whatever the reconstruction does, so the endpoints
+# always agreed. That is why the checks below deliberately sample the interior.
 
 # Step 1: Set up the model
 # -------------------------
@@ -97,11 +104,41 @@ print("\nConsistency checks:")
 print(f"  start station dy = {d_first[1]: .6e} m   (fixed end, expected ~0) ✅")
 print(f"  end   station dy = {d_last[1]: .6e} m   vs free-end node dy = {end_disp.dy: .6e} m ✅")
 
+# The endpoints above are nodal values, so they were exact even when the curve
+# between them was not. The interior is where the reconstruction is actually on
+# trial — check every station against the textbook cantilever-under-UDL curve
+#
+#     w(x) = -q * x^2 * (6L^2 - 4Lx + x^2) / (24 EI)
+#
+# and against what a cubic Hermite would have produced, which falls short by the
+# clamped-clamped term q*x^2*(L-x)^2/(24EI): 0.59 mm at mid-span here, about 6%.
+q, span, e_mod, i_strong = 1000.0, 5.0, 210e9, 13.21e-6
+
+
+def cantilever_udl(x):
+    return -q * x**2 * (6 * span**2 - 4 * span * x + x**2) / (24 * e_mod * i_strong)
+
+
+def hermite_shortfall(x):
+    return q * x**2 * (span - x) ** 2 / (24 * e_mod * i_strong)
+
+
+worst = max(abs(d[1] - cantilever_udl(xf * span)) for xf, d in samples)
+assert worst < 1e-9, f"interior stations must lie on the analytic curve (worst {worst:.2e} m)"
+
+mid_frac, mid = min(samples, key=lambda s: abs(s[0] - 0.5))
+mid_x = mid_frac * span
+print(f"  worst interior error vs closed form = {worst:.2e} m ✅")
+print(
+    f"  mid-span dy = {mid[1]: .6e} m   "
+    f"(a Hermite curve would report {mid[1] + hermite_shortfall(mid_x): .6e} m)"
+)
+
 # Step 5: Visualise
 # -----------------
-# The deformed shape now follows the engine's load-exact polyline (with an
-# automatic fall back to client-side Hermite when member_displacements is absent,
-# e.g. older engines, mode shapes, or when the option is off).
+# The deformed shape follows the engine's load-exact polyline, with an automatic
+# fall back to client-side Hermite when member_displacements is absent — older
+# engines, mode shapes, or the option simply being off.
 #
 # Interactive window:
 calculation_1.plot_results_3d(loadcase="Uniform Load")
@@ -116,7 +153,14 @@ calculation_1.plot_results_3d(loadcase="Uniform Load")
 # Notes for Users
 # =============================================================================
 # Set `include_member_deflected_shape = True` to get the per-member deflected
-# polyline in the results (`MemberResult.member_displacements`). It is exact for
-# members without span loads and quartic-accurate under member loads, so deflection
-# plots — and any custom post-processing of the curved shape — match the engine's
-# own deflection math instead of an approximate reconstruction.
+# polyline in the results (`MemberResult.member_displacements`).
+#
+# From 0.2.56 the curve is integrated from the member's own internal force field,
+# so it is exact under any span load and includes shear deformation wherever the
+# section carries a shear area. A member with no span load short-circuits to the
+# end-DOF cubic, which is exact there — the two agree to machine precision.
+#
+# Stations are evenly spaced, except on a member the solver split internally at a
+# mid-span point load: each segment is sampled over its own share of the parent's
+# range and the segments are concatenated, so the slope kink lands exactly on the
+# split. `x_frac` increases monotonically either way.
