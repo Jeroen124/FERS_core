@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Optional
 
 from ..supports.stiffness_curve import StiffnessCurveConfig
+from .moment_rotation import MomentRotationCurve
 
 
 class MemberHinge:
@@ -32,6 +33,9 @@ class MemberHinge:
         stiffness_curve_mx: Optional[StiffnessCurveConfig] = None,
         stiffness_curve_my: Optional[StiffnessCurveConfig] = None,
         stiffness_curve_mz: Optional[StiffnessCurveConfig] = None,
+        moment_rotation_mx: Optional[MomentRotationCurve] = None,
+        moment_rotation_my: Optional[MomentRotationCurve] = None,
+        moment_rotation_mz: Optional[MomentRotationCurve] = None,
     ):
         """Initialize a new Member Hinge instance.
 
@@ -59,6 +63,15 @@ class MemberHinge:
             stiffness_curve_mx: Non-linear stiffness curve for rotational X.
             stiffness_curve_my: Non-linear stiffness curve for rotational Y.
             stiffness_curve_mz: Non-linear stiffness curve for rotational Z.
+            moment_rotation_mx: Moment-rotation diagram for rotational X.
+            moment_rotation_my: Moment-rotation diagram for rotational Y.
+            moment_rotation_mz: Moment-rotation diagram for rotational Z.
+
+        A ``moment_rotation_m*`` diagram is the form a connector is specified and
+        tested in, and is preferred over the matching ``stiffness_curve_m*`` where
+        you have a test curve. They are mutually exclusive per DOF: the solver
+        rejects a hinge that sets both rather than picking one. Requires
+        ``fers_calculations >= 0.2.57``.
         """
 
         # Handle hinge numbering with an optional hinge_type
@@ -89,6 +102,9 @@ class MemberHinge:
         self.stiffness_curve_mx = stiffness_curve_mx
         self.stiffness_curve_my = stiffness_curve_my
         self.stiffness_curve_mz = stiffness_curve_mz
+        self.moment_rotation_mx = moment_rotation_mx
+        self.moment_rotation_my = moment_rotation_my
+        self.moment_rotation_mz = moment_rotation_mz
 
     @classmethod
     def reset_counter(cls):
@@ -118,6 +134,9 @@ class MemberHinge:
             "stiffness_curve_mx": self.stiffness_curve_mx.to_dict() if self.stiffness_curve_mx else None,
             "stiffness_curve_my": self.stiffness_curve_my.to_dict() if self.stiffness_curve_my else None,
             "stiffness_curve_mz": self.stiffness_curve_mz.to_dict() if self.stiffness_curve_mz else None,
+            "moment_rotation_mx": self.moment_rotation_mx.to_dict() if self.moment_rotation_mx else None,
+            "moment_rotation_my": self.moment_rotation_my.to_dict() if self.moment_rotation_my else None,
+            "moment_rotation_mz": self.moment_rotation_mz.to_dict() if self.moment_rotation_mz else None,
         }
 
     @classmethod
@@ -145,4 +164,7 @@ class MemberHinge:
             stiffness_curve_mx=StiffnessCurveConfig.from_dict(data.get("stiffness_curve_mx")),
             stiffness_curve_my=StiffnessCurveConfig.from_dict(data.get("stiffness_curve_my")),
             stiffness_curve_mz=StiffnessCurveConfig.from_dict(data.get("stiffness_curve_mz")),
+            moment_rotation_mx=MomentRotationCurve.from_dict(data.get("moment_rotation_mx")),
+            moment_rotation_my=MomentRotationCurve.from_dict(data.get("moment_rotation_my")),
+            moment_rotation_mz=MomentRotationCurve.from_dict(data.get("moment_rotation_mz")),
         )
