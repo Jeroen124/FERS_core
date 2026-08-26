@@ -2,6 +2,11 @@
 
 ## 0.1.85
 
+> **This release carries 0.1.84 as well.** 0.1.84 pinned engine `==0.2.56`, which
+> was squashed into the 0.2.57 engine release and never published — so 0.1.84
+> could not build and was never released either. Both entries describe real
+> changes; they both ship here.
+
 Pins engine `fers_calculations==0.2.57` and adds the builder for native
 moment-rotation connectors. Additive: no existing API moves.
 
@@ -41,6 +46,11 @@ moment-rotation connectors. Additive: no existing API moves.
   PyPI. That is the gate working as intended — publish the engine first.
 
 ## 0.1.84
+
+> **Never published**, and its pin points at a version that does not exist.
+> Engine 0.2.56 was squashed into the 0.2.57 release, so no artifact was built
+> under either number here. Everything below shipped inside 0.1.85, which pins
+> `==0.2.57`. Install that.
 
 Pins engine `fers_calculations==0.2.56` and corrects example 104, which had been
 advertising a guarantee the engine did not yet keep. No model API moves.
