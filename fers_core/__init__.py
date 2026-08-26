@@ -54,6 +54,7 @@ from .settings.anlysis_options import (
 from .settings.enums import MassFormulation
 from .settings.eigen_analysis import BucklingAnalysisSettings, ModalAnalysisSettings
 from .members.memberhinge import MemberHinge
+from .members.moment_rotation import CurveEndBehaviour, MomentRotationCurve
 from .results.resultsbundle import ResultsBundle
 from .results.singleresults import SingleResults
 from .results.member import MemberResult
@@ -94,7 +95,9 @@ __all__ = [
     "EntityGroup",
     "Member",
     "MemberType",
+    "CurveEndBehaviour",
     "MemberHinge",
+    "MomentRotationCurve",
     "MemberPointLoad",
     "MemberPointMoment",
     "MemberResult",
