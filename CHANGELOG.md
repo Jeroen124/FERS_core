@@ -1,5 +1,47 @@
 # Changelog
 
+## 0.1.88
+
+> **0.1.87 carried no changes of its own** — it was a bare version bump on top of
+> 0.1.86 and has no entry below, because there is nothing to describe. The pin
+> stayed at engine `0.2.58`.
+
+Pins engine `fers_calculations==0.2.59`. Additive: no existing API moves.
+
+### Changed, via the engine
+
+Engine 0.2.59 finishes the moment-rotation connector work. Nothing in this
+package's API moves, but two behaviours you can reach from it do:
+
+- **`CurveEndBehaviour.YIELDING` now redistributes on an indeterminate frame.**
+  The connector holds its plateau and the moment it cannot carry appears
+  elsewhere. Earlier engines could not converge that case at all: the secant was
+  read at the end moment, which means inverting `M(phi)` across a near-flat
+  plateau, and it oscillated. It is read at the rotation there now.
+
+  On a *determinate* span nothing can redistribute — statics fixes the connector
+  moment at `F * lever` whatever the connector does — so a demand above the cap
+  has no solution. The solver reports that instead of returning a very large
+  deflection, and the message names the connector.
+
+- **Reactions change on any model with a connector on a span-loaded member.**
+  Two engine fixes land here. The curve was being driven by a member-end moment
+  computed without the equivalent nodal loads, so it was short by the fixed-end
+  moment; and the load vector was condensed through the connector's initial
+  stiffness rather than its converged one. Global moment equilibrium was missing
+  by the difference. The connector moment itself was already right — it is the
+  reactions that move.
+
+  Only models with a moment-rotation or stiffness curve on a loaded span are
+  affected. A constant `rotational_release_m*` was never involved.
+
+### Unchanged, worth stating
+
+`rotational_release_mx/_my/_mz` — the plain constant rotational spring — is
+untouched by all of this and behaves exactly as before. It shares no code path
+with the curve evaluation: a hinge DOF without a curve resolves straight to its
+release value.
+
 ## 0.1.86
 
 Pins engine `fers_calculations==0.2.58`. Additive: no existing API moves.
