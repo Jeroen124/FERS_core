@@ -20,11 +20,20 @@ from fers_core import (
 # `analysis_options.include_member_deflected_shape = True`; the ResultRenderer
 # then draws that curve instead of the client-side cubic-Hermite reconstruction.
 #
-# Requires fers_calculations >= 0.2.56. Between 0.2.40 and 0.2.55 the array
+# Requires fers_calculations >= 0.2.56 (>= 0.2.58 for the peak). Between 0.2.40 and 0.2.55 the array
 # existed but was itself a Hermite reconstruction, so under a span load it
 # under-rendered the mid-span sag by w*L^4/(384*E*I) — the very thing this
 # example claimed it fixed. Since 0.2.56 the shape is integrated from the
 # member's internal force field and is exact, shear deformation included.
+#
+# Scanning `member_displacements` for the worst sag is what this array is usually
+# used for, and until 0.2.58 that was a trap: the array is a *display grid* of 11
+# evenly spaced stations, so on a 4 m member it steps 0.4 m at a time and walks
+# straight over a peak that does not land on a station. The reported maximum was
+# therefore under the true one, always — the unconservative direction for a
+# deflection limit. Since 0.2.58 read `member_displacement_peak` instead: the same
+# curve reduced on the grid it was integrated on, so the answer does not depend on
+# how finely the member was meshed.
 #
 # The difference only shows up *between* the nodes: a finite-element solution has
 # exact nodal displacements whatever the reconstruction does, so the endpoints
