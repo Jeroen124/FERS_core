@@ -1,6 +1,41 @@
 # Changelog
 
+## 0.1.86
+
+Pins engine `fers_calculations==0.2.58`. Additive: no existing API moves.
+
+### Changed
+
+- **`CurveEndBehaviour.FAILURE` is accepted.** This builder refused it, mirroring
+  the solver, which refused it too. Engine 0.2.58 supports it — it latches the
+  break per member end and per DOF instead of re-reading it from the current
+  moment — so the client-side rejection is gone. A curve carrying `FAILURE` now
+  round-trips unchanged.
+
+  A structure with no equilibrium without the connector — a determinate one never
+  has — comes back with a `hinge_connector_failed` error in the results rather
+  than a deflection. Use `YIELDING` for a connector that stops taking *more*
+  moment but keeps carrying what it has.
+
+### Added, via the engine
+
+- **`MemberResult.member_displacement_peak`** — a member's true peak transverse
+  deflection, as `(x_frac, displacement)`. `member_displacements` is a display
+  grid of 11 stations and its *maximum* is quantised by that grid; scanning it for
+  the worst sag under-reports, always unconservatively. The new field reduces the
+  same curve on the grid it was integrated on, so it does not depend on how finely
+  the member was meshed. See `examples/104_visual_member_deflected_shape.py`.
+
+- Zero or negative material and section properties are now refused by the engine
+  with a message naming the offending id, instead of surfacing much later as a
+  non-convergence that has nothing to do with the cause.
+
 ## 0.1.85
+
+> **This release carries 0.1.84 as well.** 0.1.84 pinned engine `==0.2.56`, which
+> was squashed into the 0.2.57 engine release and never published — so 0.1.84
+> could not build and was never released either. Both entries describe real
+> changes; they both ship here.
 
 Pins engine `fers_calculations==0.2.57` and adds the builder for native
 moment-rotation connectors. Additive: no existing API moves.
@@ -41,6 +76,11 @@ moment-rotation connectors. Additive: no existing API moves.
   PyPI. That is the gate working as intended — publish the engine first.
 
 ## 0.1.84
+
+> **Never published**, and its pin points at a version that does not exist.
+> Engine 0.2.56 was squashed into the 0.2.57 release, so no artifact was built
+> under either number here. Everything below shipped inside 0.1.85, which pins
+> `==0.2.57`. Install that.
 
 Pins engine `fers_calculations==0.2.56` and corrects example 104, which had been
 advertising a guarantee the engine did not yet keep. No model API moves.
