@@ -17,6 +17,17 @@ class CurveEndBehaviour(Enum):
     #: Rotation frozen at the last tabulated point: rigid beyond it.
     STOP = "Stop"
     #: Moment capped at the last tabulated point: the connector yields and rotates on.
+    #:
+    #: From engine 0.2.59 this redistributes properly on an indeterminate frame:
+    #: the connector holds its plateau and the moment it cannot carry appears
+    #: elsewhere. Earlier engines could not converge that case at all — the secant
+    #: was read at the end moment, which means inverting ``M(phi)`` across a
+    #: near-flat plateau, and it oscillated. It is read at the rotation there now.
+    #:
+    #: On a *determinate* span there is nothing to redistribute into: statics fixes
+    #: the connector moment at ``F * lever`` whatever the connector does, so a
+    #: demand above the cap has no solution. The solver reports that rather than
+    #: returning a very large deflection, and names the connector.
     YIELDING = "Yielding"
     #: The connector fails: no moment transmitted beyond, leaving a free hinge.
     #:
