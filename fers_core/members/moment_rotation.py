@@ -20,12 +20,15 @@ class CurveEndBehaviour(Enum):
     YIELDING = "Yielding"
     #: The connector fails: no moment transmitted beyond, leaving a free hinge.
     #:
-    #: **Not supported by the solver, which rejects a model that uses it.** Failure
-    #: is irreversible, and that is a path-dependent state the secant linearization
-    #: does not carry: a released connector reads zero moment on the next iterate,
-    #: concludes it is intact and re-engages. Kept here so the contract is stable for
-    #: when path tracking exists; use :attr:`YIELDING` for a connector that stops
-    #: taking more moment.
+    #: Supported from engine 0.2.58. Failure is irreversible, so the solver latches
+    #: the break per member end and per DOF rather than re-reading it from the
+    #: current moment -- without that a released connector reads zero moment on the
+    #: next iterate, concludes it is intact and re-engages.
+    #:
+    #: A structure that has no equilibrium without the connector -- a determinate
+    #: one never does -- comes back with a ``hinge_connector_failed`` error rather
+    #: than a deflection. Use :attr:`YIELDING` for a connector that stops taking
+    #: *more* moment but keeps carrying what it has.
     FAILURE = "Failure"
 
 
@@ -90,15 +93,6 @@ class MomentRotationCurve:
                     f"MomentRotationCurve moments must not decrease "
                     f"(point {i} is {points[i][1]} after {points[i - 1][1]}). "
                     f"Express a moment ceiling with end=CurveEndBehaviour.YIELDING."
-                )
-        for which, behaviour in (("start", start), ("end", end)):
-            if behaviour is CurveEndBehaviour.FAILURE:
-                raise ValueError(
-                    f"{which}=CurveEndBehaviour.FAILURE is not supported by the solver. Failure "
-                    "is irreversible and the secant linearization carries no path-dependent "
-                    "state, so a released connector re-engages on the next iterate and the solve "
-                    "degenerates without reporting it. Use CurveEndBehaviour.YIELDING for a "
-                    "connector that stops taking more moment."
                 )
         if symmetric and (points[0][0] != 0.0 or points[0][1] != 0.0):
             raise ValueError(

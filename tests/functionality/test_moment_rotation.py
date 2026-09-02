@@ -60,15 +60,17 @@ def test_rejects_a_symmetric_curve_that_misses_the_origin():
 
 
 @pytest.mark.parametrize("which", ["start", "end"])
-def test_rejects_failure_with_its_reason(which):
-    """Failure is irreversible, and the secant linearization carries no such state.
+def test_accepts_failure(which):
+    """Supported from engine 0.2.58, which latches the break instead of re-reading it.
 
-    Refused here as well as in the solver so the mistake surfaces where it was made.
+    Both this builder and the solver used to refuse it. Neither does now, so a curve
+    carrying it must round-trip unchanged rather than raise.
     """
-    with pytest.raises(ValueError, match="irreversible"):
-        MomentRotationCurve(points=CURVE_M1, **{which: CurveEndBehaviour.FAILURE})
+    curve = MomentRotationCurve(points=CURVE_M1, **{which: CurveEndBehaviour.FAILURE})
+    assert getattr(curve, which) is CurveEndBehaviour.FAILURE
+    assert curve.to_dict()[which] == "Failure"
 
 
-def test_accepts_the_supported_end_behaviours():
-    for end in (CurveEndBehaviour.CONTINUOUS, CurveEndBehaviour.STOP, CurveEndBehaviour.YIELDING):
+def test_accepts_every_end_behaviour():
+    for end in CurveEndBehaviour:
         assert MomentRotationCurve(points=CURVE_M1, end=end).end is end
