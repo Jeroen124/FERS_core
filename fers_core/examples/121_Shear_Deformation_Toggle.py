@@ -10,8 +10,8 @@ Compares:
 Using a short/stocky IPE300 beam (L/h ≈ 6.7) the shear contribution is clearly
 visible.  For slender beams (L/h > 20) the difference becomes negligible.
 
-Cross-check:  RFEM "Shear Deformation" tickbox in Calculation Parameters → same
-              toggle as `include_shear_deformation` in FERS AnalysisOptions.
+Cross-check:  the closed-form Timoshenko deflection above, toggled by the
+              `include_shear_deformation` flag in FERS AnalysisOptions.
 """
 
 from fers_core import (
