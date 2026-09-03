@@ -1,5 +1,72 @@
 # Changelog
 
+## 0.1.90
+
+Pins engine `fers_calculations==0.2.60`. No API in this package moves, but the
+engine carries **one behaviour change you may have to act on** and one class of
+answer it now refuses.
+
+### Changed, via the engine — spring reaction signs
+
+A support DOF restrained by `SupportConditionType.SPRING` (or by a
+`SupportStiffnessCurve`) reported its reaction with the opposite sign to the
+same DOF restrained by `FIXED`. Same model, same load, magnitudes exact, every
+sign reversed. It is now reported the same way as every other support: the force
+the support applies **to the structure**, which is what a free-body diagram
+needs and what makes `Σ(reactions) + Σ(loads)` close.
+
+**If you post-process `reaction_nodes` and special-cased spring supports, remove
+that special case.** Nothing else changes; `PositiveOnly` and `NegativeOnly` were
+already reported this way and are untouched.
+
+### Changed, via the engine — a singular model is no longer answered
+
+A structure with a degree of freedom nothing restrains used to come back with
+plausible numbers. Penalty boundary conditions regularise the operator, so it
+factorises and returns a mechanism: on a two-span beam with one truss member,
+reactions carrying 1,000 N of the 10,000 N applied, `converged: True`, and
+nothing in `errors_and_warnings` to read.
+
+Such a result now carries a `singular_model` entry in
+`errors_and_warnings.errors` and reports `converged: False`. The message says how
+far off statics the answer is. The usual causes, in the order you will meet them:
+
+- an axial-only member (`TRUSS`, `TENSION`, `COMPRESSION`) leaving a node with no
+  rotational stiffness,
+- an end release doing the same,
+- a **planar model that has not restrained Z, RX and RY at every node** — see
+  below.
+
+`solver_diagnostics.converged` also means something on first-order results now.
+It was stamped `True` unconditionally, so the field a caller naturally trusts
+carried no information at all.
+
+Some models that previously raised `Stiffness matrix is singular or
+near-singular` now return results carrying `singular_model` instead. That is
+deliberate: the outcome used to depend on which DOF went singular, and the
+message now says how far off statics the answer is rather than only that a
+factorisation failed.
+
+### Added, via the engine — `buckling_unrefined_mesh`
+
+`analysis.buckling` reports the critical load factor of the mesh it is given, and
+one element per member is not a mesh a buckling half-wave can form on: α_cr comes
+out about **21 % high, and unconservative**. Two elements are within 0.75 %, four
+within 0.05 %. `BucklingResults.warnings` now says so when a compressed member
+spans a straight run modelled with a single element.
+
+Worth knowing because nothing else in the bundle behaves that way — reactions and
+recovered internal forces are exact on one element for a straight prismatic
+member, so the habit arrives here unexamined.
+
+### Documented
+
+`AnalysisOptions.dimensionality` is **declarative only** — no solver path reads
+it, and the formulation is always the full 3D beam. A planar model must restrain
+`Z`, `RX` and `RY` on *every* node, not just at supports. The generated
+`pydantic_models.py` now carries that sentence on the field, so it reaches
+`validate_schema()` users too.
+
 ## 0.1.89
 
 Documentation only. No API, behaviour, or dependency change; the engine pin
