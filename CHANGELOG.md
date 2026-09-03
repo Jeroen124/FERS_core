@@ -395,9 +395,9 @@ changelog. Both changes move results toward the conservative side.
   load-combination warm start on models with tension-only / compression-only
   members: with `solve_loadcases: true`, combination solves were seeded from a
   superposition of the nonlinear load-case displacements and could converge —
-  reported as clean success — onto a spurious equilibrium branch (Solvinq
-  rack 1962: a tension-only diagonal carried 3.6× the correct force, a false
-  structural FAIL vs SkyCiv). Such models now cold-start each combination and
+  reported as clean success — onto a spurious equilibrium branch (on a braced
+  rack model a tension-only diagonal carried 3.6× the correct force, a false
+  structural FAIL). Such models now cold-start each combination and
   agree with the `solve_loadcases: false` answer; results on affected
   tension-only braced models **change (become correct)**. New advisory
   diagnostic `solver_diagnostics.unilateral_engagement_flips` + an

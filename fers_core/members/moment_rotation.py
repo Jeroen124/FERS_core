@@ -8,7 +8,7 @@ class CurveEndBehaviour(Enum):
     """What a connector does beyond the end of its tabulated diagram.
 
     Maps 1:1 to the solver's ``CurveEndBehaviour``, and to the four behaviours
-    RFEM offers on a member-hinge diagram.
+    a member-hinge moment-rotation diagram can specify.
     """
 
     #: Extrapolate the last segment's slope indefinitely. The default, and what a

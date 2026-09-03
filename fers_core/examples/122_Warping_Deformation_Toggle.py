@@ -14,7 +14,8 @@ For open thin-walled sections (I-beams, channels) with restrained warping at the
 support, the Vlasov theory predicts LESS twist than pure St. Venant because the
 flanges resist warping through differential bending.
 
-Cross-check: RFEM "7 Degrees of Freedom" / warping analysis module.
+Cross-check: the closed-form Vlasov twist above, toggled by the
+             `include_warping` flag in FERS AnalysisOptions.
 """
 
 import math
