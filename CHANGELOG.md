@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.1.89
+
+Documentation only. No API, behaviour, or dependency change; the engine pin
+stays at `fers_calculations==0.2.59`.
+
+### Changed
+
+- Doc strings in `examples/121_Shear_Deformation_Toggle.py`,
+  `examples/122_Warping_Deformation_Toggle.py` and `members/moment_rotation.py`
+  now cite the closed-form result each one derives as its cross-check, rather
+  than pointing outside the package. These files ship inside the wheel, so
+  0.1.88 and earlier still carry the old text.
+- The 0.1.75 entry below describes the model behind the 0.2.47 warm-start fix
+  generically instead of by project name. Its engineering content is unchanged.
+
 ## 0.1.88
 
 > **0.1.87 carried no changes of its own** — it was a bare version bump on top of
