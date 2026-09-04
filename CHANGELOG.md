@@ -1,5 +1,48 @@
 # Changelog
 
+## 0.1.91
+
+Pins engine `fers_calculations==0.2.62`. Nothing in this package's API moves.
+
+### Added, via the engine — free-tier results identify themselves
+
+Results from a free-tier solve now carry an `attribution` object alongside
+`engine_version`:
+
+```python
+model.run_analysis()
+a = model.resultsbundle.attribution
+if a:                          # None on Premium
+    print(a["text"])           # "Analysis by FERS 0.2.62 - ferscloud.com"
+```
+
+It is exposed as a plain dict — `generated_by`, `url`, `engine_version`,
+`tier`, `text`, `html` — mirroring the solver schema, the same way `modal` and
+`buckling` are carried.
+
+Premium solves carry none: the engine omits the key from its JSON entirely, and
+`resultsbundle.attribution` is `None`, so `if bundle.attribution:` is a reliable
+tier check. The unity-check report gains a matching credit footer on free and
+none on Premium.
+
+**This needed a change here, not just a pin.** `ResultsBundle` in the generated
+`pydantic_models.py` has no `extra='forbid'`, so an unknown `attribution` field
+was not rejected — it was silently dropped during validation, and never reached
+`fers_core/results/resultsbundle.py`, which did not carry the field either.
+Nothing would have errored; the credit would simply not have existed in Python.
+Both are fixed, and `attribution` now survives `from_pydantic`, `from_raw_dict`
+and `to_dict`.
+
+Additive and optional: existing code ignores it, and bundles stored by an older
+engine still deserialize. `engine_version` is unchanged and present on both tiers.
+
+### Changed — PyPI package metadata
+
+The project page linked nowhere: no homepage, no documentation, no source. It
+now carries `[project.urls]`, search keywords and the Science/Engineering
+classifiers. `pip install FERS` is the command every doc gives, so its page
+being a dead end cost more than it looked like it did.
+
 ## 0.1.90
 
 Pins engine `fers_calculations==0.2.60`. No API in this package moves, but the
