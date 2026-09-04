@@ -36,6 +36,11 @@ class ResultsBundle:
     buckling: Optional[Dict[str, Any]] = None
     # Single consolidated HTML report, when the solver was asked to embed it.
     report_html: Optional[str] = None
+    # Free-tier provenance stamp, as a plain dict mirroring the solver's
+    # `Attribution` schema (generated_by / url / engine_version / tier / text /
+    # html). None on Premium, where the solver omits it entirely — so a plain
+    # `if bundle.attribution:` is a reliable tier check.
+    attribution: Optional[Dict[str, Any]] = None
 
     # Factory from the generated Pydantic ResultsBundle
     @classmethod
@@ -56,6 +61,7 @@ class ResultsBundle:
         instance.modal = _to_plain(getattr(pyd_bundle, "modal", None))
         instance.buckling = _to_plain(getattr(pyd_bundle, "buckling", None))
         instance.report_html = getattr(pyd_bundle, "report_html", None)
+        instance.attribution = _to_plain(getattr(pyd_bundle, "attribution", None))
 
         return instance
 
@@ -133,6 +139,7 @@ class ResultsBundle:
         instance.modal = raw.get("modal")
         instance.buckling = raw.get("buckling")
         instance.report_html = raw.get("report_html")
+        instance.attribution = raw.get("attribution")
         return instance
 
     def to_dict(self) -> Dict[str, Any]:
@@ -143,4 +150,5 @@ class ResultsBundle:
             "modal": self.modal,
             "buckling": self.buckling,
             "report_html": self.report_html,
+            "attribution": self.attribution,
         }
