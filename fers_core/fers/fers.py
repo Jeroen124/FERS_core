@@ -783,6 +783,55 @@ class FERS:
             return []
         return getattr(self.resultsbundle, "unity_check_results", []) or []
 
+    def compression_capacity(self, check_id: str = "ec3"):
+        """Allowable axial compression of the governing member, in newtons.
+
+        For a member carrying no moment every EN 1993-1-1 sub-check — §6.2.4
+        axial, §6.3.1 flexural buckling, §6.3.1.4 torsional-flexural, §6.3.3
+        interaction — is linear in the axial force, so the utilization scales
+        with the load and the allowable follows from a single solve:
+
+            N_allow = N_Ed / UC
+
+        Returns `None` when the check did not run or the member carries no
+        compression. Raises if the model was solved with a moment present, where
+        that proportionality does not hold and the answer would be quietly wrong.
+        """
+        results = self.unity_check_results()
+        entry = next((u for u in results if _uc_get(u, "check_id") == check_id), None)
+        if entry is None:
+            entry = results[0] if results else None
+        if entry is None:
+            return None
+        gov = _uc_get(entry, "governing")
+        if gov is None:
+            return None
+
+        trace = _uc_get(gov, "trace") or []
+        rows = {_uc_get(st, "label"): st for st in trace}
+        for label in rows:
+            if label.startswith(("Bending", "LTB")):
+                raise ValueError(
+                    "compression_capacity() assumes pure axial load: this model's "
+                    f"trace contains a {label!r} row, so the utilization is not "
+                    "proportional to the axial force. Read the trace directly."
+                )
+
+        util = _uc_get(entry, "max_utilization")
+        if util is None:
+            util = _uc_get(gov, "utilization")
+        if not util or util <= 0.0:
+            return None
+
+        # The engine publishes the demand behind the governing row (>= 0.2.64);
+        # fall back to the axial row for an older one.
+        demand = _uc_get(rows.get("Governing"), "demand")
+        if demand is None:
+            demand = _uc_get(rows.get("Axial (6.2.3/4)"), "demand")
+        if demand is None:
+            return None
+        return demand / util
+
     def unity_report_html(self):
         """The consolidated unity-check HTML report from the last analysis, if the
         solver was asked to embed it (`settings.analysis_options.include_report_html`)."""
@@ -4182,3 +4231,12 @@ class FERS:
             description=description,
             model_dict=self.to_dict(include_results=include_results),
         )
+
+
+def _uc_get(obj, key):
+    """Unity-check results arrive as dicts or as pydantic models; read either."""
+    if obj is None:
+        return None
+    if isinstance(obj, dict):
+        return obj.get(key)
+    return getattr(obj, key, None)

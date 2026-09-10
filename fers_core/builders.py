@@ -248,3 +248,129 @@ def check_beam(
     )
     calc.add_unity_check(ec3_steel_check(check_id, check_name, applies_to=all_members(), limit_state="ULS"))
     return calc
+
+
+def check_strut(
+    length: float,
+    section: Union[str, Section],
+    *,
+    material: Union[str, Material] = "S235",
+    axial_load: float = 1.0,
+    k_y: float = 1.0,
+    k_z: float = 1.0,
+    k_t: float = 1.0,
+    gamma_m0: float = 1.0,
+    gamma_m1: float = 1.0,
+    check_id: str = "ec3",
+    check_name: str = "EN 1993-1-1 compression check",
+) -> FERS:
+    """Build a concentrically loaded strut with an EN 1993-1-1 compression check.
+
+    The compression counterpart to :func:`check_beam`: a single pin-ended member
+    carrying pure axial compression, so §6.3.1 flexural buckling and §6.3.1.4
+    torsional-flexural buckling are the checks that decide it. Both ends are held
+    against translation and against twist, and free to rotate about both bending
+    axes — the fork-supported strut the buckling curves are written for.
+
+    Because there is no moment, every sub-check is linear in the axial force, so
+    the allowable load follows from one solve without iterating::
+
+        strut = check_strut(2.5, my_section, material="S355", axial_load=1_000.0)
+        strut.run_analysis()
+        n_allow = strut.compression_capacity()
+
+    Args:
+        length: System length in metres. With no `buckling_restraints` on the set
+            this is also the buckling length, scaled by `k_y`/`k_z`.
+        section: A :class:`Section`, or a European section name (e.g. ``"IPE300"``).
+            Build it from one of the ``Section.create_*`` factories with
+            ``classify_for="compression"`` to get the section class, buckling
+            curves and effective area derived for you. Classification is opt-in
+            because it depends on the stress state — the same web can be class 4
+            in compression and class 1 in bending — and without it the solver
+            defaults every curve to b and infers class 1 from ``wpl_y``.
+        material: A :class:`Material` or a grade name (``"S235"`` … ``"S460"``).
+        axial_load: Compression in newtons. Any positive value works; the
+            utilization scales linearly with it.
+        k_y: Effective-length factor about local y (`L_cr,y = k_y * length`).
+        k_z: Effective-length factor about local z.
+        k_t: Effective-length factor for twist (`L_T = k_t * length`), which
+            §6.3.1.4 forms `N_cr,T` from. It is deliberately separate from
+            `k_y`/`k_z`: torsional restraint comes from what holds the section
+            against twisting, not from what holds it against deflecting, and a
+            member braced about one bending axis is routinely unbraced against
+            twist. Left at 1.0 the torsional length is the member length, which
+            is what the fork supports this builder applies actually provide.
+        gamma_m0: Partial factor for cross-section resistance.
+        gamma_m1: Partial factor for member buckling resistance.
+        check_id: Identifier for the unity check.
+        check_name: Display title for the unity check.
+
+    Returns:
+        A :class:`FERS` model — call ``.run_analysis()``, then
+        ``.compression_capacity()`` or ``.unity_check_results()``.
+    """
+    if length <= 0:
+        raise ValueError("length must be a positive length in metres.")
+    if axial_load <= 0:
+        raise ValueError("axial_load must be positive (a compression, in newtons).")
+
+    mat = _resolve_material(material)
+    sec = _resolve_section(section, mat)
+
+    calc = FERS()
+    calc.settings.analysis_options.order = AnalysisOrder.LINEAR
+
+    # Fork supports: translation and twist held, both bending rotations free.
+    # Leaving RX free at either end would make the strut a torsional mechanism,
+    # which is also the mode 6.3.1.4 is about — the model has to hold it while
+    # the check accounts for it.
+    n1 = Node(0.0, 0.0, 0.0)
+    n1.nodal_support = NodalSupport(
+        displacement_conditions={"X": "Fixed", "Y": "Fixed", "Z": "Fixed"},
+        rotation_conditions={"X": "Fixed", "Y": "Free", "Z": "Free"},
+    )
+    n2 = Node(length, 0.0, 0.0)
+    n2.nodal_support = NodalSupport(
+        displacement_conditions={"X": "Free", "Y": "Fixed", "Z": "Fixed"},
+        rotation_conditions={"X": "Fixed", "Y": "Free", "Z": "Free"},
+    )
+
+    member = Member(start_node=n1, end_node=n2, section=sec, classification="Column")
+    member_set = MemberSet(members=[member], classification="Column")
+    if k_y != 1.0:
+        member_set.effective_length_factor_y = k_y
+    if k_z != 1.0:
+        member_set.effective_length_factor_z = k_z
+    if k_t != 1.0:
+        # The engine resolves the torsional length from buckling_length_t first,
+        # then from torsional restraints, then from the member length - there is
+        # no effective_length_factor_t, so this is set as a length.
+        member_set.buckling_length_t = k_t * length
+    calc.add_member_set(member_set)
+
+    lc = calc.create_load_case(name="N")
+    NodalLoad(node=n2, load_case=lc, magnitude=axial_load, direction=(-1.0, 0.0, 0.0))
+
+    calc.add_load_combination(
+        LoadCombination(
+            name="ULS",
+            load_cases_factors={lc: 1.0},
+            check="ULS",
+            limit_state=LimitState.ULS,
+        )
+    )
+    calc.add_unity_check(
+        ec3_steel_check(
+            check_id,
+            check_name,
+            applies_to=all_members(),
+            limit_state="ULS",
+            gamma_m0=gamma_m0,
+            gamma_m1=gamma_m1,
+            include_buckling=True,
+            # No moment anywhere, so there is nothing for §6.3.2 to check.
+            include_ltb=False,
+        )
+    )
+    return calc
