@@ -124,13 +124,40 @@ def test_effective_length_factor_reaches_the_check():
     scaled.run_analysis()
     plain = check_strut(2.0, sec, material=S390, axial_load=10_000.0)
     plain.run_analysis()
-    # The flexural row is the one the factors act on; the torsional length is
-    # left at the member length, so compare that row rather than the envelope.
+    # k_y/k_z act on the flexural row only; without k_t the torsional length is
+    # still the member length, so only that row is comparable here.
     _, _, rows_scaled = _rows(scaled)
     _, _, rows_plain = _rows(plain)
     assert _f(rows_scaled["Flexural buckling (6.3.1)"], "capacity") == pytest.approx(
         _f(rows_plain["Flexural buckling (6.3.1)"], "capacity"), rel=1e-9
     )
+
+
+def test_k_t_carries_the_torsional_length_too():
+    """With every length factor at 2, a 1 m strut has to reproduce a 2 m strut
+    outright - envelope included, not just the flexural row.
+
+    This is what k_t is for. Scaling k_y and k_z alone leaves 6.3.1.4 forming
+    N_cr,T over the un-scaled member length, and on a channel that row is often
+    the one that governs, so the envelope came out unconservative with no sign
+    that anything had been missed.
+    """
+    # 0.3 m doubled to 0.6 m, the length the test above pins as 6.3.1.4's own -
+    # at 2 m the flexural row governs and k_t would have nothing to move.
+    sec = brace_section()
+    scaled = check_strut(0.3, sec, material=S390, axial_load=10_000.0, k_y=2.0, k_z=2.0, k_t=2.0)
+    scaled.run_analysis()
+    plain = check_strut(0.6, sec, material=S390, axial_load=10_000.0)
+    plain.run_analysis()
+    assert scaled.compression_capacity() == pytest.approx(plain.compression_capacity(), rel=1e-9)
+    _, _, rows = _rows(scaled)
+    assert _f(rows["Governing"], "formula") == "Torsional-flexural buckling (6.3.1.4)"
+
+    # ... and leaving k_t behind really does read higher, so the assertion above
+    # is not passing for want of anything to measure.
+    partial = check_strut(0.3, sec, material=S390, axial_load=10_000.0, k_y=2.0, k_z=2.0)
+    partial.run_analysis()
+    assert partial.compression_capacity() > scaled.compression_capacity()
 
 
 def test_rejects_nonsense_inputs():

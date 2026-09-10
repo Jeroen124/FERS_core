@@ -35,9 +35,12 @@ __all__ = [
     "plate_class",
     "plate_rho",
     "channel_plates",
+    "channel_fibres",
     "i_plates",
     "rhs_plates",
     "effective_section",
+    "FlexuralEffective",
+    "effective_flexural_properties",
     "tube_class",
     "angle_class",
     "buckling_curves",
@@ -126,24 +129,32 @@ class PlateElement:
     def c(self) -> float:
         return math.dist(self.p1, self.p2)
 
-    def effective_segments(self, rho: float) -> List[Tuple[Tuple[float, float], float]]:
-        """`[(midpoint, length), ...]` of the effective parts of this element."""
+    def effective_spans(self, rho: float) -> List[Tuple[Tuple[float, float], Tuple[float, float]]]:
+        """`[(end, end), ...]` of the effective parts of this element.
+
+        Endpoints rather than midpoints, because a second moment needs the
+        direction the flat runs in, not just where its centre sits.
+        """
         c = self.c
         if c <= 0.0:
             return []
         eff = rho * c
         if eff >= c:
-            return [(_mid(self.p1, self.p2), c)]
+            return [(self.p1, self.p2)]
         if self.kind == "outstand":
             a = self.p1 if self.supported_end == 1 else self.p2
             b = self.p2 if self.supported_end == 1 else self.p1
-            end = _along(a, b, eff)
-            return [(_mid(a, end), eff)]
+            return [(a, _along(a, b, eff))]
         # internal: half the effective width against each supported edge
         half = 0.5 * eff
-        e1 = _along(self.p1, self.p2, half)
-        e2 = _along(self.p2, self.p1, half)
-        return [(_mid(self.p1, e1), half), (_mid(self.p2, e2), half)]
+        return [
+            (self.p1, _along(self.p1, self.p2, half)),
+            (self.p2, _along(self.p2, self.p1, half)),
+        ]
+
+    def effective_segments(self, rho: float) -> List[Tuple[Tuple[float, float], float]]:
+        """`[(midpoint, length), ...]` of the effective parts of this element."""
+        return [(_mid(a, b), math.dist(a, b)) for a, b in self.effective_spans(rho)]
 
 
 def _mid(a: Tuple[float, float], b: Tuple[float, float]) -> Tuple[float, float]:
@@ -260,6 +271,131 @@ def _centroid_shift(plates: Sequence[PlateElement], results: Sequence[ElementRes
     return (ey / ea - gy / ga, ez / ea - gz / ga)
 
 
+@dataclass
+class FlexuralEffective:
+    """Bending properties of the effective section, about its own centroid.
+
+    Needed wherever a class 4 compression member is not loaded through the
+    effective centroid: EN 1993-1-1 §6.2.9.3 asks for the added moment
+    `N_Ed * e_N`, and a bolted end connection usually adds a far larger
+    eccentricity of its own. Both are the same calculation once the effective
+    centroid is known, so nothing here is §6.2.9.3-specific.
+
+    `i_eff_*` inherit the true gross second moment, scaled by the reduction the
+    mid-line model measures -- the same construction `a_eff` uses for area, and
+    it holds for the same reason: the mid-line model's systematic error (it
+    ignores the corner arcs, and seats each outstand flat at the web mid-line
+    rather than past the radius) is common to numerator and denominator and
+    cancels in the ratio. `w_eff_*` are minimum moduli, taken to the furthest
+    fibre of the gross outline.
+
+    Axes follow the rest of the module: `i_y = ∫ z^2 dA`, so `w_eff_y` divides
+    `i_eff_y` by a distance measured along z.
+    """
+
+    centroid_gross: Tuple[float, float]
+    centroid_eff: Tuple[float, float]
+    i_eff_y: float
+    i_eff_z: float
+    w_eff_y: float
+    w_eff_z: float
+    reduction_y: float
+    reduction_z: float
+
+
+def _line_props(segs: Sequence[Tuple[Tuple[float, float], Tuple[float, float], float]]):
+    """Area, centroid and centroidal second moments of a set of thin flats.
+
+    Each flat is a rectangle of length `L` and thickness `t`, so its own second
+    moment has a term along the flat (`A L^2/12`, projected onto the axis) and a
+    much smaller one across the thickness (`A t^2/12`, projected the other way).
+    Returns `(area, (cy, cz), i_y, i_z)`, the second moments about the centroid.
+    """
+    a_tot = sy = sz = 0.0
+    for pa, pb, t in segs:
+        length = math.dist(pa, pb)
+        if length <= 0.0:
+            continue
+        a = length * t
+        m = _mid(pa, pb)
+        a_tot += a
+        sy += m[0] * a
+        sz += m[1] * a
+    if a_tot <= 0.0:
+        return 0.0, (0.0, 0.0), 0.0, 0.0
+    cy, cz = sy / a_tot, sz / a_tot
+    i_y = i_z = 0.0
+    for pa, pb, t in segs:
+        length = math.dist(pa, pb)
+        if length <= 0.0:
+            continue
+        a = length * t
+        dy, dz = pb[0] - pa[0], pb[1] - pa[1]
+        m = _mid(pa, pb)
+        i_y += a * dz * dz / 12.0 + a * t * t / 12.0 * (dy / length) ** 2 + a * (m[1] - cz) ** 2
+        i_z += a * dy * dy / 12.0 + a * t * t / 12.0 * (dz / length) ** 2 + a * (m[0] - cy) ** 2
+    return a_tot, (cy, cz), i_y, i_z
+
+
+def effective_flexural_properties(
+    plates: Sequence[PlateElement],
+    eff: EffectiveSection,
+    *,
+    i_y_gross: float,
+    i_z_gross: float,
+    fibre_y: Tuple[float, float],
+    fibre_z: Tuple[float, float],
+    centroid_gross: Optional[Tuple[float, float]] = None,
+) -> FlexuralEffective:
+    """Bending properties of the effective section that `eff` describes.
+
+    Args:
+        plates: the same decomposition `eff` was built from.
+        eff: the result of `effective_section` on those plates.
+        i_y_gross: true gross second moment about local y, in m^4 -- take it
+            from `Section.i_y`, which comes from a meshed analysis and so
+            includes the corner arcs the mid-line model drops.
+        i_z_gross: likewise about local z.
+        fibre_y: `(y_max, y_min)` of the gross outline in the plate frame; see
+            `channel_fibres`.
+        fibre_z: `(z_max, z_min)` of the gross outline in the plate frame.
+        centroid_gross: true gross centroid in the plate frame, when it is
+            known. The effective centroid is then that point plus the shift the
+            mid-line model measures, which is more accurate than the mid-line
+            centroid itself -- the shift is a difference between two readings of
+            the same model, the position is not. Defaults to the mid-line
+            centroid.
+    """
+    gross_segs = [(pl.p1, pl.p2, pl.t) for pl in plates]
+    eff_segs = [(a, b, pl.t) for pl, res in zip(plates, eff.elements) for a, b in pl.effective_spans(res.rho)]
+    _, c_mid_gross, iy_mid_gross, iz_mid_gross = _line_props(gross_segs)
+    _, c_mid_eff, iy_mid_eff, iz_mid_eff = _line_props(eff_segs)
+
+    red_y = iy_mid_eff / iy_mid_gross if iy_mid_gross > 0.0 else 1.0
+    red_z = iz_mid_eff / iz_mid_gross if iz_mid_gross > 0.0 else 1.0
+    i_eff_y = i_y_gross * red_y
+    i_eff_z = i_z_gross * red_z
+
+    base = c_mid_gross if centroid_gross is None else centroid_gross
+    c_eff = (
+        base[0] + (c_mid_eff[0] - c_mid_gross[0]),
+        base[1] + (c_mid_eff[1] - c_mid_gross[1]),
+    )
+
+    d_z = max(abs(fibre_z[0] - c_eff[1]), abs(fibre_z[1] - c_eff[1]))
+    d_y = max(abs(fibre_y[0] - c_eff[0]), abs(fibre_y[1] - c_eff[0]))
+    return FlexuralEffective(
+        centroid_gross=base,
+        centroid_eff=c_eff,
+        i_eff_y=i_eff_y,
+        i_eff_z=i_eff_z,
+        w_eff_y=i_eff_y / d_z if d_z > 0.0 else math.inf,
+        w_eff_z=i_eff_z / d_y if d_y > 0.0 else math.inf,
+        reduction_y=red_y,
+        reduction_z=red_z,
+    )
+
+
 # ── plate decompositions ────────────────────────────────────────────────────
 #
 # Local axes follow the section factories: i_y = sp.iyy_c and i_z = sp.ixx_c, so
@@ -293,6 +429,23 @@ def channel_plates(h: float, b: float, t_f: float, t_w: float, r: float = 0.0) -
             supported_end=1,
         ),
     ]
+
+
+def channel_fibres(
+    h: float, b: float, t_f: float, t_w: float
+) -> Tuple[Tuple[float, float], Tuple[float, float]]:
+    """Extreme fibres of a plain channel's TRUE outline, in the plate frame.
+
+    `channel_plates` puts the web mid-line at `z = 0` and the flange mid-lines at
+    `y = +-(h - t_f)/2`. The physical outline reaches further: `+-h/2` in y, and
+    from the back of the web at `-t_w/2` out to the flange tip at `b - t_w/2`.
+    An elastic modulus is taken to the extreme fibre of the gross outline even
+    when part of that outline has been discounted from the effective area, so
+    these are the distances `effective_flexural_properties` needs.
+
+    Returns `((y_max, y_min), (z_max, z_min))`.
+    """
+    return ((0.5 * h, -0.5 * h), (b - 0.5 * t_w, -0.5 * t_w))
 
 
 def i_plates(h: float, b: float, t_f: float, t_w: float, r: float = 0.0) -> List[PlateElement]:
