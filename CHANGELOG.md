@@ -1,5 +1,163 @@
 # Changelog
 
+## 0.1.93
+
+Pins engine `fers_calculations==0.2.64`.
+
+The solver consumes `Section.ec3` but never derives it, and nothing in this
+package supplied it: every section reached an EN 1993-1-1 check carrying no
+class and no buckling curve, so the solver defaulted the curve to b and inferred
+class 1 from the presence of `wpl_y`. For a channel the curve is c, and a 3 mm
+cold-formed one is class 4 — the gross area overstates it by 11%. This release
+closes that, and then goes one step further into what actually limits a
+cold-formed member.
+
+### Added — a section arrives already classified
+
+`fers_core/members/ec3_section.py` does the missing step from a mid-line plate
+decomposition of the parametric profiles: EN 1993-1-1 Table 5.2 classification,
+EN 1993-1-5 §4.4 effective widths, the §6.2.9.3 centroid shift `e_N`, and
+Table 6.2 buckling curves. Wired into eight `Section` factories, which now also
+take a `fabrication` argument — for a hollow section the hot-finished versus
+cold-formed split is curve a versus curve c, which is not a detail.
+
+```python
+sec = Section.create_u_section(
+    "C 80x50x3", S390, h=0.080, b=0.050, t_f=0.003, t_w=0.003, r=0.003,
+    fabrication="cold_formed",
+    classify_for="compression",   # opt-in; see below
+)
+sec.ec3["section_class"]      # 4
+sec.ec3["buckling_curve_y"]   # "C"
+sec.ec3["a_eff"]              # 473.9e-6, against a gross 525.9e-6
+```
+
+Classification is opt-in through `classify_for` because it is a property of the
+stress distribution, not of the section: an IPE600 web is class 4 in uniform
+compression (33·eps) and class 1 in bending (72·eps), while
+`Section.ec3.section_class` is one field the solver uses for both. Emitting the
+compression class by default would have made the solver demand effective moduli
+for ordinary beam checks on 28 of the 348 catalogue sections. Buckling curves do
+not depend on the stress state and are always emitted.
+
+CHS gets its class but no `a_eff`, on purpose: a class 4 tube is EN 1993-1-6,
+not an effective width.
+
+### Added — bending properties of the effective section
+
+`effective_flexural_properties` returns the effective section's second moments
+and minimum elastic moduli about its own — shifted — centroid, with
+`channel_fibres` supplying the outline a modulus is measured to. `i_eff`
+inherits the true gross second moment scaled by the reduction the mid-line model
+measures, the same construction `a_eff` uses for area and sound for the same
+reason: the mid-line model's systematic error is common to numerator and
+denominator and cancels in the ratio.
+
+This is what makes `e_N` usable rather than merely computed. Note that the
+effective section here is the uniform-compression one, which discounts more of
+an outstand than a bending stress pattern would; using its modulus for the added
+moment is therefore conservative.
+
+### Added — EN 1993-1-3 §8.3 bolted connections in thin sheet
+
+`fers_core/members/ec3_connection.py`. A cold-formed member is rarely limited by
+the member: it is bolted through one of its own walls, and the bearing
+resistance of a 2 or 3 mm sheet together with the eccentricity from the bolt
+line to the centroid routinely govern well below the §6.3 buckling resistance.
+
+```python
+lap = BoltedLap(d=0.012, t=0.003, f_u=460e6, e1=0.025, e2=0.040)
+connection_resistance(lap).value            # 23.0 kN, bearing-governed
+eccentric_compression_capacity(n_b_rd, w_eff=..., f_y=..., e=0.010)
+```
+
+Bearing per Table 8.4 with its `k_t` and end-distance term, bolt shear per
+EN 1993-1-8 §3.6, and a net-section resistance that applies in tension only —
+in compression the bolt fills the hole. The detailing limits the table assumes,
+and the §8.3(5) ductility rule, are reported rather than raised.
+
+`eccentric_compression_capacity` measures the offset to the **effective**
+centroid, which folds §6.2.9.3 into the same calculation instead of adding it
+twice: a load applied at the gross centroid leaves `e = |e_N|` and recovers
+§6.2.9.3 exactly, while a load applied at a bolt line further out simply has a
+larger `e`. The interaction is the conservative linear one; §6.3.3 would relieve
+it.
+
+Block tearing and the shear/tension interaction on the bolt are out of scope and
+say so.
+
+### Added — `check_strut` and `FERS.compression_capacity`
+
+The compression counterpart to `check_beam`: a fork-supported strut carrying
+pure axial load, so §6.3.1 and §6.3.1.4 are the checks that decide it. Since no
+sub-check has a moment in it, every one is linear in the axial force and the
+allowable follows from a single solve rather than an iteration.
+
+```python
+strut = check_strut(2.5, sec, material=S390, axial_load=10_000.0)
+strut.run_analysis()
+strut.compression_capacity()   # 34.98 kN
+```
+
+`MemberSet` also gains the six buckling-length fields it was missing, and the
+section export carries `i_yz`, `principal_axis_angle` and `ec3` through to
+consumers.
+
+### Fixed — the shear centre was stored on the wrong axis
+
+`_extract_advanced_props` wrote `sp.x_se` to `y_s` and `sp.y_se` to `z_s`. Every
+factory stores `i_y = sp.iyy_c` and `i_z = sp.ixx_c`, which pins FERS local z to
+the sectionproperties x direction, so the two were crossed. The solver reads
+`y_s`/`z_s` for the §6.3.1.4 cubic, where an offset along one axis couples
+torsion with the mode that deflects along the other — so this coupled the wrong
+mode for every mono-symmetric section. An 80x50x3 channel has its shear centre
+32.3 mm out along local z with nothing on local y, and was stored the other way
+round.
+
+`centroid_y`/`centroid_z` are crossed the same way and are deliberately left
+alone: the solver never reads them, they only offset the viewer's extrusion, and
+moving rendered geometry needs its own visual check.
+
+### Fixed — `principal_axis_angle` was in the wrong units, and the wrong angle
+
+It was `math.degrees(sp.phi)`, but sectionproperties reports `phi` in degrees
+already — an equal angle gives -135.0, which came out as -7734.9. Even
+unconverted it would not have worked: the solver decides whether `i_y`/`i_z` are
+centroidal by matching the stored angle against its own Mohr angle,
+`0.5*atan2(-2*I_yz, I_y - I_z)`, which for that same section is +45. -135 names
+the same axis but fails the comparison, so the rotation was skipped and the
+centroidal pair used as if it were principal — 177 cm4 standing in for 73 cm4 on
+an L 100x100x10, a factor 2.4 on `N_cr`, unconservative. It is now computed from
+the same two quantities the solver compares against, so the match is true by
+construction and the engine's principal-axis fix actually fires.
+
+### Fixed — `check_strut` can set the torsional buckling length
+
+`k_y` and `k_z` were exposed but nothing set `MemberSet.buckling_length_t`, so
+§6.3.1.4 kept forming `N_cr,T` over the un-scaled member length. On a channel
+that row is often the one that governs, so the envelope came out unconservative
+with nothing in the output to say so. `check_strut` now takes `k_t`, kept
+separate from `k_y`/`k_z` because torsional restraint comes from what holds the
+section against twisting, not from what holds it against deflecting.
+
+### Fixed — the `tests/members` stubs no longer leak into the rest of the run
+
+`tests/members/conftest.py` installs empty `sys.modules` entries for
+`fers_calculations`, `ujson` and `pyvista` so the geometric unit tests can run
+without a solver. Its `not in sys.modules` guard was not enough: at
+`pytest_configure` time nothing has imported those yet, so the stubs won on a
+machine that had the real packages, and then stayed for the whole session.
+`pytest tests/members tests/functionality` failed with `module 'ujson' has no
+attribute 'dumps'` while either directory passed on its own. A stub is now
+installed only where the real package cannot be imported.
+
+## 0.1.92
+
+Pins engine `fers_calculations==0.2.63`, which stops a load case carrying
+moments but no forces from silently swallowing the moment, and stops a
+non-converged nonlinear solve reporting itself as converged. Nothing in this
+package's API moves.
+
 ## 0.1.91
 
 Pins engine `fers_calculations==0.2.62`. Nothing in this package's API moves.
