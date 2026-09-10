@@ -61,7 +61,7 @@ from .results.member import MemberResult
 from .results.nodes import NodeDisplacement, NodeForces, ReactionNodeResult
 from .cloud import FersCloudClient
 from .sections.steel_sections_en import resolve_section, list_sections
-from .builders import create_beam, check_beam
+from .builders import create_beam, check_beam, check_strut
 
 
 def __getattr__(name: str):
@@ -151,5 +151,6 @@ __all__ = [
     "SwayImperfection",
     "TranslationImperfection",
     "check_beam",
+    "check_strut",
     "create_beam",
 ]

@@ -23,6 +23,12 @@ class MemberSet:
         classification: Optional[str] = None,
         buckling_restraints: Optional[list[BucklingRestraint]] = None,
         id: Optional[int] = None,
+        buckling_length_y: Optional[float] = None,
+        buckling_length_z: Optional[float] = None,
+        ltb_length: Optional[float] = None,
+        buckling_length_t: Optional[float] = None,
+        effective_length_factor_y: Optional[float] = None,
+        effective_length_factor_z: Optional[float] = None,
     ):
         self.id = id or MemberSet._member_set_counter
         if id is None:
@@ -32,18 +38,41 @@ class MemberSet:
         self.members = members if members is not None else []
         self.buckling_restraints = buckling_restraints if buckling_restraints is not None else []
         self.classification = classification
+        # Buckling-length control for the EN 1993-1-1 §6.3 checks. Precedence per
+        # axis, as the solver applies it: an explicit length wins, then an
+        # effective-length factor, then `buckling_restraints` spacing, then the
+        # member length. Note the factor multiplies the individual FE member's
+        # length, so on a split chain prefer an explicit length or restraints.
+        self.buckling_length_y = buckling_length_y
+        self.buckling_length_z = buckling_length_z
+        self.ltb_length = ltb_length
+        self.buckling_length_t = buckling_length_t
+        self.effective_length_factor_y = effective_length_factor_y
+        self.effective_length_factor_z = effective_length_factor_z
 
     @classmethod
     def reset_counter(cls):
         cls._member_set_counter = 1
 
     def to_dict(self):
-        return {
+        d = {
             "id": self.id,
             "classification": self.classification,
             "member_ids": self.members_id,
             "buckling_restraints": [br.to_dict() for br in self.buckling_restraints],
         }
+        for key in (
+            "buckling_length_y",
+            "buckling_length_z",
+            "ltb_length",
+            "buckling_length_t",
+            "effective_length_factor_y",
+            "effective_length_factor_z",
+        ):
+            value = getattr(self, key)
+            if value is not None:
+                d[key] = value
+        return d
 
     @classmethod
     def from_dict(
