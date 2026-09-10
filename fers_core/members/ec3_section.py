@@ -437,6 +437,8 @@ def ec3_params(
     eff: Optional[EffectiveSection],
     curves: Tuple[str, str, Optional[str]],
     section_class: Optional[int] = None,
+    *,
+    classify: bool = True,
 ) -> dict:
     """Build a `Section.ec3` block from a classification result and curve set.
 
@@ -446,9 +448,15 @@ def ec3_params(
     `a_eff` is emitted only for a class 4 section: for classes 1-3 the effective
     area equals the gross one, and sending it anyway would make the solver
     substitute a rounded copy of a number it already has.
+
+    With `classify=False` only the buckling curves go out. Those do not depend on
+    the stress distribution, whereas the class does — see `section_ec3`.
     """
     curve_y, curve_z, curve_lt = curves
     cls = section_class if section_class is not None else (eff.section_class if eff else None)
+    if not classify:
+        cls = None
+        eff = None
     out: dict = {
         "buckling_curve_y": curve_y.upper(),
         "buckling_curve_z": curve_z.upper(),
@@ -475,6 +483,7 @@ def section_ec3(
     t_w: Optional[float] = None,
     r: float = 0.0,
     d: Optional[float] = None,
+    classify_for: Optional[str] = None,
 ) -> Tuple[dict, Optional[EffectiveSection]]:
     """`(ec3_block, effective_section_or_None)` for a parametric profile.
 
@@ -482,19 +491,41 @@ def section_ec3(
     the plate decomposition. A CHS gets its class but no `a_eff` — a class 4 tube
     is EN 1993-1-6, not an effective width, and inventing one would be worse than
     leaving it out.
+
+    `classify_for` decides whether a class and an effective area are emitted at
+    all, and it defaults to **off** on purpose. Classification is a property of
+    the stress distribution, not of the section: an IPE600 web is class 4 under
+    uniform compression and class 1 in bending (Table 5.2 allows 33·eps against
+    72·eps), while `Section.ec3.section_class` is a single field the solver uses
+    for both. Stamping the compression class onto a section that will be used as
+    a beam would have the solver demand effective moduli for a check that never
+    needed them — 28 of the 348 catalogue sections are affected.
+
+    So the buckling curves, which do not depend on the stress state, are always
+    emitted; the class and `a_eff` only when the caller says how the member is
+    loaded. Pass ``classify_for="compression"`` for a strut or a brace.
     """
+    if classify_for not in (None, "compression"):
+        raise ValueError(
+            "classify_for must be None or 'compression'; bending classification "
+            "(EN 1993-1-1 Table 5.2 with psi < 1) is not implemented"
+        )
+    classify = classify_for == "compression"
     curves = buckling_curves(kind, fabrication, f_y, h=h, b=b, t_f=t_f)
     tf = t_f if t_f is not None else t
     tw = t_w if t_w is not None else t
 
     if kind in ("chs", "tube"):
         if d is None or t is None:
-            return ec3_params(None, curves), None
-        return ec3_params(None, curves, section_class=tube_class(d, t, f_y)), None
+            return ec3_params(None, curves, classify=classify), None
+        return (
+            ec3_params(None, curves, section_class=tube_class(d, t, f_y), classify=classify),
+            None,
+        )
 
     if kind in ("angle", "l"):
         if h is None or b is None or t is None:
-            return ec3_params(None, curves), None
+            return ec3_params(None, curves, classify=classify), None
         cls = angle_class(h, b, t, f_y)
         eff = effective_section(angle_plates(h, b, t, r), a_gross, f_y)
         # Table 5.2 sheet 3 is the classification authority for an angle; the
@@ -502,10 +533,10 @@ def section_ec3(
         eff.section_class = cls
         if cls < 4:
             eff.a_eff = a_gross
-        return ec3_params(eff, curves, section_class=cls), eff
+        return ec3_params(eff, curves, section_class=cls, classify=classify), eff
 
     if h is None or b is None or tf is None or tw is None:
-        return ec3_params(None, curves), None
+        return ec3_params(None, curves, classify=classify), None
 
     if kind in ("channel", "u"):
         plates = channel_plates(h, b, tf, tw, r)
@@ -514,7 +545,7 @@ def section_ec3(
     elif kind in ("i", "h", "ipe", "hea", "heb", "hem"):
         plates = i_plates(h, b, tf, tw, r)
     else:
-        return ec3_params(None, curves), None
+        return ec3_params(None, curves, classify=classify), None
 
     eff = effective_section(plates, a_gross, f_y)
-    return ec3_params(eff, curves), eff
+    return ec3_params(eff, curves, classify=classify), eff
