@@ -282,9 +282,12 @@ def check_strut(
         length: System length in metres. With no `buckling_restraints` on the set
             this is also the buckling length, scaled by `k_y`/`k_z`.
         section: A :class:`Section`, or a European section name (e.g. ``"IPE300"``).
-            Build it from one of the ``Section.create_*`` factories to get the
-            section class, buckling curves and effective area derived for you —
-            without them the solver defaults every curve to b and infers class 1.
+            Build it from one of the ``Section.create_*`` factories with
+            ``classify_for="compression"`` to get the section class, buckling
+            curves and effective area derived for you. Classification is opt-in
+            because it depends on the stress state — the same web can be class 4
+            in compression and class 1 in bending — and without it the solver
+            defaults every curve to b and infers class 1 from ``wpl_y``.
         material: A :class:`Material` or a grade name (``"S235"`` … ``"S460"``).
         axial_load: Compression in newtons. Any positive value works; the
             utilization scales linearly with it.

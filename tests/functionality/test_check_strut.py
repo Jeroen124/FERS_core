@@ -21,6 +21,9 @@ def brace_section():
         t_w=0.003,
         r=0.003,
         fabrication="cold_formed",
+        # Classification depends on the stress state, so it is opt-in. This
+        # section is going into a strut.
+        classify_for="compression",
     )
 
 

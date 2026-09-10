@@ -180,21 +180,43 @@ class Section:
         except (AttributeError, TypeError, IndexError):
             props["a_sy"] = None
             props["a_sz"] = None
-        # Principal axis angle: rotation from centroidal to principal axes (degrees).
-        # Non-zero when the section has a product of inertia (Iyz ≠ 0).
-        try:
-            import math
-
-            phi_rad = float(sp.phi)  # sectionproperties stores angle in radians
-            props["principal_axis_angle"] = math.degrees(phi_rad) if abs(phi_rad) > 1e-10 else None
-        except (AttributeError, TypeError):
-            props["principal_axis_angle"] = None
-        # Product of inertia about centroidal axes
+        # Product of inertia about the centroidal axes. Under the factories'
+        # mapping (i_y = iyy_c, i_z = ixx_c, so FERS y is the sectionproperties y
+        # direction and FERS z its x), I_yz = int(y*z dA) is exactly ixy_c.
         try:
             ixy_c = float(sp.ixy_c)
             props["i_yz"] = ixy_c if abs(ixy_c) > 1e-10 else None
         except (AttributeError, TypeError):
+            ixy_c = None
             props["i_yz"] = None
+
+        # Principal axis angle, in degrees.
+        #
+        # Derived here rather than read from sp.phi, for two reasons. sp.phi is
+        # already in DEGREES (an angle section reports -135.0), so the old
+        # math.degrees() call turned it into -7734.9. And even unconverted it
+        # would not do: the solver decides whether i_y/i_z are centroidal by
+        # checking this angle against its own Mohr angle
+        # theta = 0.5*atan2(-2*I_yz, I_y - I_z), which for that same angle is
+        # +45 deg. -135 names the same axis but fails the comparison, so the
+        # rotation is skipped and the CENTROIDAL pair is used as if it were
+        # principal - for an L 100x100x10 that is 177 cm4 in place of 73 cm4,
+        # a factor 2.4 on N_cr in the unconservative direction.
+        #
+        # Computing it from the same two quantities the solver compares against
+        # makes the match true by construction.
+        try:
+            import math
+
+            if ixy_c is None or props["i_yz"] is None:
+                props["principal_axis_angle"] = None
+            else:
+                i_y = float(sp.iyy_c)
+                i_z = float(sp.ixx_c)
+                theta = 0.5 * math.atan2(-2.0 * ixy_c, i_y - i_z)
+                props["principal_axis_angle"] = math.degrees(theta)
+        except (AttributeError, TypeError):
+            props["principal_axis_angle"] = None
         # Centroid coordinates within the shape path coordinate system.
         #
         # KNOWN: these are crossed the same way y_s/z_s were (cx belongs on
@@ -284,6 +306,7 @@ class Section:
         data: dict,
         materials_by_id: dict[int, Material],
         shapepaths_by_id: dict[int, "ShapePath"],
+        classify_for: Optional[str] = None,
     ) -> "Section":
         material_id = data.get("material")
         material = materials_by_id[material_id] if material_id is not None else None
@@ -327,6 +350,7 @@ class Section:
         t_f: float,
         t_w: float,
         r: float,
+        classify_for: Optional[str] = None,
     ) -> "Section":
         """
         Static method to create an IPE section.
@@ -356,7 +380,16 @@ class Section:
 
         _area = float(analysis_section.section_props.area)
         _ec3, _ = section_ec3(
-            "i", material.yield_stress, _area, fabrication="hot_rolled", h=h, b=b, t_f=t_f, t_w=t_w, r=r
+            "i",
+            material.yield_stress,
+            _area,
+            fabrication="hot_rolled",
+            h=h,
+            b=b,
+            t_f=t_f,
+            t_w=t_w,
+            r=r,
+            classify_for=classify_for,
         )
 
         return Section(
@@ -383,6 +416,7 @@ class Section:
         t_w: float,
         r: float,
         fabrication: str = "hot_rolled",
+        classify_for: Optional[str] = None,
     ) -> "Section":
         """
         Static method to create a U (channel) section with uniform thickness t.
@@ -420,7 +454,16 @@ class Section:
 
         _area = float(analysis_section.section_props.area)
         _ec3, _ = section_ec3(
-            "channel", material.yield_stress, _area, fabrication=fabrication, h=h, b=b, t_f=t_f, t_w=t_w, r=r
+            "channel",
+            material.yield_stress,
+            _area,
+            fabrication=fabrication,
+            h=h,
+            b=b,
+            t_f=t_f,
+            t_w=t_w,
+            r=r,
+            classify_for=classify_for,
         )
 
         return Section(
@@ -445,6 +488,7 @@ class Section:
         thickness: float,
         n: int = 64,
         fabrication: str = "hot_finished",
+        classify_for: Optional[str] = None,
     ) -> "Section":
         """
         Static method to create a Circular Hollow Section (CHS).
@@ -481,7 +525,13 @@ class Section:
 
         _area = float(analysis_section.section_props.area)
         _ec3, _ = section_ec3(
-            "chs", material.yield_stress, _area, fabrication=fabrication, d=diameter, t=thickness
+            "chs",
+            material.yield_stress,
+            _area,
+            fabrication=fabrication,
+            d=diameter,
+            t=thickness,
+            classify_for=classify_for,
         )
 
         return Section(
@@ -507,6 +557,7 @@ class Section:
         t_f: float,
         t_w: float,
         r: float,
+        classify_for: Optional[str] = None,
     ) -> "Section":
         """
         Static method to create an HE (wide-flange H) section.
@@ -554,7 +605,16 @@ class Section:
 
         _area = float(analysis_section.section_props.area)
         _ec3, _ = section_ec3(
-            "i", material.yield_stress, _area, fabrication="hot_rolled", h=h, b=b, t_f=t_f, t_w=t_w, r=r
+            "i",
+            material.yield_stress,
+            _area,
+            fabrication="hot_rolled",
+            h=h,
+            b=b,
+            t_f=t_f,
+            t_w=t_w,
+            r=r,
+            classify_for=classify_for,
         )
 
         return Section(
@@ -599,6 +659,7 @@ class Section:
         t: float,
         r_out: float = 0.0,
         fabrication: str = "hot_finished",
+        classify_for: Optional[str] = None,
     ) -> "Section":
         """
         Create a Rectangular Hollow Section (RHS). Also suitable for SHS when h == b.
@@ -633,7 +694,15 @@ class Section:
 
         _area = float(analysis_section.section_props.area)
         _ec3, _ = section_ec3(
-            "rhs", material.yield_stress, _area, fabrication=fabrication, h=h, b=b, t=t, r=r_out
+            "rhs",
+            material.yield_stress,
+            _area,
+            fabrication=fabrication,
+            h=h,
+            b=b,
+            t=t,
+            r=r_out,
+            classify_for=classify_for,
         )
 
         return Section(
@@ -658,6 +727,7 @@ class Section:
         t: float,
         r_out: float = 0.0,
         fabrication: str = "hot_finished",
+        classify_for: Optional[str] = None,
     ) -> "Section":
         """
         Create a Square Hollow Section (SHS). Convenience wrapper around create_rhs.
@@ -680,6 +750,7 @@ class Section:
             t=t,
             r_out=r_out,
             fabrication=fabrication,
+            classify_for=classify_for,
         )
 
     @staticmethod
@@ -691,6 +762,7 @@ class Section:
         t: float,
         r_root: float = 0.0,
         r_toe: float = 0.0,
+        classify_for: Optional[str] = None,
     ) -> "Section":
         """
         Create an angle (L) section.
@@ -735,7 +807,15 @@ class Section:
 
         _area = float(analysis_section.section_props.area)
         _ec3, _ = section_ec3(
-            "angle", material.yield_stress, _area, fabrication="hot_rolled", h=h, b=b, t=t, r=r_root
+            "angle",
+            material.yield_stress,
+            _area,
+            fabrication="hot_rolled",
+            h=h,
+            b=b,
+            t=t,
+            r=r_root,
+            classify_for=classify_for,
         )
 
         return Section(
@@ -760,6 +840,7 @@ class Section:
         b: float,
         t_f: float,
         t_w: float,
+        classify_for: Optional[str] = None,
     ) -> "Section":
         """
         Create a welded I-section (no root radius). Built from plates.
@@ -800,7 +881,15 @@ class Section:
 
         _area = float(analysis_section.section_props.area)
         _ec3, _ = section_ec3(
-            "i", material.yield_stress, _area, fabrication="welded", h=h, b=b, t_f=t_f, t_w=t_w
+            "i",
+            material.yield_stress,
+            _area,
+            fabrication="welded",
+            h=h,
+            b=b,
+            t_f=t_f,
+            t_w=t_w,
+            classify_for=classify_for,
         )
 
         return Section(
@@ -826,6 +915,7 @@ class Section:
         lip: float,
         t: float,
         r_out: float = 0.0,
+        classify_for: Optional[str] = None,
     ) -> "Section":
         """
         Create a cold-formed steel C-section (lipped channel).
@@ -877,6 +967,7 @@ class Section:
             t_f=t,
             t_w=t,
             r=r_out,
+            classify_for=classify_for,
         )
 
         return Section(
@@ -903,6 +994,7 @@ class Section:
         lip: float,
         t: float,
         r_out: float = 0.0,
+        classify_for: Optional[str] = None,
     ) -> "Section":
         """
         Create a cold-formed steel Z-section (lipped zed).
