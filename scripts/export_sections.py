@@ -50,6 +50,17 @@ _GEOM_KEYS = [
     "wagner_coeff",
     "centroid_y",
     "centroid_z",
+    # Asymmetric sections: without these the consumer sees the CENTROIDAL pair as
+    # if it were principal, and every buckling check downstream is formed about
+    # axes the section does not have. An L 100x100x10 stores I_y = I_z = 177 cm4
+    # while its weak principal value is 73 cm4.
+    "i_yz",
+    "principal_axis_angle",
+    # EN 1993-1-1 design parameters. Without them the solver defaults every
+    # buckling curve to b - wrong for a channel (c) and for a cold-formed hollow
+    # section (c) - and infers class 1 from the presence of wpl_y, which silently
+    # bypasses the class 4 guard for the whole catalogue.
+    "ec3",
 ]
 
 _DEFAULT_OUT = "fers_core/sections/steel_sections.generated.json"
@@ -76,9 +87,10 @@ def main() -> int:
         "_generated_by": "fers_core scripts/export_sections.py",
         "_units": "SI (metres; area m^2; second moments m^4; warping m^6)",
         "_note": (
-            "Geometry + elastic/plastic section moduli (wel/wpl). EC3 params "
-            "(buckling curves, section class) are NOT included — the solver "
-            "defaults the class from wpl presence and buckling curves to B."
+            "Geometry, elastic/plastic section moduli (wel/wpl), the product of "
+            "inertia and principal-axis angle where the section has one, and the "
+            "EN 1993-1-1 `ec3` block (section class, buckling curves, and a_eff "
+            "for a class 4 section) derived by fers_core.members.ec3_section."
         ),
         "sections": result,
     }
