@@ -258,6 +258,7 @@ def check_strut(
     axial_load: float = 1.0,
     k_y: float = 1.0,
     k_z: float = 1.0,
+    k_t: float = 1.0,
     gamma_m0: float = 1.0,
     gamma_m1: float = 1.0,
     check_id: str = "ec3",
@@ -293,6 +294,13 @@ def check_strut(
             utilization scales linearly with it.
         k_y: Effective-length factor about local y (`L_cr,y = k_y * length`).
         k_z: Effective-length factor about local z.
+        k_t: Effective-length factor for twist (`L_T = k_t * length`), which
+            §6.3.1.4 forms `N_cr,T` from. It is deliberately separate from
+            `k_y`/`k_z`: torsional restraint comes from what holds the section
+            against twisting, not from what holds it against deflecting, and a
+            member braced about one bending axis is routinely unbraced against
+            twist. Left at 1.0 the torsional length is the member length, which
+            is what the fork supports this builder applies actually provide.
         gamma_m0: Partial factor for cross-section resistance.
         gamma_m1: Partial factor for member buckling resistance.
         check_id: Identifier for the unity check.
@@ -334,6 +342,11 @@ def check_strut(
         member_set.effective_length_factor_y = k_y
     if k_z != 1.0:
         member_set.effective_length_factor_z = k_z
+    if k_t != 1.0:
+        # The engine resolves the torsional length from buckling_length_t first,
+        # then from torsional restraints, then from the member length - there is
+        # no effective_length_factor_t, so this is set as a length.
+        member_set.buckling_length_t = k_t * length
     calc.add_member_set(member_set)
 
     lc = calc.create_load_case(name="N")
