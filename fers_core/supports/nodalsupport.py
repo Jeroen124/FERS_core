@@ -54,7 +54,8 @@ class NodalSupport:
         Accepts:
           - SupportCondition instances
           - numeric (int|float) -> spring with that stiffness
-          - strings: "Fixed", "Free", "Positive-only", "Negative-only" (case-insensitive)
+          - strings: "Fixed", "Free", "PositiveOnly", "NegativeOnly" (case-insensitive;
+            the hyphenated spellings are still accepted)
         """
         # Start with all FIXED
         normalized: Dict[str, SupportCondition] = {d: SupportCondition.fixed() for d in self.DIRECTIONS}
@@ -106,16 +107,21 @@ class NodalSupport:
                     f"Use SupportCondition.spring_curve(depends_on, points) "
                     f"or pass a list of [force_value, stiffness] pairs."
                 )
+            # Both spellings, because the canonical one changed: `to_dict()`
+            # now emits "PositiveOnly" to match the solver contract, and a
+            # string read back out of a dumped model has to keep working.
             mapping = {
                 "fixed": SupportCondition.fixed(),
                 "free": SupportCondition.free(),
+                "positiveonly": SupportCondition.positive_only(),
                 "positive-only": SupportCondition.positive_only(),
+                "negativeonly": SupportCondition.negative_only(),
                 "negative-only": SupportCondition.negative_only(),
             }
             if name not in mapping:
                 raise ValueError(
                     f"Direction '{direction}': unknown condition string '{value}'. "
-                    f"Supported: Fixed, Free, Positive-only, Negative-only, "
+                    f"Supported: Fixed, Free, PositiveOnly, NegativeOnly, "
                     f"numeric stiffness, list (spring_curve)"
                 )
             return mapping[name]
