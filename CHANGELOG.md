@@ -1,5 +1,68 @@
 # Changelog
 
+## 0.1.94
+
+Pins engine `fers_calculations==0.2.65`.
+
+### Fixed — the SDK could not run any one-way support model
+
+`SupportConditionType` is written twice, and the two spellings disagreed. The
+hand-written enum here emitted `"Positive-only"` / `"Negative-only"`; the enum
+generated from the solver's OpenAPI into `fers_core/types/pydantic_models.py`
+accepts only `"PositiveOnly"` / `"NegativeOnly"`.
+
+The Rust engine takes both, because the variants carry serde aliases — but a
+serde alias is not part of the OpenAPI document utoipa derives, so the generated
+schema never learned about it. `run_analysis()` and `run_analysis_to_file()` both
+pre-validate against that schema, so both refused **every** model containing a
+`PositiveOnly` or `NegativeOnly` condition, including the `ground_contact_y`
+preset the MCP tools hand out:
+
+```
+ValueError: FERS model does not conform to the solver input schema:
+1 validation error for FERS
+model.nodal_supports.1.Y.condition_type
+  Input should be 'Fixed', 'Free', 'Spring', 'PositiveOnly' or 'NegativeOnly'
+  [type=enum, input_value='Positive-only', input_type=str]
+```
+
+It read like the caller had passed something wrong. The caller had passed
+`SupportCondition.positive_only()`.
+
+`validate_schema` was doing exactly the job its docstring claims — catching
+drift between a hand-written `to_dict()` and the schema, "wrong enum value"
+included. The check was right; the drift was real. Anything driving the engine
+directly was unaffected, which is why this went unnoticed.
+
+The two values are now the canonical variant names.
+
+### Fixed — a condition string read back out of a dumped model still loads
+
+`to_dict()` now emits `"PositiveOnly"`, and `NodalSupport(displacement_conditions=
+{"Y": "PositiveOnly"})` has to keep working, so `_coerce_condition` accepts the
+compact spelling alongside the hyphenated one. Without this the canonical change
+would have broken exactly the round trip it was meant to fix. `from_dict` already
+normalised `"positive-only" | "positiveonly" | "pos-only" | "pos"`, so JSON
+written before this release is unaffected either way.
+
+### Tests — the class, not the instance
+
+`tests/functionality/test_schema_conformance.py` was written for this family of
+bug: its docstring names "a hand-written `to_dict()` drifting from the solver
+contract". It had no `SupportConditionType` case. It now has three:
+
+- every member of the hand-written enum must survive `validate_schema()` on a
+  model that uses it — parametrised over the enum, so a new variant is covered
+  the day it is added;
+- the two enums must be the same **set**. The model-shaped test catches a value
+  the schema refuses; this catches the other direction, a value the schema would
+  accept that the SDK no longer emits, which no model-shaped test can see because
+  you cannot build a model out of a variant you do not have;
+- both spellings round-trip through `from_dict` and through the constructor.
+
+Verified failing against the old enum before the fix — two parametrised cases and
+the set comparison — and passing after. 482 tests pass against the pinned engine.
+
 ## 0.1.93
 
 Pins engine `fers_calculations==0.2.64`.
