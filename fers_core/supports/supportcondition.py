@@ -10,8 +10,8 @@ class SupportConditionType(Enum):
     FIXED = "Fixed"
     FREE = "Free"
     SPRING = "Spring"
-    POSITIVE_ONLY = "Positive-only"
-    NEGATIVE_ONLY = "Negative-only"
+    POSITIVE_ONLY = "PositiveOnly"
+    NEGATIVE_ONLY = "NegativeOnly"
 
 
 class SupportCondition:
