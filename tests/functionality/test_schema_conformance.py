@@ -11,7 +11,10 @@ import os
 import pytest
 
 from fers_core import FERS, Node, Member, MemberSet, NodalSupport, NodalLoad
-from fers_core.supports.supportcondition import SupportCondition
+from fers_core.supports.supportcondition import SupportCondition, SupportConditionType
+from fers_core.types.pydantic_models import (
+    SupportConditionType as GeneratedSupportConditionType,
+)
 from fers_core.supports.stiffness_curve import ForceComponent
 from fers_core.unity_checks import (
     generic_check,
@@ -108,3 +111,83 @@ class _BadEnum:
     """Stand-in whose serialized value is not a valid AnalysisOrder."""
 
     value = "TotallyNotAnOrder"
+
+
+@pytest.mark.parametrize(
+    "condition_type",
+    list(SupportConditionType),
+    ids=[c.name for c in SupportConditionType],
+)
+def test_every_support_condition_type_conforms(condition_type):
+    """Every hand-written SupportConditionType must survive the schema check.
+
+    This is the property that broke. ``SupportConditionType`` is written twice --
+    by hand here, and generated from the solver's OpenAPI into
+    ``types/pydantic_models.py`` -- and the two spellings disagreed:
+    ``to_dict()`` emitted ``"Positive-only"`` where the generated schema accepts
+    only ``"PositiveOnly"``. The Rust engine takes both, because the variants
+    carry serde aliases, but a serde alias is not part of the OpenAPI document
+    utoipa derives, so the SDK's own pre-flight rejected a payload its own engine
+    would have solved. ``run_analysis()`` and ``run_analysis_to_file()`` both
+    pre-validate, so every one-way model was refused through the documented API
+    -- including the ``ground_contact_y`` preset the MCP tools hand out.
+
+    Stated over the whole enum rather than over the two values that were wrong,
+    because the instance is cheap to fix and the class is what keeps coming back.
+    """
+    steel = build_steel_s235()
+    sec = build_ipe180(steel)
+    m = FERS()
+    n1 = Node(0.0, 0.0, 0.0)
+    n2 = Node(5.0, 0.0, 0.0)
+    n1.nodal_support = NodalSupport()
+
+    # SPRING needs a stiffness to be a well-formed condition at all; the rest
+    # are complete on their own.
+    if condition_type is SupportConditionType.SPRING:
+        condition = SupportCondition.spring(1.0e5)
+    else:
+        condition = SupportCondition(condition_type)
+    n2.nodal_support = NodalSupport(displacement_conditions={"Y": condition})
+
+    mem = Member(start_node=n1, end_node=n2, section=sec)
+    m.add_member_set(MemberSet(members=[mem]))
+    lc = m.create_load_case(name="LC")
+    NodalLoad(node=n2, load_case=lc, magnitude=1000.0, direction=(0.0, -1.0, 0.0))
+    m.validate_schema()
+
+
+def test_support_condition_values_match_the_generated_enum():
+    """The two spellings of the enum must be the same set, not merely both valid.
+
+    ``test_every_support_condition_type_conforms`` catches a value the schema
+    refuses. This catches the other direction -- a value the schema would accept
+    that the hand-written enum no longer emits -- which no model-shaped test can
+    see, because you cannot build a model out of a variant you do not have.
+    """
+    hand_written = {c.value for c in SupportConditionType}
+    generated = {c.value for c in GeneratedSupportConditionType}
+    assert hand_written == generated, (
+        "SupportConditionType has drifted from the generated contract: "
+        f"only hand-written {sorted(hand_written - generated)}, "
+        f"only generated {sorted(generated - hand_written)}"
+    )
+
+
+def test_one_way_support_round_trips_through_from_dict():
+    """Changing what ``to_dict()`` emits must not break reading older files.
+
+    The canonical value moved from ``"Positive-only"`` to ``"PositiveOnly"``.
+    Both spellings have to load, or every JSON model written before the change
+    stops opening.
+    """
+    for spelling in ("PositiveOnly", "Positive-only", "positiveonly", "pos"):
+        cond = SupportCondition.from_dict({"condition_type": spelling})
+        assert cond.condition_type is SupportConditionType.POSITIVE_ONLY, spelling
+    for spelling in ("NegativeOnly", "Negative-only", "negativeonly", "neg"):
+        cond = SupportCondition.from_dict({"condition_type": spelling})
+        assert cond.condition_type is SupportConditionType.NEGATIVE_ONLY, spelling
+
+    # And the constructor-string path, which reads what to_dict() wrote.
+    support = NodalSupport(displacement_conditions={"Y": "PositiveOnly"})
+    assert support.displacement_conditions["Y"].condition_type is (SupportConditionType.POSITIVE_ONLY)
