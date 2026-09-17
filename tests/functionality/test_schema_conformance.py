@@ -6,14 +6,27 @@ enum and the unity-check ``report_template`` placement diverge silently.
 """
 
 import glob
+import inspect
 import os
 
 import pytest
 
 from fers_core import FERS, Node, Member, MemberSet, NodalSupport, NodalLoad
 from fers_core.supports.supportcondition import SupportCondition, SupportConditionType
+from fers_core.types import pydantic_models
 from fers_core.types.pydantic_models import (
     SupportConditionType as GeneratedSupportConditionType,
+)
+from fers_core.results.resultsbundle import ResultsBundle
+from fers_core.results.singleresults import SingleResults
+from fers_core.results.member import MemberResult
+from fers_core.results.plate import PlateResult
+from fers_core.results.resultssummary import ResultsSummary
+from fers_core.results.nodes import (
+    NodeDisplacement,
+    NodeLocation,
+    ReactionNodeResult,
+    NodeForces,
 )
 from fers_core.supports.stiffness_curve import ForceComponent
 from fers_core.unity_checks import (
@@ -191,3 +204,108 @@ def test_one_way_support_round_trips_through_from_dict():
     # And the constructor-string path, which reads what to_dict() wrote.
     support = NodalSupport(displacement_conditions={"Y": "PositiveOnly"})
     assert support.displacement_conditions["Y"].condition_type is (SupportConditionType.POSITIVE_ONLY)
+
+
+# ---------------------------------------------------------------------------
+# Result classes: the other direction.
+#
+# Everything above guards the INPUT side -- a model built in Python validating
+# against the generated schema. The result side has the same failure mode and no
+# guard at all: `ResultsBundle` and friends are hand-written, the solver's schema
+# is generated, and a field the solver adds is simply never copied across.
+#
+# That is not hypothetical. `solve_failures` -- the list of load combinations
+# that did not solve, whose own schema description says "always inspect before
+# trusting envelopes or unity-check verdicts computed over the surviving
+# combinations" -- was dropped, so through the SDK a partial result was
+# indistinguishable from a complete one. Three more went with it, and two more
+# again on `Results` and `MemberResult`.
+#
+# A test per field would only ever catch the field someone thought to add. This
+# asserts the property instead: every field the generated model declares must
+# exist on the hand-written class.
+# ---------------------------------------------------------------------------
+
+_RESULT_CLASS_PAIRS = [
+    (ResultsBundle, "ResultsBundle"),
+    (SingleResults, "Results"),
+    (MemberResult, "MemberResult"),
+    (PlateResult, "PlateResult"),
+    (ResultsSummary, "ResultsSummary"),
+    (NodeDisplacement, "NodeDisplacement"),
+    (NodeLocation, "NodeLocation"),
+    (ReactionNodeResult, "ReactionNodeResult"),
+    (NodeForces, "NodeForces"),
+]
+
+
+def _hand_written_fields(cls):
+    """Field names, however this class happens to declare them.
+
+    These classes are not uniform: some are dataclasses, some annotate at class
+    level, and `MemberResult` declares everything in `__init__`. A scan that
+    understands only one shape reports the other two as entirely missing, which
+    looks like catastrophic drift and is really a broken test.
+    """
+    names = set(getattr(cls, "__annotations__", {}))
+    names |= set(getattr(cls, "__dataclass_fields__", {}))
+    try:
+        names |= {
+            p for p in inspect.signature(cls.__init__).parameters if p not in ("self", "args", "kwargs")
+        }
+    except (TypeError, ValueError):  # pragma: no cover - builtin __init__
+        pass
+    return {n for n in names if not n.startswith("_")}
+
+
+@pytest.mark.parametrize(
+    "hand_written, generated_name",
+    _RESULT_CLASS_PAIRS,
+    ids=[f"{c.__name__}->{n}" for c, n in _RESULT_CLASS_PAIRS],
+)
+def test_result_class_carries_every_generated_field(hand_written, generated_name):
+    generated = getattr(pydantic_models, generated_name)
+    missing = sorted(set(generated.model_fields) - _hand_written_fields(hand_written))
+    assert not missing, (
+        f"{hand_written.__name__} has drifted from the generated {generated_name}: "
+        f"{missing} declared by the solver schema and not carried. A caller reading "
+        f"the result object cannot see them at all."
+    )
+
+
+def test_solve_failures_survives_from_raw_dict():
+    """The partial-result signal has to reach a caller, through either factory.
+
+    ``from_raw_dict`` also could not be called at all -- it builds ``SingleResults``
+    with keyword arguments, and that class was not a dataclass despite using
+    ``field(default_factory=...)``, so it took no arguments and raised TypeError.
+    """
+    bundle = ResultsBundle.from_raw_dict(
+        {
+            "loadcombinations": {"1": {"name": "ULS1"}},
+            "solve_failures": [{"combination_id": 73, "name": "ULS73", "error": "non-descent at alpha-min"}],
+            "engine_version": "0.2.65",
+        }
+    )
+
+    assert len(bundle.loadcombinations) == 1
+    assert bundle.engine_version == "0.2.65"
+    assert [f["combination_id"] for f in bundle.solve_failures] == [73]
+    # The documented check: truthy only when something actually failed.
+    assert bool(bundle.solve_failures) is True
+    assert bundle.to_dict()["solve_failures"] == bundle.solve_failures
+
+
+def test_empty_result_bundle_has_real_defaults():
+    """``field(default_factory=...)`` on a class that is not a dataclass does nothing.
+
+    Every default read back as a ``dataclasses.Field`` object -- which is truthy,
+    so ``if bundle.solve_failures:`` would have reported a partial result on a
+    bundle that had never been near a solver.
+    """
+    bundle = ResultsBundle()
+    assert bundle.loadcases == {}
+    assert bundle.loadcombinations == {}
+    assert bundle.solve_failures == []
+    assert not bundle.solve_failures
+    assert bundle.engine_version is None

@@ -1,5 +1,91 @@
 # Changelog
 
+## 0.1.95
+
+### Fixed — a partial result was indistinguishable from a complete one
+
+A load combination with no equilibrium is an ordinary solver outcome, not a
+defect. The engine handles it well: it keeps solving the remaining combinations,
+returns successfully, and records what failed in `results.solve_failures`. Its
+own schema says what to do about it — *"always inspect before trusting envelopes
+or unity-check verdicts computed over the surviving combinations"*.
+
+That instruction could not be followed through this SDK, because `ResultsBundle`
+is hand-written and never copied the field. A caller received 99 of 100
+combinations, every one converged and warning-free, with no supported way to
+learn the 100th had existed. Nothing raised, nothing warned, and
+`len(bundle.loadcombinations)` was the only clue — which requires already knowing
+what you sent.
+
+Note the asymmetry that made it easy to miss: a failing load **case** raises
+straight out of `calculate_to_file` and aborts the run, while a failing load
+**combination** is collected and the run succeeds. Collecting is the better
+behaviour of the two — a partial envelope is genuinely useful — but it meant the
+recoverable half was the half whose only signal was discarded, so the
+safe-looking path was the silent one.
+
+```python
+if bundle.solve_failures:
+    ...  # len(bundle.loadcombinations) is NOT what you asked for
+```
+
+**Eight fields were missing, across three classes**, not the one that prompted
+the report:
+
+| class | fields it dropped |
+|---|---|
+| `ResultsBundle` | `solve_failures`, `engine_version`, `seismic`, `buckling_runs` |
+| `SingleResults` (generated `Results`) | `errors_and_warnings`, `solver_diagnostics` |
+| `MemberResult` | `internal_force_series`, `member_displacement_peak` |
+
+The `SingleResults` pair is the same bug wearing a different hat: those are the
+per-combination convergence diagnostics, so the obvious way to check a result was
+sound was itself unreachable. And `member_displacement_peak` had been
+*documented* since 0.2.58 — `examples/104_visual_member_deflected_shape.py` tells
+you to read it rather than scanning the 11-station `member_displacements` grid,
+which steps over a peak that does not land on a station and under-reports sag in
+the unconservative direction. The field that advice depends on was discarded.
+
+### Fixed — `ResultsBundle.from_raw_dict` could not be called at all
+
+It raised `TypeError: SingleResults() takes no arguments`. `SingleResults` and
+`ResultsBundle` both used `dataclasses.field(default_factory=...)` on classes
+that were never decorated `@dataclass`, which does nothing at all: no `__init__`
+was generated, so the keyword construction inside `from_raw_dict` could not work,
+and every default read back as a `dataclasses.Field` object rather than a dict or
+a list.
+
+That second half is why it had to be fixed here rather than later. `Field` is
+**truthy**, so `if bundle.solve_failures:` on a freshly constructed bundle would
+have reported a partial result on something that had never been near a solver —
+adding the field without this would have shipped a check that lies. Both classes
+are now real dataclasses.
+
+### Added — field parity as a property, not a field list
+
+`tests/functionality/test_schema_conformance.py` guarded the input side only: a
+model built in Python validating against the generated schema. The result side
+had the same failure mode and no guard, which is how eight fields went missing
+without a test noticing.
+
+`test_result_class_carries_every_generated_field` now asserts, for all nine
+hand-written result classes, that every field the generated model declares exists
+on the hand-written one. A test per field would only ever have caught the field
+someone thought to add.
+
+One wrinkle worth knowing if it ever needs extending: these classes declare their
+fields in three different ways — dataclass fields, bare class annotations, and
+`MemberResult` in its `__init__` signature. A scan that understands only one
+shape reports the other two as *entirely* missing, which looks like catastrophic
+drift and is really a broken test.
+
+### Not done, deliberately
+
+Emitting a warning from `run_analysis()` / `run_analysis_to_file()` when
+`solve_failures` is non-empty. Raising would be wrong — partial results are the
+point of collecting rather than aborting — but a caller who never thinks to look
+is exactly the case this is about. Left as the owner's call.
+
 ## 0.1.94
 
 Pins engine `fers_calculations==0.2.65`.

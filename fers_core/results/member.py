@@ -9,6 +9,31 @@ if TYPE_CHECKING:
     import pyvista as pv
 
 
+def _sample_to_tuple(sample: Any) -> Optional[Tuple[float, Tuple[float, float, float]]]:
+    """Read one ``MemberDisplacementSample`` (pydantic, dict, or absent).
+
+    ``displacement`` arrives as a ``Vector3`` RootModel from pydantic and as a
+    plain list from raw JSON, so both are unwrapped here rather than at each
+    call site.
+    """
+    if sample is None:
+        return None
+    if isinstance(sample, dict):
+        x_frac = sample.get("x_frac")
+        displacement = sample.get("displacement")
+    else:
+        x_frac = getattr(sample, "x_frac", None)
+        displacement = getattr(sample, "displacement", None)
+    if hasattr(displacement, "root"):
+        displacement = displacement.root
+    if x_frac is None or displacement is None:
+        return None
+    return (
+        float(x_frac),
+        (float(displacement[0]), float(displacement[1]), float(displacement[2])),
+    )
+
+
 class MemberResult:
     def __init__(
         self,
@@ -24,6 +49,8 @@ class MemberResult:
         local_displacement_end_node: Optional[NodeDisplacement] = None,
         section_forces: Optional[List[SectionForce]] = None,
         member_displacements: Optional[List[Tuple[float, Tuple[float, float, float]]]] = None,
+        internal_force_series: Optional[List[SectionForce]] = None,
+        member_displacement_peak: Optional[Tuple[float, Tuple[float, float, float]]] = None,
     ) -> None:
         self.start_node_forces = start_node_forces if start_node_forces is not None else NodeForces()
         self.end_node_forces = end_node_forces if end_node_forces is not None else NodeForces()
@@ -44,6 +71,18 @@ class MemberResult:
         # in the global frame (present when include_member_deflected_shape was set).
         self.member_displacements: List[Tuple[float, Tuple[float, float, float]]] = (
             member_displacements if member_displacements is not None else []
+        )
+        # The continuous diagram: local_start_forces, then section_forces, then
+        # local_end_forces, as one ready-to-plot series from x_frac 0 to 1. Only
+        # present when the solver was asked for it, hence Optional rather than [].
+        self.internal_force_series: Optional[List[SectionForce]] = internal_force_series
+        # The worst sag on the curve the solver integrated, NOT the worst of the
+        # 11-station `member_displacements` display grid. The grid steps over a
+        # peak that does not land on a station and under-reports it -- the
+        # unconservative direction for a deflection limit -- which is why 0.2.58
+        # added this. See examples/104_visual_member_deflected_shape.py.
+        self.member_displacement_peak: Optional[Tuple[float, Tuple[float, float, float]]] = (
+            member_displacement_peak
         )
 
     @classmethod
@@ -71,6 +110,16 @@ class MemberResult:
                 continue
             member_displacements.append((float(xf), (float(d[0]), float(d[1]), float(d[2]))))
 
+        raw_ifs = getattr(model_object, "internal_force_series", None)
+        internal_force_series: Optional[List[SectionForce]] = None
+        if raw_ifs is not None:
+            internal_force_series = [
+                SectionForce.from_dict(sf) if isinstance(sf, dict) else SectionForce.from_pydantic(sf)
+                for sf in raw_ifs
+            ]
+
+        member_displacement_peak = _sample_to_tuple(getattr(model_object, "member_displacement_peak", None))
+
         return cls(
             start_node_forces=NodeForces.from_pydantic(getattr(model_object, "start_node_forces", None)),
             end_node_forces=NodeForces.from_pydantic(getattr(model_object, "end_node_forces", None)),
@@ -92,6 +141,8 @@ class MemberResult:
             else None,
             section_forces=section_forces,
             member_displacements=member_displacements,
+            internal_force_series=internal_force_series,
+            member_displacement_peak=member_displacement_peak,
         )
 
     def to_dict(self) -> Dict[str, Any]:
@@ -110,6 +161,19 @@ class MemberResult:
             "member_displacements": [
                 {"x_frac": xf, "displacement": list(d)} for xf, d in self.member_displacements
             ],
+            "internal_force_series": (
+                [sf.to_dict() for sf in self.internal_force_series]
+                if self.internal_force_series is not None
+                else None
+            ),
+            "member_displacement_peak": (
+                {
+                    "x_frac": self.member_displacement_peak[0],
+                    "displacement": list(self.member_displacement_peak[1]),
+                }
+                if self.member_displacement_peak is not None
+                else None
+            ),
         }
 
     # ------------------------------------------------------------------
