@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import field
+from dataclasses import dataclass, field
 from typing import Dict, Any, Optional
 
 from fers_core.results.member import MemberResult
@@ -9,8 +9,26 @@ from fers_core.results.nodes import NodeDisplacement, ReactionNodeResult
 from fers_core.results.resultssummary import ResultsSummary
 
 
+def _to_plain(value: Any) -> Any:
+    """Convert a pydantic model (or list/dict of them) to plain dicts."""
+    if hasattr(value, "model_dump"):
+        return value.model_dump()
+    if hasattr(value, "dict"):
+        return value.dict()
+    if isinstance(value, list):
+        return [_to_plain(v) for v in value]
+    if isinstance(value, dict):
+        return {k: _to_plain(v) for k, v in value.items()}
+    return value
+
+
+# A real dataclass. These annotations carried `field(default_factory=...)` on a
+# plain class, which does nothing: `SingleResults()` took no arguments at all
+# (breaking `ResultsBundle.from_raw_dict`, which calls it with keywords), and
+# every default read back as a `dataclasses.Field` object rather than a dict.
+@dataclass
 class SingleResults:
-    name: str
+    name: str = ""
     displacement_nodes: Dict[str, NodeDisplacement] = field(default_factory=dict)
     reaction_nodes: Dict[str, ReactionNodeResult] = field(default_factory=dict)
     member_results: Dict[str, MemberResult] = field(default_factory=dict)
@@ -18,6 +36,12 @@ class SingleResults:
     summary: Optional[ResultsSummary] = None
     result_type: Optional[Dict[str, Any]] = None
     unity_checks: Optional[Dict[str, Any]] = None
+    # How this one solve went, as plain dicts mirroring the solver schema.
+    # `errors_and_warnings` is empty in the common case; `solver_diagnostics`
+    # carries iterations, time and `converged`. Without these a caller cannot
+    # tell a converged combination from one the solver had reservations about.
+    errors_and_warnings: Optional[Dict[str, Any]] = None
+    solver_diagnostics: Optional[Dict[str, Any]] = None
 
     @classmethod
     def from_pydantic(cls, pyd_results: Any) -> "SingleResults":
@@ -70,6 +94,8 @@ class SingleResults:
         instance.summary = summary_
         instance.result_type = result_type_dict
         instance.unity_checks = unity_checks_value
+        instance.errors_and_warnings = _to_plain(getattr(pyd_results, "errors_and_warnings", None))
+        instance.solver_diagnostics = _to_plain(getattr(pyd_results, "solver_diagnostics", None))
         return instance
 
     def to_dict(self) -> Dict[str, Any]:
@@ -82,4 +108,6 @@ class SingleResults:
             "summary": self.summary.to_dict() if self.summary else None,
             "result_type": self.result_type,
             "unity_checks": self.unity_checks,
+            "errors_and_warnings": self.errors_and_warnings,
+            "solver_diagnostics": self.solver_diagnostics,
         }

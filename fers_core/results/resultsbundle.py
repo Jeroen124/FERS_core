@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import field
+from dataclasses import dataclass, field
 from typing import Dict, Any, List, Mapping, Optional
 
 from fers_core.results.member import MemberResult
@@ -23,6 +23,12 @@ def _to_plain(value: Any) -> Any:
     return value
 
 
+# A real dataclass, for the same reason as SingleResults: these annotations
+# carried `field(default_factory=...)` on an undecorated class, so every default
+# read back as a `dataclasses.Field` object instead of a dict or a list. That
+# matters here because `if bundle.solve_failures:` is the documented way to check
+# for a partial result, and a Field object is truthy.
+@dataclass
 class ResultsBundle:
     loadcases: Dict[str, SingleResults] = field(default_factory=dict)
     loadcombinations: Dict[str, SingleResults] = field(default_factory=dict)
@@ -41,6 +47,28 @@ class ResultsBundle:
     # html). None on Premium, where the solver omits it entirely — so a plain
     # `if bundle.attribution:` is a reliable tier check.
     attribution: Optional[Dict[str, Any]] = None
+    # Load combinations that failed to solve and are therefore MISSING from
+    # `loadcombinations`. A combination with no equilibrium is an ordinary solver
+    # outcome, not a defect -- the engine keeps solving the rest and records what
+    # failed here -- but that makes a partial result look exactly like a complete
+    # one. Always inspect before trusting an envelope, a utilization maximum or a
+    # pass/fail computed over the surviving combinations:
+    #
+    #     if bundle.solve_failures:
+    #         ...  # len(bundle.loadcombinations) is NOT what you asked for
+    #
+    # Note the asymmetry with load *cases*, where the same event raises straight
+    # out of `calculate_to_file` and aborts the run. Collecting is the better
+    # behaviour of the two, but it means the recoverable half is the quiet one.
+    solve_failures: List[Dict[str, Any]] = field(default_factory=list)
+    # Which engine produced these results. The input's `schema_version` says which
+    # contract the caller wrote to; this says which engine answered -- the thing
+    # you want in a bug report, and previously unreachable from the result object.
+    engine_version: Optional[str] = None
+    # Seismic (`SeismicResults`) and per-reference buckling runs (`BucklingRun`),
+    # as plain dicts mirroring the solver schema. None when not requested.
+    seismic: Optional[Dict[str, Any]] = None
+    buckling_runs: Optional[List[Dict[str, Any]]] = None
 
     # Factory from the generated Pydantic ResultsBundle
     @classmethod
@@ -62,6 +90,10 @@ class ResultsBundle:
         instance.buckling = _to_plain(getattr(pyd_bundle, "buckling", None))
         instance.report_html = getattr(pyd_bundle, "report_html", None)
         instance.attribution = _to_plain(getattr(pyd_bundle, "attribution", None))
+        instance.solve_failures = _to_plain(getattr(pyd_bundle, "solve_failures", []) or [])
+        instance.engine_version = getattr(pyd_bundle, "engine_version", None)
+        instance.seismic = _to_plain(getattr(pyd_bundle, "seismic", None))
+        instance.buckling_runs = _to_plain(getattr(pyd_bundle, "buckling_runs", None))
 
         return instance
 
@@ -98,6 +130,8 @@ class ResultsBundle:
                 summary=ResultsSummary(**(value.get("summary") or {})) if value.get("summary") else None,
                 result_type=value.get("result_type"),
                 unity_checks=value.get("unity_checks"),
+                errors_and_warnings=value.get("errors_and_warnings"),
+                solver_diagnostics=value.get("solver_diagnostics"),
             )
 
         comb_map: Dict[str, SingleResults] = {}
@@ -130,6 +164,8 @@ class ResultsBundle:
                 summary=ResultsSummary(**(value.get("summary") or {})) if value.get("summary") else None,
                 result_type=value.get("result_type"),
                 unity_checks=value.get("unity_checks"),
+                errors_and_warnings=value.get("errors_and_warnings"),
+                solver_diagnostics=value.get("solver_diagnostics"),
             )
 
         instance = cls()
@@ -140,6 +176,10 @@ class ResultsBundle:
         instance.buckling = raw.get("buckling")
         instance.report_html = raw.get("report_html")
         instance.attribution = raw.get("attribution")
+        instance.solve_failures = list(raw.get("solve_failures") or [])
+        instance.engine_version = raw.get("engine_version")
+        instance.seismic = raw.get("seismic")
+        instance.buckling_runs = raw.get("buckling_runs")
         return instance
 
     def to_dict(self) -> Dict[str, Any]:
@@ -151,4 +191,8 @@ class ResultsBundle:
             "buckling": self.buckling,
             "report_html": self.report_html,
             "attribution": self.attribution,
+            "solve_failures": self.solve_failures,
+            "engine_version": self.engine_version,
+            "seismic": self.seismic,
+            "buckling_runs": self.buckling_runs,
         }
