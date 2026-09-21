@@ -1,5 +1,40 @@
 # Changelog
 
+## 0.1.96
+
+Pins engine `fers_calculations==0.2.66`.
+
+**A pin bump and nothing else.** No SDK code changes, and the generated models
+are byte-identical apart from their `# engine-version:` stamp — the engine's
+0.2.66 fix is behavioural, and regenerating `pydantic_models.py` moved exactly
+one line. The reason to release it anyway is that this package pins the engine
+*exactly*, so `pip install FERS` at 0.1.95 resolves to engine 0.2.65 and a
+Python caller cannot reach the fix at all without this.
+
+### What the engine fixed, and why a Python user cares
+
+A soft axial spring in a member end release (`translational_release_vx`) made
+the second-order solve return **silently wrong** results — no error, no warning,
+no dropped load combination, normal solve time. It cost 8.3 % in a design unity
+check on the reporting integrator's rack, and it reached them through this SDK.
+
+`K_g` is built from the member's axial force, and the engine computed that force
+by multiplying the **node-to-node** extension by the member's own `EA/L`. With a
+series spring in the release, part of that extension is the spring stretching
+rather than the member straining, so the axial force was too large by the series
+ratio `(EA/L)/k` — around 300x for an IPE180 with a 1000 N/mm release. The
+linear solve never forms `K_g`, which is why linear results stayed exact while
+nonlinear ones did not, and why nothing in the pipeline reported a problem.
+
+See the engine CHANGELOG 0.2.66 for the full account, including a ~1.5e-4
+residual in reported member force that is recorded rather than claimed away.
+
+### If you model axial flexibility with an end-release spring, re-run
+
+Anything using `translational_release_vx` with a stiffness **and** a
+second-order solve was affected, and the error grew with the ratio of the
+member's `EA/L` to the release stiffness. Linear results were never affected.
+
 ## 0.1.95
 
 ### Fixed — a partial result was indistinguishable from a complete one
