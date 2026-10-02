@@ -149,14 +149,16 @@ def cantilever_uniform_load_fixed_end_moment(
 def cantilever_full_triangular_fixed_end_moment(
     load_intensity_in_newton_per_meter: float, beam_length_in_meter: float
 ) -> float:
-    # Triangular with zero at fixed end, peak at free end
+    # Triangular with peak at fixed end, zero at free end (test 005 applies
+    # magnitude=w at the start): resultant w*L/2 at L/3 from the root.
     return load_intensity_in_newton_per_meter * beam_length_in_meter**2 / 6.0
 
 
 def cantilever_full_inverse_triangular_fixed_end_moment(
     load_intensity_in_newton_per_meter: float, beam_length_in_meter: float
 ) -> float:
-    # Inverse triangular with peak at fixed end, zero at free end
+    # Inverse triangular with zero at fixed end, peak at free end: resultant
+    # w*L/2 at 2L/3 from the root.
     return load_intensity_in_newton_per_meter * beam_length_in_meter**2 / 3.0
 
 
