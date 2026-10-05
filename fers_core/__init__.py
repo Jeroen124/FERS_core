@@ -60,7 +60,7 @@ from .results.singleresults import SingleResults
 from .results.member import MemberResult
 from .results.nodes import NodeDisplacement, NodeForces, ReactionNodeResult
 from .cloud import FersCloudClient
-from .sections.steel_sections_en import resolve_section, list_sections
+from .sections.steel_sections_en import resolve_section, list_sections, section_catalogue
 from .builders import create_beam, check_beam, check_strut
 
 
@@ -143,6 +143,7 @@ __all__ = [
     "SurfaceLoadVertex",
     "list_sections",
     "resolve_section",
+    "section_catalogue",
     "ShapePath",
     "SingleResults",
     "StiffnessCurveConfig",

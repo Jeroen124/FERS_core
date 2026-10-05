@@ -1056,7 +1056,8 @@ class Section:
         """
         Create a standard section by name from the built-in library.
 
-        Supports European steel profiles per EN 10365 and common hollow sections.
+        Supports European steel profiles per EN 10365 and common hollow sections,
+        and British Steel's UB / UC / PFC and ASTM W / HP sections (datasheet values).
 
         Examples:
             Section.from_name("IPE200", steel)
@@ -1067,6 +1068,9 @@ class Section:
             Section.from_name("L 100x100x10", steel)
             Section.from_name("CHS 168.3x5", steel)
             Section.from_name("UPE200", steel)
+            Section.from_name("UB 457x191x67", steel)   # "UKB 457x191x67" also works
+            Section.from_name("PFC 300x100x46", steel)
+            Section.from_name("W10X22", steel)
 
         Parameters:
             name: Standard section designation.
@@ -1088,7 +1092,8 @@ class Section:
         List available section names in the built-in library.
 
         Parameters:
-            series: Optional filter, e.g. "IPE", "HEA", "RHS", "SHS", "L", "CHS", "UPE".
+            series: Optional filter, e.g. "IPE", "HEA", "RHS", "SHS", "L", "CHS", "UPE",
+                    "UB", "UC", "PFC", "W", "HP".
                     If None, returns all available sections.
 
         Returns:

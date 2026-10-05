@@ -1,19 +1,27 @@
 """
-European Steel Sections Library (EN 10365 / EN 10219 / EN 10210)
-================================================================
+Steel Sections Library
+======================
+
+European sections (EN 10365 / EN 10219 / EN 10210), whose properties are computed
+from the dimensions below, and two tabulated sources that carry their published
+values: British Steel's UB / UC / PFC and ASTM W / HP (``british_steel.py``), and
+the AISC shapes British Steel does not roll (``aisc.py``).
 
 All dimensions are in **metres** to match the FERS coordinate convention.
-
-This module is *not* imported eagerly – it is pulled in by
-``Section.from_name()`` and ``Section.list_available()`` only when needed.
 """
 
 from __future__ import annotations
 
+import re
 from typing import Optional
 
 from ..members.section import Section
 from ..members.material import Material
+from . import aisc, british_steel
+
+# Tabulated sources, highest priority first. Each module exposes FAMILIES,
+# published_si(), dimensions() and catalogue_of(); a name may appear in only one.
+_TABULATED = (british_steel, aisc)
 
 # ---------------------------------------------------------------------------
 # Dimension tables – dict of  name → (params-dict)
@@ -434,37 +442,142 @@ _L: dict[str, dict] = {
 # ---------------------------------------------------------------------------
 
 
-def _build_index() -> dict[str, tuple[str, dict]]:
-    idx: dict[str, tuple[str, dict]] = {}
-    for name, p in _IPE.items():
-        idx[name.upper()] = ("IPE", p)
-    for name, p in _HEA.items():
-        idx[name.upper()] = ("HEA", p)
-    for name, p in _HEB.items():
-        idx[name.upper()] = ("HEB", p)
-    for name, p in _HEM.items():
-        idx[name.upper()] = ("HEM", p)
-    for name, p in _UPE.items():
-        idx[name.upper()] = ("UPE", p)
-    for name, p in _CHS.items():
-        idx[name.upper()] = ("CHS", p)
-    for name, p in _RHS.items():
-        idx[name.upper()] = ("RHS", p)
-    for name, p in _SHS.items():
-        idx[name.upper()] = ("SHS", p)
-    for name, p in _L.items():
-        idx[name.upper()] = ("L", p)
+_EN_TABLES: dict[str, dict] = {
+    "IPE": _IPE,
+    "HEA": _HEA,
+    "HEB": _HEB,
+    "HEM": _HEM,
+    "UPE": _UPE,
+    "CHS": _CHS,
+    "RHS": _RHS,
+    "SHS": _SHS,
+    "L": _L,
+}
+
+_WHITESPACE = re.compile(r"[\s_]+")
+_SERIAL_FIRST = re.compile(r"^(\d+X\d+X[\d.]+)(UKB|UKC|UKPFC|UB|UC|PFC)$")
+_UK_ALIAS = {"UKB": "UB", "UKC": "UC", "UKPFC": "PFC"}
+
+
+def _norm(name: str) -> str:
+    """Lookup key: case, spacing, "×", "*" and a decimal comma do not matter.
+
+    Keep in step with ``normalizeSectionName`` in FERS_cloud. A trailing "*" (the
+    datasheets' non-ASTM-weight marker) is dropped before "*" is read as "x".
+    """
+    s = name.strip().upper().rstrip("*")
+    s = s.replace("×", "X").replace("*", "X").replace(",", ".")
+    return _WHITESPACE.sub("", s)
+
+
+def _alias(key: str) -> str:
+    """Map UKB/UKC/UKPFC and serial-first spellings ("457x191x67 UB") to UB/UC/PFC keys."""
+    m = _SERIAL_FIRST.match(key)
+    if m:
+        key = m.group(2) + m.group(1)
+    for alias, family in _UK_ALIAS.items():
+        if key.startswith(alias) and key[len(alias) : len(alias) + 1].isdigit():
+            return family + key[len(alias) :]
+    return key
+
+
+def _build_index() -> dict[str, tuple[str, str, dict]]:
+    """normalised key -> (family, display name, params)."""
+    idx: dict[str, tuple[str, str, dict]] = {}
+
+    def add(key_name: str, entry: tuple[str, str, dict]) -> None:
+        key = _norm(key_name)
+        if key in idx:
+            raise RuntimeError(f"section library: '{key_name}' collides with '{idx[key][1]}'")
+        idx[key] = entry
+
+    for family, table in _EN_TABLES.items():
+        for name, p in table.items():
+            add(name, (family, name, p))
+    for source in _TABULATED:
+        for family, (rows, _, _) in source.FAMILIES.items():
+            for name in rows:
+                add(name, (family, name, {"source": source}))
     return idx
 
 
-_INDEX: dict[str, tuple[str, dict]] | None = None
+_INDEX: dict[str, tuple[str, str, dict]] | None = None
 
 
-def _get_index() -> dict[str, tuple[str, dict]]:
+def _get_index() -> dict[str, tuple[str, str, dict]]:
     global _INDEX
     if _INDEX is None:
         _INDEX = _build_index()
     return _INDEX
+
+
+def _lookup(name: str) -> tuple[str, str, dict]:
+    idx = _get_index()
+    key = _norm(name)
+    hit = idx.get(key) or idx.get(_alias(key))
+    if hit is None:
+        available = ", ".join(sorted(display for _, display, _ in idx.values())[:20]) + " …"
+        raise ValueError(f"Section '{name}' not found in library. Available (first 20): {available}")
+    return hit
+
+
+def section_catalogue(name: str) -> str:
+    """``"en"``, ``"uk"`` (British Steel UB/UC/PFC) or ``"us"`` (W/HP/HSS/pipe)."""
+    _, display, params = _lookup(name)
+    source = params.get("source")
+    return source.catalogue_of(display) if source else "en"
+
+
+def section_source(name: str) -> str:
+    """``"en"``, ``"british_steel"`` or ``"aisc"``: whose values a section carries."""
+    _, _, params = _lookup(name)
+    source = params.get("source")
+    return source.__name__.rsplit(".", 1)[-1] if source else "en"
+
+
+def _build_tabulated(source, family: str, name: str, material: Material) -> Section:
+    d = source.dimensions(name)
+    kind = source.kind_of(name) if source is aisc else "I"
+    if kind == "RECT":
+        # ASTM A500 is cold-formed (EC3 curve c), with the Manual's 2t corner radius.
+        return Section.create_rhs(
+            name=name,
+            material=material,
+            h=d["h"],
+            b=d["b"],
+            t=d["t"],
+            r_out=2 * d["t"],
+            fabrication="cold_formed",
+        )
+    if kind == "ROUND":
+        return Section.create_chs(
+            name=name, material=material, diameter=d["d"], thickness=d["t"], fabrication="cold_formed"
+        )
+    factory = Section.create_u_section if family == "PFC" else Section.create_ipe_section
+    return factory(name=name, material=material, h=d["h"], b=d["b"], t_w=d["t_w"], t_f=d["t_f"], r=d["r"])
+
+
+def _apply_published(section: Section, p: dict) -> Section:
+    """Replace the meshed values with the tabulated ones; the mesh keeps the rest.
+
+    Shear areas, shear centre, centroid, shape path and the EC3 block come from the
+    geometry, which the tables do not give. So does the warping constant of a
+    hollow section, which AISC does not tabulate.
+    """
+    section.area = p["A"]
+    section.i_z = p["I_major"]
+    section.i_y = p["I_minor"]
+    section.j = p["J"]
+    if p["H"] is not None:
+        section.i_w = p["H"]
+    section.wel_z = p["Wel_major"]
+    section.wel_y = p["Wel_minor"]
+    section.wpl_z = p["Wpl_major"]
+    section.wpl_y = p["Wpl_minor"]
+    ys = section.y_s or 0.0
+    zs = section.z_s or 0.0
+    section.wagner_coeff = (section.i_y + section.i_z) / section.area + ys**2 + zs**2
+    return section
 
 
 # ---------------------------------------------------------------------------
@@ -475,14 +588,18 @@ def _get_index() -> dict[str, tuple[str, dict]]:
 def resolve_section(name: str, material: Material) -> Section:
     """
     Look up a standard section by designation and return a fully-constructed
-    :class:`Section`.
+    :class:`Section`, named by its catalogue designation.
 
     Parameters
     ----------
     name : str
         Profile designation, e.g. ``"IPE200"``, ``"HEB300"``,
         ``"RHS 200x100x8"``, ``"SHS 100x100x6"``,
-        ``"L 100x100x10"``, ``"CHS 168.3x5"``, ``"UPE200"``.
+        ``"L 100x100x10"``, ``"CHS 168.3x5"``, ``"UPE200"``,
+        ``"UB 457x191x67"``, ``"UC 305x305x97"``, ``"PFC 300x100x46"``,
+        ``"W10X22"``, ``"HP12X53"``, ``"HSS6X4X1/4"``, ``"HSS6.000X0.250"``,
+        ``"Pipe6STD"``. Case and spacing do not matter, and UKB / UKC / UKPFC
+        are accepted for UB / UC / PFC.
     material : Material
         The material object to assign to the section.
 
@@ -491,18 +608,12 @@ def resolve_section(name: str, material: Material) -> Section:
     ValueError
         If the name is not found in the built-in library.
     """
-    key = name.strip().upper()
-    idx = _get_index()
+    family, name, params = _lookup(name)
 
-    if key not in idx:
-        # Try stripping extra spaces for hollow sections  "RHS  200x100x8"
-        key = " ".join(key.split())
-
-    if key not in idx:
-        available = ", ".join(sorted(idx.keys())[:20]) + " …"
-        raise ValueError(f"Section '{name}' not found in library. Available (first 20): {available}")
-
-    family, params = idx[key]
+    source = params.get("source")
+    if source is not None:
+        section = _build_tabulated(source, family, name, material)
+        return _apply_published(section, source.published_si(name))
 
     if family in ("IPE",):
         return Section.create_ipe_section(
@@ -584,20 +695,14 @@ def list_sections(series: Optional[str] = None) -> list[str]:
     ----------
     series : str, optional
         One of ``"IPE"``, ``"HEA"``, ``"HEB"``, ``"HEM"``, ``"UPE"``,
-        ``"CHS"``, ``"RHS"``, ``"SHS"``, ``"L"``.  If *None*, all names
-        are returned.
+        ``"CHS"``, ``"RHS"``, ``"SHS"``, ``"L"``, ``"UB"``, ``"UC"``,
+        ``"PFC"``, ``"W"``, ``"HP"``, ``"HSS"`` (rectangular), ``"HSSR"``
+        (round), ``"PIPE"``.  If *None*, all names are returned.
     """
-    tables: dict[str, dict] = {
-        "IPE": _IPE,
-        "HEA": _HEA,
-        "HEB": _HEB,
-        "HEM": _HEM,
-        "UPE": _UPE,
-        "CHS": _CHS,
-        "RHS": _RHS,
-        "SHS": _SHS,
-        "L": _L,
-    }
+    tables: dict[str, dict] = dict(_EN_TABLES)
+    for source in _TABULATED:
+        for family, (rows, _, _) in source.FAMILIES.items():
+            tables[family] = {**tables.get(family, {}), **rows}
 
     if series is not None:
         key = series.strip().upper()
