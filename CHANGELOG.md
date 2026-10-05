@@ -87,6 +87,23 @@ geometry is built from the tabulated dimensions:
 `scripts/import_aisc.py` pins the workbook's SHA-256, the same way the British
 Steel importer pins the PDFs.
 
+### Rolled I-sections buckle laterally on curve a or b, not d
+
+`Section.ec3["buckling_curve_lt"]` was `"D"` for every rolled I-section and H-section.
+That curve is meant for welded deep sections and "other cross-sections" in EN
+1993-1-1 Table 6.4. The solver's χ_LT is the §6.3.2.2 general case, which reads
+its curve from that table:
+
+- **Rolled I:** a for h/b ≤ 2, b above.
+- **Welded I:** c / d.
+- **Channels:** d, unchanged.
+- **Without dimensions:** d, unchanged.
+
+At λ̄_LT = 1, curve d gives a χ_LT 20–30 % below the correct one. Any
+`check_beam` or hand-built EC3 check on a library I-section was
+correspondingly conservative on LTB. The flexural curves `buckling_curve_y` and
+`buckling_curve_z` were right and have not changed.
+
 ### Name lookup ignores spacing everywhere
 
 `"IPE 180"` used to raise, while `"RHS 200x100x8"` needed its space. Lookup now

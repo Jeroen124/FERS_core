@@ -176,3 +176,17 @@ def test_buckling_curves_follow_table_6_2():
     assert buckling_curves("i", "hot_rolled", 235.0e6, h=0.300, b=0.150, t_f=0.0107)[:2] == ("b", "a")
     # Thick-flanged stocky I drops to d/d.
     assert buckling_curves("i", "hot_rolled", 235.0e6, h=0.300, b=0.300, t_f=0.120)[:2] == ("d", "d")
+
+
+def test_lt_curve_follows_table_6_4():
+    """The solver evaluates the §6.3.2.2 general case, whose curves are Table 6.4."""
+    lt = lambda **kw: buckling_curves("i", "hot_rolled", 235.0e6, **kw)[2]  # noqa: E731
+    # Rolled I: a up to h/b = 2, b beyond.
+    assert lt(h=0.300, b=0.150, t_f=0.0107) == "a"  # IPE300, h/b = 2.0
+    assert lt(h=0.4534, b=0.1899, t_f=0.0127) == "b"  # UB 457x191x67, h/b = 2.39
+    assert lt(h=0.300, b=0.300, t_f=0.019) == "a"  # HEB300
+    # Welded I: c up to h/b = 2, d beyond.
+    assert buckling_curves("i", "welded", 235.0e6, h=0.300, b=0.300, t_f=0.019)[2] == "c"
+    assert buckling_curves("i", "welded", 235.0e6, h=0.900, b=0.300, t_f=0.019)[2] == "d"
+    # Channels are "other cross-sections".
+    assert buckling_curves("channel", "hot_rolled", 235.0e6)[2] == "d"

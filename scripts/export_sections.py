@@ -74,10 +74,10 @@ _GEOM_KEYS = [
     "ec3",
 ]
 
-# The US catalogue is picker-only in FERS Cloud: nothing resolves a W name to a
-# model section, and the beam tool reads only these. A lazy chunk of 1100 rows
-# should not carry shear areas, centroids and EC3 blocks nobody reads.
-_US_KEYS = ["area", "i_y", "i_z", "j", "i_w", "wel_y", "wel_z", "wpl_y", "wpl_z", "h", "b"]
+# The US catalogue is a lazy chunk of 1100 rows in FERS Cloud. Its shapes are all
+# doubly symmetric, so it leaves out what only matters for the rest: centroids
+# (viewer offsets for mono-symmetric shapes) and the product of inertia.
+_US_KEYS = [k for k in _GEOM_KEYS if k not in ("centroid_y", "centroid_z", "i_yz", "principal_axis_angle")]
 
 _FILES = {"en": "steel_sections.json", "uk": "steel_sections_uk.json", "us": "steel_sections_us.json"}
 
