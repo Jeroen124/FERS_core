@@ -32,7 +32,8 @@ steel = Material(name="S355", e_mod=210e9, g_mod=81e9, density=7850, yield_stres
 # =============================================================================
 # Step 2: Pick a section straight from the library
 # =============================================================================
-# All European standard sections are available by name:
+# European standard sections, and British Steel's UB / UC / PFC and ASTM W / HP
+# sections, are available by name:
 ipe200 = Section.from_name("IPE200", steel)
 heb300 = Section.from_name("HEB300", steel)
 rhs_200x100 = Section.from_name("RHS 200x100x8", steel)
@@ -40,9 +41,11 @@ shs_100 = Section.from_name("SHS 100x100x6", steel)
 angle_100 = Section.from_name("L 100x100x10", steel)
 chs_168 = Section.from_name("CHS 168.3x5", steel)
 upe200 = Section.from_name("UPE200", steel)
+ub457 = Section.from_name("UB 457x191x67", steel)  # "UKB 457x191x67" works too
+w10 = Section.from_name("W10X22", steel)
 
 # Print basic properties
-for sec in [ipe200, heb300, rhs_200x100, shs_100, angle_100, chs_168, upe200]:
+for sec in [ipe200, heb300, rhs_200x100, shs_100, angle_100, chs_168, upe200, ub457, w10]:
     print(
         f"{sec.name:25s}  A={sec.area * 1e4:8.2f} cm²  "
         f"I_y={sec.i_y * 1e8:10.2f} cm⁴  I_z={sec.i_z * 1e8:10.2f} cm⁴  "

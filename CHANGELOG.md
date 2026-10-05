@@ -1,5 +1,107 @@
 # Changelog
 
+## 0.1.97
+
+### British Steel UB / UC / PFC and ASTM W / HP sections
+
+`Section.from_name` now knows 405 more sections, taken from British Steel's
+datasheets (used with permission; attribution and terms:
+https://ferscloud.com/legal-notice/imprint):
+
+| Family | Count | Name format |
+|---|---|---|
+| UB | 134 | `"UB 457x191x67"` |
+| UC | 62 | `"UC 305x305x97"` |
+| PFC | 12 | `"PFC 300x100x46"` |
+| W | 186 | `"W10X22"` |
+| HP | 11 | `"HP12X53"` |
+
+- UKB, UKC and UKPFC are accepted for UB, UC and PFC, as is serial-first order
+  (`"457x191x67 UB"`).
+- `section_catalogue(name)` returns `"en"`, `"uk"` or `"us"`.
+- `list_sections("UB")` and the other new families work as before.
+
+**Unlike the EN sections, these carry the datasheet values.** A, I, J, Iw, Wel and
+Wpl come from British Steel's table, not from a mesh, so a section matches the sheet
+an engineer checks it against. The shear areas, shear centre, centroid, shape path and
+EC3 block are still computed from the printed dimensions, because the sheet does not
+tabulate them. The ASTM sheet calls the major axis y-y and the UK sheets call it x-x;
+both land on FERS local z.
+
+- A non-ASTM weight (marked `*` on the sheet) keeps its nominal width in the name,
+  e.g. `W8X8X76`. Two of them share depth and lb/ft with a standard shape:
+  `W18X6X50` sits next to `W18X50`.
+
+**Four misprints in the datasheets are corrected, not reproduced.** Each row was
+checked against its own redundancy (mass against A, i against sqrt(I/A), Wel
+against 2I/h), against the section meshed from its printed dimensions, and against
+its twin on the other sheet. Four rows failed in a way that rounding cannot
+explain. `fers_core.sections.british_steel.CORRECTIONS` lists each printed value,
+its correction and the evidence:
+
+- **UB 406x260x132, and W16X89 (the same section on the ASTM sheet):** the web is
+  printed as 16.3 mm. The 132.52 kg/m mass needs 13.3 mm. A, I, W and J had been
+  computed from the misprint, overstating A by 6.5 % and Wpl,y by 3.8 %.
+- **W27X94:** the web is printed as 21.4 mm, with its digits swapped; 12.4 mm fits
+  the 140 kg/m mass. As printed, A was 32 % high and Ix 15 % high.
+- **W16X100:** the minor-axis radius of gyration is printed as 2.38 cm. It is
+  6.38 cm. FERS never uses this value, but the row is now right.
+- **W16X67:** the minor-axis Iz is printed as 4995 cm⁴. It is 4955 cm⁴.
+
+For the two misprinted webs, every property the web feeds is scaled by the ratio
+of the meshed correct section to the meshed misprinted one. Scaling rather than
+replacing keeps British Steel's own conventions.
+
+`scripts/import_british_steel.py` regenerates the table from the two PDFs. It pins
+their SHA-256, so a re-issued datasheet stops the script until someone has looked at
+it. The PDFs are not in the repository.
+
+### AISC shapes where British Steel has none
+
+The AISC Shapes Database v16.0 adds 905 US shapes that British Steel's datasheets do
+not list. Attribution and terms: https://ferscloud.com/legal-notice/imprint.
+
+| Family | Count | Name format |
+|---|---|---|
+| W | 129 | `"W44X335"` |
+| HP | 11 | `"HP16X183"` |
+| HSS, rectangular | 525 | `"HSS6X4X1/4"` |
+| HSS, round | 189 | `"HSS6.000X0.250"` |
+| Pipe | 51 | `"Pipe6STD"` |
+
+Where both sources list a shape, British Steel's row is used and AISC's is left
+out, so a name never has two sets of values. `section_source(name)` returns
+`"en"`, `"british_steel"` or `"aisc"`. The AISC rows sit in their own generated
+module, `_aisc_data.py`, so the source can be withdrawn on its own.
+
+As with British Steel, the tabulated A, I, J, Cw, S and Z are used as published. The
+geometry is built from the tabulated dimensions:
+
+- **W and HP:** fillet radius = kdes − tf.
+- **HSS:** the design wall thickness, and an outside corner radius of 2t for
+  rectangular HSS.
+- **HSS and pipe:** treated as cold-formed, so EC3 curve c.
+- AISC does not tabulate a warping constant for hollow sections, so theirs comes
+  from the mesh.
+
+`scripts/import_aisc.py` pins the workbook's SHA-256, the same way the British
+Steel importer pins the PDFs.
+
+### Name lookup ignores spacing everywhere
+
+`"IPE 180"` used to raise, while `"RHS 200x100x8"` needed its space. Lookup now
+ignores case, whitespace and `_`, reads `×` and `*` as `x`, and accepts a decimal
+comma, matching FERS Cloud. The returned `Section.name` is the catalogue's own
+spelling, not the string that was passed in.
+
+### Export
+
+`scripts/export_sections.py --catalogues en,uk,us --out-dir DIR` writes one JSON per
+catalogue, named as FERS Cloud's `src/data` expects them. Each UK and US row carries
+a `source` (`"british_steel"` or `"aisc"`). The output defaults to
+`build/sections`. The stale `fers_core/sections/steel_sections.generated.json` is
+removed: it predated the EC3 block and the shear-centre axis fix, and nothing read it.
+
 ## 0.1.96
 
 Pins engine `fers_calculations==0.2.66`.
