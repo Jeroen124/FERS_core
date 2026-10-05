@@ -57,7 +57,7 @@ def _resolve_material(material: Union[str, Material]) -> Material:
 def _resolve_section(section: Union[str, Section], material: Material) -> Section:
     if isinstance(section, Section):
         return section
-    # Named European section (IPE/HEA/HEB/UPE/RHS/CHS/…). `Section.from_name`
+    # Named library section (IPE/HEA/UPE/RHS/CHS/…, UB/UC/PFC, W/HP). `Section.from_name`
     # needs the optional `sectionproperties` dependency to compute properties.
     return Section.from_name(str(section), material)
 

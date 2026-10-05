@@ -531,12 +531,17 @@ def buckling_curves(
     b: Optional[float] = None,
     t_f: Optional[float] = None,
 ) -> Tuple[str, str, Optional[str]]:
-    """`(curve_y, curve_z, curve_lt)` per EN 1993-1-1 Table 6.2.
+    """`(curve_y, curve_z, curve_lt)` per EN 1993-1-1 Tables 6.2 and 6.4.
 
     `curve_y` is about local y and `curve_z` about local z, matching the section
     factories' `i_y = sp.iyy_c` / `i_z = sp.ixx_c` mapping — so for an I-section
     or a channel, local z is the STRONG axis and local y the weak one, and the
     table's "y-y" row maps onto `curve_z` here.
+
+    `curve_lt` is Table 6.4, the §6.3.2.2 general case, because that is the χ_LT
+    formula the solver evaluates. Rolled I is a / b either side of h/b = 2; it
+    used to be d, which is the welded-deep and "other cross-sections" row and
+    cost a rolled beam 20-30 % of χ_LT at λ̄_LT = 1.
 
     Cold-formed members are EN 1993-1-3 §6.2.2, whose Table 6.3 sends anything
     that is not a lipped channel or a hollow section to curve c; the entries
@@ -558,12 +563,14 @@ def buckling_curves(
         return ("b", "b", "b")
 
     if kind in ("i", "h", "ipe", "hea", "heb", "hem"):
+        deep = bool(h and b and h / b > 2.0)  # Table 6.4 splits at h/b = 2
         if fabrication == "welded":
             # Welded I: depends on flange thickness; strong axis b / weak c
             # (t_f <= 40 mm), c / d above it.
+            lt = "d" if deep else "c"
             if t_f is not None and t_f > 0.040:
-                return ("d", "c", "d")
-            return ("c", "b", "d")
+                return ("d", "c", lt)
+            return ("c", "b", lt)
         # Rolled I. Table 6.2 keys on h/b and t_f; "y-y" is the strong axis,
         # which is local z here.
         if h and b and t_f is not None:
@@ -576,7 +583,8 @@ def buckling_curves(
                 strong, weak = ("a", "a") if high_grade else ("b", "c")
             else:
                 strong, weak = ("c", "c") if high_grade else ("d", "d")
-            return (weak, strong, "d")
+            return (weak, strong, "b" if deep else "a")
+        # No dimensions to place it in Table 6.4: the "other cross-sections" row.
         return ("b", "b", "d")
 
     # Unknown family: curve c is the table's catch-all for a plain section.
