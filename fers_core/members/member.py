@@ -13,6 +13,21 @@ if TYPE_CHECKING:
 
 
 class Member:
+    """A line element between two nodes.
+
+    ``weight`` is the member's mass on the SDK side, density·area·length, read
+    by :meth:`LoadCase.apply_deadload_to_members`; pass it to replace the
+    computed value. It is never sent to the solver, which works out self-weight
+    and mass from the section.
+
+    ``weight_override`` is what the solver uses instead: a self-weight per unit
+    length in the model's force/length units, gravity included (N/m in an SI
+    model). The solver applies it in place of density·area·g, and divided by g
+    as the member's mass per length in modal and seismic analysis. Use it for a
+    member that carries more than its section, such as cladding or a services
+    run. ``None``, the default, leaves both to the section.
+    """
+
     _member_counter = 1
     _all_members: List["Member"] = []
 
@@ -36,6 +51,7 @@ class Member:
         end_offset: Optional[dict] = None,
         pretension: Optional[float] = None,
         unstretched_length: Optional[float] = None,
+        weight_override: Optional[float] = None,
     ):
         self.id = id or Member._member_counter
         if id is None:
@@ -67,6 +83,7 @@ class Member:
         self.unstretched_length = float(unstretched_length) if unstretched_length is not None else None
 
         self.weight = float(weight) if weight is not None else self.weight()
+        self.weight_override = float(weight_override) if weight_override is not None else None
 
         # Keep registry if you use it elsewhere
         Member._all_members.append(self)
@@ -86,11 +103,10 @@ class Member:
         else:
             raise TypeError(f"Member offset must be dict, tuple or None, got {type(offset).__name__}")
 
-        def f(v):
-            return float(v) if v is not None else None
-
-        x, y, z = f(x), f(y), f(z)
-        if all(v in (None, 0.0) for v in (x, y, z)):
+        # A missing axis is zero. Writing it as null made the solver refuse the
+        # whole model: it reads each axis as a plain number.
+        x, y, z = (float(v) if v is not None else 0.0 for v in (x, y, z))
+        if x == y == z == 0.0:
             return None
         return {"X": x, "Y": y, "Z": z}
 
@@ -185,8 +201,8 @@ class Member:
             # mass (density·area) itself. `self.weight` here is the member MASS
             # (density·area·length) — used by the Python-side self-weight helper
             # (loadcase.py) — so emitting it on the wire would mis-scale modal mass
-            # (by ~g/L_elem) and self-weight. Emit 0 and let the solver compute them.
-            "weight": 0.0,
+            # (by ~g/L_elem) and self-weight. Only `weight_override` goes there.
+            "weight": self.weight_override if self.weight_override is not None else 0.0,
             "chi": self.chi,
             "reference_member": self.reference_member.id if self.reference_member else None,
             "reference_node": self.reference_node.id if self.reference_node else None,
@@ -278,6 +294,9 @@ class Member:
             reference_node = nodes_by_id.get(ref_node)
 
         # --- build ---
+        # The wire `weight` is the solver's per-length override, 0 meaning none;
+        # `weight` on the SDK side is the member's mass and is computed again.
+        wire_weight = data.get("weight")
         member = cls(
             start_node=start_node,
             end_node=end_node,
@@ -285,10 +304,10 @@ class Member:
             id=member_id,
             start_hinge=start_hinge,
             end_hinge=end_hinge,
-            classification=data.get("classification", "") or "",
+            classification=data.get("classification", ""),
             rotation_angle=float(data.get("rotation_angle", 0.0) or 0.0),
             mirror=bool(data.get("mirror", False)),
-            weight=data.get("weight"),
+            weight_override=float(wire_weight) if wire_weight else None,
             chi=data.get("chi"),
             reference_member=reference_member,
             reference_node=reference_node,

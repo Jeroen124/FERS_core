@@ -151,7 +151,11 @@ class PlateSurface:
         boundary_nodes = [nodes_by_id[node_id] for node_id in boundary_node_ids]
 
         openings_data = data.get("openings")
-        openings = [PlateOpening.from_dict(o) for o in openings_data] if openings_data is not None else None
+        openings = (
+            [PlateOpening.from_dict(o, nodes_by_id=nodes_by_id) for o in openings_data]
+            if openings_data is not None
+            else None
+        )
 
         surface = cls(
             id=data.get("id"),
