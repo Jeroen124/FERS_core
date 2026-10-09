@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import re
 from typing import Any, Optional, Tuple, Union, TYPE_CHECKING
 import fers_calculations
@@ -43,6 +44,7 @@ from ..plates.components import PlateOpening
 from ..geometry.workaxis import WorkAxis
 from ..geometry.workplane import WorkPlane
 from ..entities.entitygroup import EntityGroup
+from ..members.bucklingrestraint import BucklingRestraint
 from ..members.material import Material
 from ..members.member import Member
 from ..members.section import Section
@@ -264,6 +266,15 @@ class _AnalysisView:
 
 
 class FERS:
+    """A structural model, its analysis requests and, once solved, its results.
+
+    Create the ``FERS`` object before the nodes, members, sections and loads of
+    its model. Creating one restarts every id counter (unless
+    ``reset_counters=False``), so objects made before it would share ids with
+    the ones made after it, and the solver refuses node ids that do not run
+    from 1 without gaps.
+    """
+
     def __init__(self, settings=None, reset_counters=True):
         if reset_counters:
             self.reset_counters()
@@ -1053,89 +1064,127 @@ class FERS:
 
     def create_combined_model_pattern(original_model, count, spacing_vector):
         """
-        Creates a single model instance that contains the original model and additional
-        replicated and translated member sets according to the specified pattern.
+        Creates a single model instance that contains the original model's member sets
+        and ``count - 1`` copies of them, each one ``spacing_vector`` further along.
+
+        The copies get ids above the original's, so none replaces an original node
+        or member, and node ids stay consecutive, as the solver requires. Each copy
+        keeps its members' types, hinges, offsets and other properties, its member
+        sets' buckling restraints and lengths, and its reference members within the
+        same copy. The combined model takes a copy of the original's settings. Only
+        member sets are combined: load cases, plates and nodal masses are not.
 
         Args:
             original_model (FERS): The original model to replicate.
-            count (int): The number of times the model should be replicated, including the original.
-            spacing_vector (tuple): A tuple (dx, dy, dz) representing the spacing between each model instance.
+            count (int): The number of instances, the original included.
+            spacing_vector (tuple): (dx, dy, dz) from one instance to the next.
 
         Returns:
-            FERS: A single model instance with combined member sets from the original and replicated models.
+            FERS: A model with the original member sets and their translated copies.
         """
-        combined_model = FERS()
-        node_mapping = {}
-        member_mapping = {}
-
-        for original_member_set in original_model.get_all_member_sets():
+        settings = copy.deepcopy(original_model.settings)
+        # Load cases are not copied, so self-weight goes to a load case of its own.
+        settings.analysis_options.self_weight_load_case_id = None
+        # Not FERS(): it restarts the id counters, and the copies then took the
+        # original's ids and replaced its members and nodes.
+        combined_model = FERS(settings=settings, reset_counters=False)
+        member_sets = original_model.get_all_member_sets()
+        for original_member_set in member_sets:
             combined_model.add_member_set(original_member_set)
 
-        # Start replicating and translating the member sets
-        for i in range(1, count):
-            total_translation = (spacing_vector[0] * i, spacing_vector[1] * i, spacing_vector[2] * i)
-            for original_node in original_model.get_all_nodes():
-                # Translate node coordinates
-                new_node_coords = (
-                    original_node.X + total_translation[0],
-                    original_node.Y + total_translation[1],
-                    original_node.Z + total_translation[2],
-                )
-                # Create a new node or find an existing one with the same coordinates
-                if new_node_coords not in node_mapping:
-                    new_node = Node(
-                        X=new_node_coords[0],
-                        Y=new_node_coords[1],
-                        Z=new_node_coords[2],
-                        nodal_support=original_node.nodal_support,
-                        classification=original_node.classification,
-                    )
-                    node_mapping[(original_node.id, i)] = new_node
+        set_nodes = {}
+        for member_set in member_sets:
+            for member in member_set.members:
+                for node in (member.start_node, member.end_node, member.reference_node):
+                    if node is not None:
+                        set_nodes.setdefault(node.id, node)
+        next_node_id = max(set_nodes, default=0) + 1
+        next_member_id = max((member.id for member in original_model.get_all_members()), default=0) + 1
+        next_set_id = max((member_set.id for member_set in member_sets), default=0) + 1
 
+        node_mapping = {}  # (original node id, copy) -> node
+        member_mapping = {}  # (original member id, copy) -> member
+        copied = []  # (original member, copy, its member)
         for i in range(1, count):
-            for original_member_set in original_model.get_all_member_sets():
+            shift = [component * i for component in spacing_vector]
+            for original_node in set_nodes.values():
+                node_mapping[(original_node.id, i)] = Node(
+                    X=original_node.X + shift[0],
+                    Y=original_node.Y + shift[1],
+                    Z=original_node.Z + shift[2],
+                    id=next_node_id,
+                    nodal_support=original_node.nodal_support,
+                    classification=original_node.classification,
+                )
+                next_node_id += 1
+
+            for original_member_set in member_sets:
                 new_members = []
                 for member in original_member_set.members:
-                    new_start_node = node_mapping[(member.start_node.id, i)]
-                    new_end_node = node_mapping[(member.end_node.id, i)]
-                    if member.reference_node is not None:
-                        new_reference_node = node_mapping[(member.reference_node.id, i)]
-                    else:
-                        new_reference_node = None
-
                     new_member = Member(
-                        start_node=new_start_node,
-                        end_node=new_end_node,
+                        start_node=node_mapping[(member.start_node.id, i)],
+                        end_node=node_mapping[(member.end_node.id, i)],
                         section=member.section,
+                        id=next_member_id,
                         start_hinge=member.start_hinge,
                         end_hinge=member.end_hinge,
                         classification=member.classification,
                         rotation_angle=member.rotation_angle,
+                        mirror=member.mirror,
+                        weight=member.weight,
                         chi=member.chi,
-                        reference_member=member.reference_member,
-                        reference_node=new_reference_node,
+                        reference_node=(
+                            node_mapping[(member.reference_node.id, i)]
+                            if member.reference_node is not None
+                            else None
+                        ),
+                        member_type=member.member_type,
+                        start_offset=member.start_offset,
+                        end_offset=member.end_offset,
+                        pretension=member.pretension,
+                        unstretched_length=member.unstretched_length,
+                        weight_override=member.weight_override,
                     )
+                    next_member_id += 1
                     new_members.append(new_member)
-                    if member not in member_mapping:
-                        member_mapping[member] = []
-                    member_mapping[member].append(new_member)
-                # Create and add the new member set to the combined model
-                translated_member_set = MemberSet(
-                    members=new_members,
-                    classification=original_member_set.classification,
-                    buckling_restraints=original_member_set.buckling_restraints,
+                    member_mapping[(member.id, i)] = new_member
+                    copied.append((member, i, new_member))
+
+                restraints = [
+                    BucklingRestraint(
+                        node_id=(
+                            node_mapping[(restraint.node_id, i)].id
+                            if (restraint.node_id, i) in node_mapping
+                            else restraint.node_id
+                        ),
+                        restrains_local_y=restraint.restrains_local_y,
+                        restrains_local_z=restraint.restrains_local_z,
+                        restrains_torsion=restraint.restrains_torsion,
+                    )
+                    for restraint in original_member_set.buckling_restraints
+                ]
+                combined_model.add_member_set(
+                    MemberSet(
+                        members=new_members,
+                        classification=original_member_set.classification,
+                        buckling_restraints=restraints,
+                        id=next_set_id,
+                        buckling_length_y=original_member_set.buckling_length_y,
+                        buckling_length_z=original_member_set.buckling_length_z,
+                        ltb_length=original_member_set.ltb_length,
+                        buckling_length_t=original_member_set.buckling_length_t,
+                        effective_length_factor_y=original_member_set.effective_length_factor_y,
+                        effective_length_factor_z=original_member_set.effective_length_factor_z,
+                    )
                 )
-                combined_model.add_member_set(translated_member_set)
+                next_set_id += 1
 
-        for new_member_lists in member_mapping.values():
-            for new_member in new_member_lists:
-                if new_member.reference_member:
-                    # Find the new reference member corresponding to the original reference member
-                    new_reference_member = member_mapping.get(new_member.reference_member, [None])[
-                        0
-                    ]  # Assuming a one-to-one mapping
-                    new_member.reference_member = new_reference_member
+        # A copy's reference member is the same member of that copy.
+        for member, i, new_member in copied:
+            if member.reference_member is not None:
+                new_member.reference_member = member_mapping.get((member.reference_member.id, i))
 
+        combined_model._advance_id_counters()
         return combined_model
 
     def translate_model(model, translation_vector):

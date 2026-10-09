@@ -86,6 +86,24 @@ Smaller changes to loading:
 - **`save_to_json()` works with its default arguments.** It passed
   `indent=None` to ujson, which refuses it with `TypeError`; only the examples'
   explicit `indent=4` worked.
+- **`LoadCase.apply_deadload_to_members` applies the dead load per unit
+  length.** It applied g times the member's whole mass, `member.weight`, as a load
+  per unit length, so a member got its weight times its length: five times too
+  much on a 5 m member, and too little on a member shorter than one length unit.
+  It now applies `9.81 · weight / length`, which is density·area·g. The
+  `direction` its docstring described, `'Y'`, produced a model the solver
+  schema refused; an axis letter now works as well as a vector. The helper
+  returns the loads it added.
+- **`FERS.create_combined_model_pattern` gives every copy its own ids.** It
+  restarted the id counters, so copies took the original's member and node ids
+  and replaced them: asking for three instances kept two. Copies also lost
+  their members' types, which made any rigid member raise and turned ties and
+  struts into ordinary members, along with offsets, pretension and the weight
+  override. Their reference members and buckling restraints pointed into the
+  first copy or the original, their buckling lengths were dropped, and the
+  combined model had default settings rather than the original's units. All of
+  that is carried over now, and node ids run on from the original's without
+  gaps.
 
 ### Fixed — saving and loading a model
 
@@ -169,6 +187,15 @@ a field that the model does not set.
   the file's order.
 - **Unknown option values.** `AnalysisOptions.order`, `rigid_strategy` and the
   P-delta options can hold a string from a newer document rather than an enum.
+- **Dead load from `apply_deadload_to_members` changes.** Each member's load is
+  divided by its length in model units, so results built on the helper change by
+  that factor. For example, a 5 m member's dead load is a fifth of what it was,
+  and the 0.625 m elements of a 5 m beam meshed in eight get 1.6 times as much.
+  The load is right in the model's units when density is per cubic length unit
+  and forces are in newtons: kg/m³ with m, kg/mm³ with mm. For other units, use
+  the solver's own self-weight (`AnalysisOptions(enable_self_weight=True)`).
+- **`create_combined_model_pattern` returns more.** It now returns every copy,
+  and takes the original's settings, units included, instead of the defaults.
 
 ### Documentation
 
@@ -200,6 +227,10 @@ The README also has new sections:
 
 `fers_core/examples/151_Seismic_Response_Spectrum.py` runs a portal frame
 through both seismic methods, against hand checks.
+
+"Solving a model" in the README, and the `FERS` docstring, now say to create the
+`FERS` object before a model's nodes and members: creating it restarts the id
+counters.
 
 ### Not changed
 

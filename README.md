@@ -28,6 +28,11 @@ model.run_analysis()
 print(model.resultsbundle)
 ```
 
+Building a model by hand, create the `FERS` object first, then its nodes,
+members and loads. Creating a `FERS` restarts the id counters, so a node made
+before it would share an id with one made after it, and the solver refuses
+node ids that do not run from 1 without gaps.
+
 ## Reading results
 
 `run_analysis()` puts the results on `model.resultsbundle`. Load cases and load
