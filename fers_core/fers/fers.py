@@ -17,7 +17,8 @@ from fers_core.fers.deformation_utils import (
     centerline_path_points,
     extrude_along_path,
 )
-from fers_core.results.resultsbundle import ResultsBundle
+from fers_core.results._json_stream import JsonStream
+from fers_core.results._loader import bundle_from_mapping, read_document, results_from_engine_output
 from fers_core.supports.support_utils import (
     format_support_label,
     get_condition_type,
@@ -54,7 +55,6 @@ from ..settings.settings import Settings
 from ..settings.eigen_analysis import BucklingAnalysisSettings, ModalAnalysisSettings
 from pydantic import ValidationError as _PydValidationError
 
-from ..types.pydantic_models import ResultsBundle as ResultsBundleSchema
 from ..types.pydantic_models import FERS as FERSInputSchema
 
 # Engine >= 0.2.53 raises a distinct, catchable error when the licence handshake
@@ -299,12 +299,7 @@ class FERS:
 
         # Parse and validate the results
         try:
-            results_dictionary = ujson.loads(result_string)
-            results_bundle_dict = results_dictionary.get("results")
-            if results_bundle_dict is None:
-                raise ValueError("No 'results' field found in the calculation output")
-            validated = ResultsBundleSchema(**results_bundle_dict)
-            self.resultsbundle = ResultsBundle.from_pydantic(validated)
+            self.resultsbundle = results_from_engine_output(result_string)
         except Exception as e:
             raise ValueError(f"Failed to parse or validate results: {e}")
 
@@ -317,6 +312,12 @@ class FERS:
         """
         Run the Rust-based FERS calculation without saving the input to a file.
         The input JSON is generated directly from the current FERS instance.
+
+        The results replace ``self.resultsbundle``: ``loadcases`` and
+        ``loadcombinations`` by name, and within each, nodes and members by id
+        as a string. ``member_results`` and ``displacement_nodes`` are read-only
+        tables; ``.copy()`` gives editable dicts. See "Reading results" in the
+        README.
 
         Args:
             validate: When True (default), the assembled input is validated
@@ -341,8 +342,9 @@ class FERS:
                 that point, so retrying is safe.
         """
 
-        # Generate the input JSON
-        input_dict = self.to_dict()
+        # Generate the input JSON. Previous results are not input: sending them made
+        # every re-solve carry the last answer to the solver and back.
+        input_dict = self.to_dict(include_results=False)
         if validate:
             self._validate_input_dict(input_dict)
         input_json = ujson.dumps(input_dict)
@@ -368,13 +370,7 @@ class FERS:
             raise RuntimeError(f"Failed to run calculation: {e}")
 
         try:
-            results_dictionary = ujson.loads(result_string)
-            # Extract the 'results' field from the response
-            results_bundle_dict = results_dictionary.get("results")
-            if results_bundle_dict is None:
-                raise ValueError("No 'results' field found in the calculation output")
-            validated = ResultsBundleSchema(**results_bundle_dict)
-            self.resultsbundle = ResultsBundle.from_pydantic(validated)
+            self.resultsbundle = results_from_engine_output(result_string)
         except Exception as e:
             raise ValueError(f"Failed to parse or validate results: {e}")
 
@@ -391,7 +387,8 @@ class FERS:
         Unlike :meth:`run_analysis`, the result never passes through the Python
         heap, so this is the entry point for models whose output runs to hundreds
         of megabytes. Nothing is parsed and ``self.resultsbundle`` is left
-        untouched — load the file yourself if you need the values.
+        untouched; ``FERS.from_json(output_path)`` loads the solved model with
+        its results.
 
         A solve failure raises and leaves any existing file at ``output_path``
         unchanged.
@@ -408,7 +405,7 @@ class FERS:
                 complete within ``license_timeout``. The solve has not started at
                 that point, so retrying is safe.
         """
-        input_dict = self.to_dict()
+        input_dict = self.to_dict(include_results=False)
         if validate:
             self._validate_input_dict(input_dict)
         input_json = ujson.dumps(input_dict)
@@ -509,22 +506,51 @@ class FERS:
         }
 
     def save_to_json(self, file_path, indent=None):
-        """Save the FERS model to a JSON file using ujson."""
+        """Save the model, with its results if it has any, to a JSON file that
+        :meth:`from_json` reads back. ``indent`` pretty-prints it."""
         with open(file_path, "w") as json_file:
-            ujson.dump(self.to_dict(), json_file, indent=indent)
+            # ujson refuses indent=None: it takes an int or no argument at all.
+            ujson.dump(self.to_dict(), json_file, **({} if indent is None else {"indent": indent}))
 
     @classmethod
     def from_json(cls, file_path: str) -> "FERS":
         """
-        Load a FERS model (including optional results) from a JSON file that was
-        created with FERS.to_dict() / FERS.save_to_json().
+        Load a FERS model (including optional results) from a JSON file written by
+        ``calculate_to_file``, ``run_analysis_to_file`` or ``save_to_json``.
+
+        The file is read value by value and the results are stored compactly, so
+        loading usually needs less memory than the file's size, and at most about
+        twice it, rather than 15 to 20 times. ``member_results`` and
+        ``displacement_nodes`` come back as read-only tables; ``.copy()`` gives
+        editable dicts.
         """
-        with open(file_path, "r") as json_file:
-            data = ujson.load(json_file)
-        return cls.from_dict(data)
+        try:
+            return cls._from_json_file(file_path, "utf-8-sig")
+        except UnicodeDecodeError:
+            # Not UTF-8: read it in the platform codec, which is what this method
+            # always did before (it opened files without an encoding).
+            return cls._from_json_file(file_path, "locale")
+
+    @classmethod
+    def _from_json_file(cls, file_path: str, encoding: str) -> "FERS":
+        with open(file_path, "r", encoding=encoding, newline="") as json_file:
+            fers, bundle = read_document(JsonStream(json_file), cls._from_model_dict)
+        if bundle is not None:
+            fers.resultsbundle = bundle
+        return fers
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "FERS":
+        """Build a model, with its results if present, from a dict shaped like
+        :meth:`to_dict`'s output. :meth:`from_json` reads a file in less memory."""
+        fers = cls._from_model_dict(data)
+        res_data = data.get("results") or data.get("resultsbundle")
+        if res_data:
+            fers.resultsbundle = bundle_from_mapping(res_data)
+        return fers
+
+    @classmethod
+    def _from_model_dict(cls, data: dict[str, Any]) -> "FERS":
         # Unwrap the nested {settings, model{…, workspace}, analysis, results}
         # document into the flat lookup this builder consumes. `analysis.options`
         # is folded back under settings (in-memory Settings still owns it).
@@ -543,7 +569,6 @@ class FERS:
             "imperfection_cases": analysis.get("imperfection_cases", []),
             "unity_checks": analysis.get("unity_checks", []),
             "settings": settings_data,
-            "results": data.get("results") or data.get("resultsbundle"),
         }
 
         settings = Settings.from_dict(data["settings"])
@@ -660,14 +685,6 @@ class FERS:
                 imp_data, load_combinations=fers.load_combinations, membersets_by_id=membersets_by_id
             )
             fers.add_imperfection_case(ic)
-
-        # results
-        res_data = data.get("results")
-        if res_data is None:
-            res_data = data.get("resultsbundle")
-        if res_data:
-            validated = ResultsBundleSchema(**res_data)
-            fers.resultsbundle = ResultsBundle.from_pydantic(validated)
 
         return fers
 

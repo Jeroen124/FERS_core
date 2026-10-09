@@ -1,5 +1,118 @@
 # Changelog
 
+## 0.1.98
+
+### Results load in a fraction of the memory
+
+`FERS.from_json` peaked at about 14 times the size of the result file. An
+integrator's nightly was killed for memory while loading an 81.5 MB result, after
+a solve that took 4 s. Three complete copies of the results existed at the peak:
+the parsed JSON, a full tree of the generated pydantic models used to validate it,
+and the SDK's own objects. Those objects were themselves about seven times the
+file: ten small objects per member per load combination, four of them zero
+placeholders for blocks a `result_filter` had removed.
+
+The file is now read one member or node entry at a time. Entries are validated in
+batches against the same generated models, and stored as one float64 array per
+block and per load case or combination. Measured on generated files of the same
+shape, with the peak working set above the post-import baseline, worst of three
+runs:
+
+| file | peak, 0.1.97 | peak, 0.1.98 | resident after load, 0.1.97 → 0.1.98 |
+|---|---|---|---|
+| 81.7 MB: 3090 members, 25 combinations, five-token filter | 17.96× | 0.63× | 9.34× → 0.63× |
+| 411 MB: 8546 members, 31 combinations + 15 load cases | 18.03× (7.4 GB) | 0.50× | 9.29× → 0.50× |
+| 206 MB, unfiltered | 19.96× | 0.64× | 10.01× → 0.64× |
+| 34.6 MB: one combination, 24,000 members | 15.09× | 2.16× | 8.87× → 1.43× |
+| `run_analysis`, 81.7 MB result string | 15.94× | ≤ 1.00× | 7.37× → 0.58× |
+
+The numbers are identical: `to_dict()` of a loaded result is byte-for-byte what
+0.1.97 produced, `-0.0` and the zero-filled filtered blocks included.
+`scripts/make_synthetic_result.py` and `scripts/bench_result_load.py` reproduce
+the table.
+
+### `member_results` and `displacement_nodes` are read-only now
+
+On a loaded result these two are read-only mappings over the arrays, and each
+lookup builds the `MemberResult` or `NodeDisplacement`. They behave like the
+dicts they replace for reading: same keys in the same order, `len`, `in`, `get`,
+`.items()`, `next(iter(...))`. The differences:
+
+- **Objects are read-only.** Setting or deleting an attribute raises
+  `AttributeError`, because an edit would change a copy that the next lookup
+  replaces. `section_forces`, `internal_force_series` and `member_displacements`
+  come back as tuples, so `.append()` raises too.
+- **`.copy()` gives back the old shape**: a plain dict of ordinary, editable
+  objects, at the old memory cost. `dict(table)` gives an editable dict whose
+  values are still read-only.
+- **Lookups build objects**, so `a[k] is a[k]` is false, and reading every
+  member once costs more than it did: 0.69 s instead of 0.06 s on the 81.7 MB
+  file, and 3.5 s instead of 0.35 s on the 411 MB one. Loading itself got faster
+  by more (4.9 s → 2.5 s, and 28.4 s → 18.2 s), so a load plus one full read
+  still takes less time than before.
+- `isinstance(x, dict)` is false; `isinstance(x, collections.abc.Mapping)` is
+  true. The objects are still instances of `MemberResult`, `NodeForces` and the
+  rest.
+
+Smaller changes to loading:
+
+- Files are decoded as UTF-8, with or without a BOM, as the engine writes them.
+  They used to be read in the platform codec, which on Windows garbled non-ASCII
+  names and failed on some. A file that is not UTF-8 is still read in the
+  platform codec.
+- Malformed JSON raises `json.JSONDecodeError` rather than ujson's error. Both
+  are `ValueError`s.
+- A validation error reports the first failing batch rather than every error in
+  the file.
+- A null `bw` or `warp` reads as 0.0. It used to raise `TypeError`.
+
+### Fixed
+
+- **`ResultsBundle.from_raw_dict` reads real results.** It raised `TypeError` on
+  any non-empty displacement, reaction, member or summary entry, and dropped ten
+  member fields, `local_*` and `section_forces` among them. It now builds the
+  same tables as the validated path, still without validating.
+- **`to_dict()` survives `json.dumps` when unity-check results are present.**
+  They carried enum objects, so `save_to_json`, a second `run_analysis` and
+  `cloud_update(include_results=True)` all failed. `to_dict()` now writes the wire
+  values; the result objects still hold the enums.
+- **`run_analysis` and `run_analysis_to_file` no longer send the previous results
+  to the solver** with every re-solve.
+- **`ReactionNodeResult()` and `PlateResult()` have real defaults.** They read
+  back `dataclasses.Field` objects, the same fault 0.1.95 fixed in
+  `ResultsBundle`.
+- **`MemberResult.plot_diagram` runs.** It called a `Member.calculate_length()`
+  that does not exist.
+- **`save_to_json()` works with its default arguments.** It passed
+  `indent=None` to ujson, which refuses it with `TypeError`; only the examples'
+  explicit `indent=4` worked.
+
+### Documentation
+
+The README, which is also the PyPI page, has a new "Reading results" section.
+It covers:
+
+- how results are keyed;
+- the read-only tables and `.copy()`;
+- saving and loading;
+- solving straight to a file for large models.
+
+`fers_core/examples/809_Reading_Results.py` runs these end to end. Docstrings on
+`run_analysis`, `run_analysis_to_file`, `from_json`, `from_dict`,
+`save_to_json`, `ResultsBundle` and `SingleResults` now say where the results
+land and in what form. The examples index lists every example again: twelve were
+missing from it.
+
+The README's first example loaded its beam upward. It called it "5 kN/m
+downward" while passing `udl=-5000.0`, but `create_beam`'s `udl` is positive
+downward.
+
+### Not changed
+
+The engine pin stays `==0.2.66`. `to_dict()`/`save_to_json` still build every
+value as Python objects. Unity-check, modal, buckling and seismic results stay
+plain dicts, and plate results stay objects.
+
 ## 0.1.97
 
 ### British Steel UB / UC / PFC and ASTM W / HP sections

@@ -23,13 +23,64 @@ pip install FERS
 ```python
 from fers_core.builders import create_beam
 
-model = create_beam(5.0, "IPE180", udl=-5000.0)   # 5 m span, 5 kN/m downward
+model = create_beam(5.0, "IPE180", udl=5000.0)    # 5 m span, 5 kN/m downward
 model.run_analysis()
 print(model.resultsbundle)
 ```
 
-Use `run_analysis_to_file(path, ...)` instead when the result is large — it
-streams the JSON straight to disk rather than through the Python heap.
+## Reading results
+
+`run_analysis()` puts the results on `model.resultsbundle`. Load cases and load
+combinations are keyed by name. Within each, nodes and members are keyed by
+their id as a string, because results round-trip through JSON.
+
+```python
+case = model.resultsbundle.loadcases["Load"]    # or .loadcombinations["ULS 1"]
+
+case.displacement_nodes["5"].dy                  # dx dy dz rx ry rz warp
+case.reaction_nodes["1"].nodal_forces.fy         # fx fy fz mx my mz bw
+beam = case.member_results["4"]
+beam.local_maximums.mz, beam.local_minimums.mz   # envelope along the member
+beam.local_start_forces.fy                       # end forces, member axes
+```
+
+Since 0.1.98, `member_results` and `displacement_nodes` are read-only tables
+rather than dicts of objects. That is what keeps a large result small in
+memory. They read like dicts: `[]`, `get`, `in`, `len`, `.items()`, and
+iteration in the solver's order. Each lookup builds a fresh object, and nothing
+in it can be changed:
+
+```python
+beam.local_maximums.mz = 0.0                     # AttributeError: read-only
+editable = case.member_results.copy()            # a plain dict of editable objects
+editable["4"].local_maximums.mz = 0.0            # fine
+```
+
+`section_forces`, `internal_force_series` and `member_displacements` come back
+as tuples. To test for a table, use `isinstance(x, collections.abc.Mapping)`,
+not `dict`. `reaction_nodes` and `plate_results` are plain dicts, as before.
+
+### Saving and loading
+
+```python
+from fers_core import FERS
+
+model.save_to_json("beam.json")                  # the model and its results
+model = FERS.from_json("beam.json")
+```
+
+`FERS.from_json` reads any file the solver or the SDK wrote, one entry at a
+time. A typical result needs less memory than its file to load, and at most
+about twice the file's size; before 0.1.98 it needed 15 to 20 times. For a
+large model, let the solver write the file itself. The result then never
+passes through Python as one string:
+
+```python
+model.run_analysis_to_file("beam_results.json")
+solved = FERS.from_json("beam_results.json")
+```
+
+`fers_core/examples/809_Reading_Results.py` runs all of this end to end.
 
 ## Premium solves and timeouts
 

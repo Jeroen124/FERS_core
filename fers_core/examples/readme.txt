@@ -5,7 +5,7 @@ This folder contains runnable example scripts that demonstrate the features
 of the FERS structural-analysis library.  Examples are grouped by number range:
 
   0xx  –  Basic Beam Validation Tests
-  1xx  –  Visual / 3-D Rendering Examples
+  1xx  –  Visual / 3-D Rendering and Feature Examples
   2xx  –  Real-World Structural Application Examples
   8xx  –  Utility & Functionality Examples  (sections, I/O, cloud, DXF …)
   9xx  –  Experimental / Scratch
@@ -46,22 +46,40 @@ of the FERS structural-analysis library.  Examples are grouped by number range:
 071  Support Connection
 
 081  Double Cantilever
+081  Double Cantilever – Out-of-Plane Load
 082  Double Cantilever – Double Supported
 083  Double Cantilever – Rope, Double Supported
+084  Triple Cantilever in 3-D
+085  Triple Cantilever in 3-D, Rotated −45° about Y
 
 091  Load Combinations – Cantilever
 093  Load Combinations – Hooked Cantilever
 
 
 ──────────────────────────────────────────────────────────────────
-1xx – Visual / 3-D Rendering Examples
+1xx – Visual / 3-D Rendering and Feature Examples
 ──────────────────────────────────────────────────────────────────
+100  Unity Check – Beam Deflection (SLS) – chord-relative mid-span sag
+                                    (MemberDeflection) against a span limit.
+101  Unity Check – Reference Member Clearance – cross-member checks through
+                                    reference_member.
 101  Visual Cantilever with End Load
 103  Visual Cantilever with Uniform Distributed Load
 104  Visual Member Deflected Shape   – engine load-exact member_displacements vs
                                     client Hermite on a uniformly-loaded cantilever
                                     (set include_member_deflected_shape).
 111  Visual Simply Supported with Center Load
+121  Shear Deformation Toggle       – Euler-Bernoulli against Timoshenko on a
+                                    cantilever.
+122  Warping Deformation Toggle     – St. Venant against Vlasov torsion under an
+                                    end torque.
+131  Stiffness Curve – Cantilever   – a base spring whose rotational stiffness
+                                    grows with the axial load.
+132  Stiffness Curve – Sensitivity  – deflection against axial load, one model
+                                    per load level.
+141  Plate Surface Mesh             – a slab meshed automatically from its outline.
+142  Plate Strip Surface Load       – a cantilevered plate strip under pressure,
+                                    against the beam formula.
 181  Visual Double Cantilever
 182  Visual Double Cantilever – Double Supported
 
@@ -77,6 +95,8 @@ of the FERS structural-analysis library.  Examples are grouped by number range:
                                     frame in aluminium RHS/SHS sections, with
                                     gravity, snow, and wind-uplift load combinations
                                     (EN 1990/1991), saved to FERS Cloud.
+203  Premium Batch Solve          – Many models in one unattended run, with a
+                                    bounded licence handshake and retry.
 
 
 ──────────────────────────────────────────────────────────────────
@@ -100,6 +120,10 @@ of the FERS structural-analysis library.  Examples are grouped by number range:
                                     (requires an account and API key).
 807  Custom Line Stroke           – Customise member visualisation stroke styles.
 808  Default Materials            – Inspect and use the built-in material library.
+809  Reading Results              – Node displacements, reactions and member
+                                    forces; the read-only result tables and
+                                    .copy(); save_to_json / from_json; solving
+                                    straight to a file for large models.
 
 
 ──────────────────────────────────────────────────────────────────
