@@ -1,5 +1,106 @@
 # Changelog
 
+## 0.1.99
+
+### Engine 0.2.68: ask for only the results you read
+
+This release pins `fers_calculations==0.2.68`. The pin also brings engine
+0.2.67's fixes to Python callers, the first SDK release to do so, among them a
+regression 0.2.66 introduced: a hinge on a truss, tie or strut scaled that
+member's reported force, to zero for a released axial end, in linear analysis
+too.
+
+`result_filter` keeps or drops whole blocks. A `ResultRequest` names a block and
+narrows it: to members (the unity checks' selectors) or nodes, to load
+combinations by `limit_state` or id, to components, and to one member end:
+
+```python
+from fers_core import ResultBlock, ResultRequest
+from fers_core.result_requests import nodes_of
+from fers_core.unity_checks import classification
+
+uprights, beams = classification("Upright_1"), classification("beam")
+model.settings.analysis_options.result_requests = [
+    ResultRequest(ResultBlock.LOCAL_ENVELOPES, members=[uprights, classification("Bracing")],
+                  limit_state="ULS", components=["fx", "my", "mz"]),
+    ResultRequest(ResultBlock.LOCAL_END_FORCES, members=beams, limit_state="ULS",
+                  end="start", components=["my", "fz"]),
+    ResultRequest(ResultBlock.NODE_DISPLACEMENTS, nodes=nodes_of(uprights, beams),
+                  limit_state="SLS", components=["dx", "dy", "dz"]),
+    ResultRequest(ResultBlock.REACTIONS, limit_state="ULS"),
+]
+```
+
+On an integrator's 4-bay shuttle rack (8546 members, 31 combinations), the
+five-token filter writes 451.8 MB. With their selection the file is 40.7 MB, and
+every value in it equals the filter-only output exactly.
+
+The solver returns the selection as dense arrays, and the SDK loads them into the
+usual `member_results`, `displacement_nodes` and `reaction_nodes`, so code that
+reads results keeps working. Anything that was not requested reads as `None`
+rather than zero: a component, a block, or a reaction's location and support id.
+A check that reads a value nobody asked for therefore fails instead of seeing a
+zero. The arrays themselves are on `ResultsBundle.selections`, each shaped
+`(result_sets, ids, fields, components)`. `to_dict()` writes the selections back
+as the solver wrote them, so a saved result reloads unchanged.
+
+Combinations are matched on their `limit_state`, as unity checks match them. Set
+it on each `LoadCombination` to select by it; ULS or SLS in `situation` is not
+read. The solver refuses a request it cannot meet before it starts, including a
+`limit_state` that no combination carries.
+
+The README's "Reading results" section now covers requests and `selections`.
+`fers_core/examples/810_Result_Requests.py` runs a request end to end, and
+`ResultRequest`'s docstring lists what each argument takes.
+
+### Engine 0.2.68: sections with a product of inertia, and shear-centre offsets
+
+These engine fixes reach Python callers with the new pin.
+
+- **A section with `i_yz` is read the same whichever principal axis names it.**
+  The engine read such a section correctly only when `principal_axis_angle` was
+  its own Mohr angle θ. The other principal axis (θ ± 90°), θ ± 180°, or no angle
+  made it take the centroidal `i_y`/`i_z` as principal values, without a word. A
+  cantilever came out 3.8× too stiff. Now:
+  - any angle that names a principal axis works;
+  - an omitted angle is derived;
+  - an angle that names neither axis is refused with a `RuntimeError` that gives
+    both principal angles.
+
+  The SDK's section factories and catalogues send θ, so their bending is
+  unchanged.
+- **Shear-centre offsets are applied along the member's own axes, with the
+  right sign.**
+  - Sign: with coupling on, which is the default, every section with an offset
+    twisted the wrong way. That covers channels, tees and angles.
+  - Axes: angles and Z sections also twisted by the wrong amount. An equal angle
+    twisted 41 % too much under a load along y, and not at all under one along
+    z.
+
+  Displacements of the member axis were right. The twist, torsion and bimoment
+  of those sections change.
+- **The deflected shape of a turned section follows its principal axes.** This
+  affects `member_displacements` and `MemberDeflection` checks.
+- **EC3 checks a section with `i_yz` about its principal axes.** Forces,
+  inertias, moduli, shear areas and buckling curves are all taken about y′/z′,
+  and each principal axis takes the buckling length of the member axis nearest
+  it.
+  - The SDK's angle and Z sections now send their section moduli and shear areas
+    about the principal axes, since that is what the engine reads for them. For
+    an L 100x65x7, `wel_y`/`wel_z` are 19.25/6.33 cm³, where they were
+    7.83/17.07.
+  - The leg-axis values stay on the new `Section.geometric`, for anyone who
+    bends the section in one plane about a member axis. It is not sent to the
+    solver, and `scripts/export_sections.py` writes it beside the principal
+    values.
+- **EC3 pairs shear areas as the element does.** `a_sz` carries the shear
+  along y and `a_sy` the shear along z. EC3 paired them by letter, so a library
+  I-section's strong-axis shear was checked against its flanges: for an IPE300,
+  29.4 cm² instead of the 20.8 cm² web.
+
+`Section`'s docstring now describes the rule. It still described the old
+"principal values plus an angle" contract.
+
 ## 0.1.98
 
 ### Results load in a fraction of the memory

@@ -82,6 +82,67 @@ solved = FERS.from_json("beam_results.json")
 
 `fers_core/examples/809_Reading_Results.py` runs all of this end to end.
 
+### Only the results you read (engine 0.2.68)
+
+`AnalysisOptions(result_filter=[...])` keeps or drops whole result blocks.
+`result_requests` goes further. Each `ResultRequest` names a block and narrows
+it to chosen members or nodes, load combinations, components and one member
+end:
+
+```python
+from fers_core import ResultBlock, ResultRequest
+from fers_core.result_requests import nodes_of
+from fers_core.unity_checks import classification
+
+columns, beams = classification("column"), classification("beam")
+model.settings.analysis_options.result_requests = [
+    ResultRequest(ResultBlock.LOCAL_ENVELOPES, members=[columns, beams],
+                  limit_state="ULS", components=["fx", "my", "mz"]),
+    ResultRequest(ResultBlock.NODE_DISPLACEMENTS, nodes=nodes_of(beams),
+                  limit_state="SLS", components=["dx", "dz"]),
+    ResultRequest(ResultBlock.REACTIONS, limit_state="ULS"),
+]
+model.run_analysis()
+```
+
+The values load into the same `member_results`, `displacement_nodes` and
+`reaction_nodes`, so code that reads them keeps working. **Anything that was not
+requested reads as `None`, not zero.** A check that reads a value nobody asked
+for therefore fails instead of passing on a zero.
+
+- `members` takes the unity checks' selectors: `classification(...)`,
+  `members([...])`, `member_sets([...])` and `all_members()`. Several selectors
+  form a union.
+- `nodes` takes `nodes([...])`, or `nodes_of(*selectors)` for the end nodes of
+  the selected members.
+- Load combinations are matched on their `limit_state`, as unity checks match
+  them, or by `load_combination_ids`. To select by limit state, set
+  `limit_state` on each `LoadCombination`; the solver does not read `situation`.
+- A request with neither `limit_state` nor `load_combination_ids` also covers
+  the load cases.
+- `end="start"` or `end="end"` keeps one end of the end-force and
+  end-displacement blocks.
+- The solver refuses a request it cannot meet, before it starts. That includes
+  `section_forces`, `internal_force_series`, a component the block does not
+  have, a limit state no combination carries, and `result_filter` set as well.
+
+The values themselves are on `model.resultsbundle.selections`, one entry per
+request and group of result sets. Each entry's `values` is a read-only numpy
+array shaped `(result_sets, ids, fields, components)`, with each axis listed
+beside it:
+
+```python
+sel = model.resultsbundle.selections[0]
+sel["group"]                     # "loadcombinations" or "loadcases"
+sel["result_sets"], sel["ids"]   # combination names, member or node ids
+sel["fields"], sel["components"] # e.g. ["local_maximums", "local_minimums"], ["fx", "my", "mz"]
+my = sel["values"][..., sel["components"].index("my")]   # every set, member and field
+```
+
+`save_to_json` writes the selections back as the solver wrote them, so a saved
+result reloads unchanged. `fers_core/examples/810_Result_Requests.py` runs this
+end to end.
+
 ## Premium solves and timeouts
 
 Without an API key the solver runs at Free-tier limits (100 members) and makes

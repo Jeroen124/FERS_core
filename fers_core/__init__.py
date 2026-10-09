@@ -52,6 +52,7 @@ from .settings.anlysis_options import (
     RigidStrategy,
 )
 from .settings.enums import MassFormulation
+from .result_requests import ResultRequest
 from .settings.eigen_analysis import BucklingAnalysisSettings, ModalAnalysisSettings
 from .members.memberhinge import MemberHinge
 from .members.moment_rotation import CurveEndBehaviour, MomentRotationCurve
@@ -135,6 +136,7 @@ __all__ = [
     "PdeltaMode",
     "ReactionNodeResult",
     "ResultBlock",
+    "ResultRequest",
     "ResultRenderer",
     "ResultsBundle",
     "RigidStrategy",

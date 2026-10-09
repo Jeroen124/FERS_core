@@ -124,6 +124,10 @@ of the FERS structural-analysis library.  Examples are grouped by number range:
                                     forces; the read-only result tables and
                                     .copy(); save_to_json / from_json; solving
                                     straight to a file for large models.
+810  Result Requests              – Ask the solver for only the results a check
+                                    reads (engine 0.2.68): result_requests,
+                                    None for anything not asked for, and the
+                                    selections arrays.
 
 
 ──────────────────────────────────────────────────────────────────

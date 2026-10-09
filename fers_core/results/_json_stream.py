@@ -98,6 +98,29 @@ class JsonStream:
             if separator != ",":
                 raise self._error("Expecting ',' delimiter", self._pos - 1)
 
+    def iter_array(self) -> Iterator[int]:
+        """Step through the array at the cursor, yielding each element's index; the
+        caller consumes the element before asking for the next."""
+        if self._skip_whitespace() != "[":
+            raise self._error("Expecting '['", self._pos)
+        self._pos += 1
+        if self._skip_whitespace() == "]":
+            self._pos += 1
+            return
+        index = 0
+        while True:
+            before = self.offset
+            yield index
+            if self.offset == before:
+                raise RuntimeError(f"JsonStream: array element {index} was not consumed")
+            separator = self._skip_whitespace()
+            self._pos += 1
+            if separator == "]":
+                return
+            if separator != ",":
+                raise self._error("Expecting ',' delimiter", self._pos - 1)
+            index += 1
+
     def expect_end(self) -> None:
         """Raise unless only whitespace is left."""
         if self._skip_whitespace():

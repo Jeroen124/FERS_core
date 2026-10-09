@@ -1,4 +1,5 @@
-from typing import List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
+from ..result_requests import ResultRequest
 from ..settings.enums import (
     AnalysisOrder,
     Dimensionality,
@@ -46,6 +47,11 @@ class AnalysisOptions:
     the sampled deflected shape stays governed solely by
     ``include_member_deflected_shape``, and unity checks always evaluate on
     the full results regardless of the filter. Older engines ignore the field.
+
+    Result requests (engine >= 0.2.68): ``result_requests`` narrows a block to
+    chosen members or nodes, combinations, components and member end, and
+    returns only that — see ``fers_core.result_requests``. Not combinable with
+    ``result_filter``.
     """
 
     _analysis_options_counter = 1
@@ -74,6 +80,7 @@ class AnalysisOptions:
         self_weight_load_case_id: Optional[int] = None,
         include_member_deflected_shape: Optional[bool] = None,
         result_filter: Optional[List[Union[ResultBlock, str]]] = None,
+        result_requests: Optional[List[Union[ResultRequest, Dict[str, Any]]]] = None,
     ):
         self.analysis_options_id = id or AnalysisOptions._analysis_options_counter
         if id is None:
@@ -106,6 +113,11 @@ class AnalysisOptions:
         # Whitelist of result blocks to emit (None = full output). Items may be
         # ResultBlock members or their raw wire strings.
         self.result_filter = list(result_filter) if result_filter is not None else None
+        self.result_requests = (
+            [r if isinstance(r, ResultRequest) else ResultRequest.from_dict(r) for r in result_requests]
+            if result_requests is not None
+            else None
+        )
 
     def to_dict(self):
         data = {
@@ -152,6 +164,8 @@ class AnalysisOptions:
             data["result_filter"] = [
                 block.value if isinstance(block, ResultBlock) else str(block) for block in self.result_filter
             ]
+        if self.result_requests is not None:
+            data["result_requests"] = [request.to_dict() for request in self.result_requests]
         return data
 
     @classmethod
@@ -237,4 +251,5 @@ class AnalysisOptions:
             self_weight_load_case_id=data.get("self_weight_load_case_id"),
             include_member_deflected_shape=data.get("include_member_deflected_shape"),
             result_filter=result_filter,
+            result_requests=data.get("result_requests"),
         )
