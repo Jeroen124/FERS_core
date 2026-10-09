@@ -663,6 +663,10 @@ class MemberSet(BaseModel):
         description='Ids of the members (in `FERS.members`) that make up this beam.',
         min_length=1,
     )
+    scissor_hinge: conint(ge=0) | None = Field(
+        None,
+        description="Id of a `ScissorHinge` (in `model.scissor_hinges`): where this beam\nmeets a member outside the set, its members stay joined to each other\nand rotate relative to the node about the hinge's released global axes.\nA member may belong to only one set that carries one.",
+    )
 
 
 class Point(RootModel[tuple[float, float]]):
@@ -1298,6 +1302,20 @@ class ResultsSummary(BaseModel):
 class RigidStrategy(Enum):
     LinearMpc = 'LinearMpc'
     RigidMember = 'RigidMember'
+
+
+class ScissorHinge(BaseModel):
+    id: conint(ge=0)
+    rotational_release_x: float | None = Field(
+        None,
+        description='Rotation about global X. Omitted: held, as at any node. `0.0`: free.\nA positive value: a linear rotational spring between the set and the\nnode, in moment per radian.',
+    )
+    rotational_release_y: float | None = Field(
+        None, description='Rotation about global Y; as `rotational_release_x`.'
+    )
+    rotational_release_z: float | None = Field(
+        None, description='Rotation about global Z; as `rotational_release_x`.'
+    )
 
 
 class Section(BaseModel):
@@ -2594,6 +2612,11 @@ class Model(BaseModel):
     nodes: list[Node]
     plate_elements: list[PlateElement] | None = Field([], validate_default=True)
     plate_surfaces: list[PlateSurface] | None = Field([], validate_default=True)
+    scissor_hinges: list[ScissorHinge] | None = Field(
+        [],
+        description='Referenced by `MemberSet.scissor_hinge`; see [`ScissorHinge`].',
+        validate_default=True,
+    )
     sections: list[Section]
     shape_paths: list[ShapePath] | None = Field([], validate_default=True)
     workspace: Workspace | None = Field({}, validate_default=True)
@@ -2698,7 +2721,7 @@ class FERS(BaseModel):
     )
     results: ResultsBundle | None = None
     schema_version: conint(ge=0) | None = Field(
-        2,
+        3,
         description='Schema contract version (see [`SCHEMA_VERSION`]). Defaults to the current\nversion when omitted so older documents still parse.',
     )
     settings: Settings = Field(

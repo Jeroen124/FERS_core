@@ -55,6 +55,7 @@ from .settings.enums import MassFormulation
 from .result_requests import ResultRequest
 from .settings.eigen_analysis import BucklingAnalysisSettings, ModalAnalysisSettings
 from .members.memberhinge import MemberHinge
+from .members.scissorhinge import ScissorHinge
 from .members.moment_rotation import CurveEndBehaviour, MomentRotationCurve
 from .results.resultsbundle import ResultsBundle
 from .results.singleresults import SingleResults
@@ -140,6 +141,7 @@ __all__ = [
     "ResultRenderer",
     "ResultsBundle",
     "RigidStrategy",
+    "ScissorHinge",
     "Section",
     "SurfaceLoad",
     "SurfaceLoadVertex",

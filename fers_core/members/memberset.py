@@ -3,6 +3,7 @@ import numpy as np
 
 from ..members.member import Member
 from ..members.bucklingrestraint import BucklingRestraint
+from ..members.scissorhinge import ScissorHinge
 from typing import Optional
 
 
@@ -13,6 +14,11 @@ class MemberSet:
     The member objects are kept in-memory (``self.members``) so the helper
     methods can operate on them, but the set is serialized as a list of member
     ids (``member_ids``) referencing the top-level ``FERS.members`` list.
+
+    ``scissor_hinge`` says how the beam connects to the members it crosses: it
+    stays continuous and turns relative to them about the released global axes
+    (see :class:`ScissorHinge`). A member can belong to only one set that
+    carries one.
     """
 
     _member_set_counter = 1
@@ -29,6 +35,7 @@ class MemberSet:
         buckling_length_t: Optional[float] = None,
         effective_length_factor_y: Optional[float] = None,
         effective_length_factor_z: Optional[float] = None,
+        scissor_hinge: Optional[ScissorHinge] = None,
     ):
         self.id = id or MemberSet._member_set_counter
         if id is None:
@@ -49,6 +56,7 @@ class MemberSet:
         self.buckling_length_t = buckling_length_t
         self.effective_length_factor_y = effective_length_factor_y
         self.effective_length_factor_z = effective_length_factor_z
+        self.scissor_hinge = scissor_hinge
 
     @classmethod
     def reset_counter(cls):
@@ -72,6 +80,8 @@ class MemberSet:
             value = getattr(self, key)
             if value is not None:
                 d[key] = value
+        if self.scissor_hinge is not None:
+            d["scissor_hinge"] = self.scissor_hinge.id
         return d
 
     @classmethod
@@ -80,6 +90,7 @@ class MemberSet:
         data: dict,
         *,
         members_by_id: dict[int, Member],
+        scissor_hinges_by_id: Optional[dict[int, ScissorHinge]] = None,
     ) -> "MemberSet":
         members: list[Member] = []
         for mid in data.get("member_ids", []):
@@ -91,11 +102,26 @@ class MemberSet:
 
         buckling_restraints = [BucklingRestraint.from_dict(br) for br in data.get("buckling_restraints", [])]
 
+        scissor_hinge = None
+        if data.get("scissor_hinge") is not None:
+            hinge_id = int(data["scissor_hinge"])
+            try:
+                scissor_hinge = (scissor_hinges_by_id or {})[hinge_id]
+            except KeyError:
+                raise KeyError(f"ScissorHinge with id={hinge_id} not found when building MemberSet.")
+
         return cls(
             members=members,
             classification=data.get("classification"),
             buckling_restraints=buckling_restraints,
             id=data.get("id"),
+            buckling_length_y=data.get("buckling_length_y"),
+            buckling_length_z=data.get("buckling_length_z"),
+            ltb_length=data.get("ltb_length"),
+            buckling_length_t=data.get("buckling_length_t"),
+            effective_length_factor_y=data.get("effective_length_factor_y"),
+            effective_length_factor_z=data.get("effective_length_factor_z"),
+            scissor_hinge=scissor_hinge,
         )
 
     @staticmethod

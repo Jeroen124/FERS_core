@@ -143,6 +143,76 @@ my = sel["values"][..., sel["components"].index("my")]   # every set, member and
 result reloads unchanged. `fers_core/examples/810_Result_Requests.py` runs this
 end to end.
 
+## Scissor hinges: a continuous beam that turns on what it crosses (engine 0.2.68)
+
+A rail running over beams and resting on each one is continuous along its
+length, but free to turn on every beam. A `MemberHinge` releases one member end,
+so releasing both rail ends at a beam splits the rail into two spans. Put the
+rail's members in a member set of their own and give the set a
+`ScissorHinge` instead. No link member or extra node is needed:
+
+```python
+from fers_core import FERS, DistributedLoad, Material, Member, MemberSet, NodalSupport, Node, ScissorHinge, Section
+from fers_core.supports.supportcondition import SupportCondition as C
+
+model = FERS()
+steel = Material(name="S355", e_mod=210e9, g_mod=81e9, density=7850.0, yield_stress=355e6)
+rail_section = Section(name="rail", material=steel, i_y=1e-6, i_z=1e-6, j=1e-7, area=1e-3)
+beam_section = Section(name="beam", material=steel, i_y=1e-4, i_z=1e-4, j=1e-4, area=5e-3)
+
+turns = {"X": C.fixed(), "Y": C.free(), "Z": C.free()}
+a, m, b = Node(0.0, 0.0, 0.0), Node(1.0, 0.0, 0.0), Node(2.0, 0.0, 0.0)
+a.nodal_support = NodalSupport(rotation_conditions=turns)
+b.nodal_support = NodalSupport(
+    displacement_conditions={"X": C.free(), "Y": C.fixed(), "Z": C.fixed()}, rotation_conditions=turns
+)
+beam_start, beam_end = Node(1.0, 0.0, -0.5), Node(1.0, 0.0, 0.5)
+beam_start.nodal_support = beam_end.nodal_support = NodalSupport()  # clamped
+
+rail_1 = Member(start_node=a, end_node=m, section=rail_section)
+rail_2 = Member(start_node=m, end_node=b, section=rail_section)
+model.add_member_set(MemberSet(
+    members=[rail_1, rail_2],
+    scissor_hinge=ScissorHinge(rotational_release_y=0.0, rotational_release_z=0.0),
+))
+model.add_member_set(MemberSet(members=[
+    Member(start_node=beam_start, end_node=m, section=beam_section),
+    Member(start_node=m, end_node=beam_end, section=beam_section),
+]))
+
+span = model.create_load_case(name="span")
+DistributedLoad(member=rail_1, load_case=span, magnitude=1000.0, end_magnitude=1000.0, direction=(0, -1, 0))
+model.run_analysis()
+mz = model.resultsbundle.loadcases["span"].member_results[str(rail_1.id)].local_end_forces.mz
+print(f"{abs(mz):.1f} Nm")  # 62.4; a knife edge gives qL²/16 = 62.5, a rigid joint 122.6
+```
+
+- **Where it applies:** at every node where a member of the set meets a member
+  outside the set, or a plate. There the set's members stay joined to each
+  other, keep the node's translations, and turn relative to the node.
+  Nothing is released where the set meets only itself or a support. So the
+  continuous beam's members belong in a set of their own; a set holding every
+  member meets nothing, and the solver refuses it.
+- **The axes are global**, each set as a `MemberHinge` release is: `None` holds
+  it, `0.0` frees it, and a positive value is a rotational spring between the
+  set and the node, in moment per radian.
+- **Supports and nodal loads** at a released node act on the node, meaning the
+  members outside the set. A node's reported rotation is theirs. The set's own
+  rotation there is in its members' `local_displacement_start_node` and
+  `local_displacement_end_node`.
+- **Two hinged sets crossing** with nothing else are each released from the
+  node, so every axis either one releases is free between them.
+- **A set of one member** gives a release about global axes at that member's
+  ends.
+- **Second order:** as with member hinges, a model with scissor hinges takes the
+  corotational correction only when `NonlinearMethod.COROTATIONAL` is named.
+
+A model that uses scissor hinges is written with `schema_version` 3, so a solver
+older than 0.2.68 refuses it instead of solving every connection as rigid.
+Without them, a model is written exactly as before.
+`fers_core/examples/054_Scissor_Hinge_Rail_On_Beam.py` compares the rigid
+connection, member hinges, the scissor hinge and a spring.
+
 ## Premium solves and timeouts
 
 Without an API key the solver runs at Free-tier limits (100 members) and makes

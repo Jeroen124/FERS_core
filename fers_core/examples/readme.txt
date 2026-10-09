@@ -40,6 +40,7 @@ of the FERS structural-analysis library.  Examples are grouped by number range:
 051  Member Hinge at Half
 052  Bending Moment Development
 053  Bending Moment Development – Rigid Member
+054  Scissor Hinge – a Rail on a Beam
 
 061  Tension Member
 

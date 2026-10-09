@@ -101,6 +101,46 @@ These engine fixes reach Python callers with the new pin.
 `Section`'s docstring now describes the rule. It still described the old
 "principal values plus an angle" contract.
 
+### Engine 0.2.68: scissor hinges, a continuous beam that turns on what it crosses
+
+A rail running over beams and resting on each one is one continuous beam, free
+to turn on every beam. A `MemberHinge` releases a single member end, so
+releasing both rail ends at a beam split the rail into two spans. The workaround
+was a short link member and an extra node at every rail support.
+
+A member set is one beam, and it can now say how it connects to what it crosses:
+
+```python
+rail = MemberSet(
+    members=[rail_1, rail_2],
+    scissor_hinge=ScissorHinge(rotational_release_y=0.0, rotational_release_z=0.0),
+)
+```
+
+Where the set meets a member outside it, or a plate, its members stay joined to
+each other, keep the node's translations, and turn relative to the node about
+the released global axes. `None` holds an axis, `0.0` frees it, and a positive
+value is a rotational spring. On a rail-on-beam test model, four members and no
+link give 62 402 N·mm over the beam, against qL²/16 = 62 500 for a knife edge.
+The link workaround gave the same 62 402 with five members.
+
+- `ScissorHinge` is new and exported. `MemberSet(scissor_hinge=...)` takes one,
+  and `model.scissor_hinges` lists those in use.
+- A model that uses one is written with `model.scissor_hinges` and
+  `schema_version` 3, so a solver older than 0.2.68 refuses it rather than
+  solving the connections as rigid. A model without one is written exactly as
+  before.
+- The README has a "Scissor hinges" section, and
+  `fers_core/examples/054_Scissor_Hinge_Rail_On_Beam.py` compares the rigid
+  connection, member hinges, the scissor hinge and a spring.
+
+### Fixed
+
+- `MemberSet.from_dict` dropped the buckling lengths and effective-length
+  factors that `to_dict` writes. A model loaded with `FERS.from_json` or
+  `FERS.from_dict` therefore lost its EC3 buckling lengths. It reads them back
+  now.
+
 ## 0.1.98
 
 ### Results load in a fraction of the memory

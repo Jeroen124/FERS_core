@@ -48,6 +48,7 @@ from ..members.member import Member
 from ..members.section import Section
 from ..members.memberhinge import MemberHinge
 from ..members.memberset import MemberSet
+from ..members.scissorhinge import ScissorHinge
 from ..members.shapepath import ShapePath
 from ..nodes.node import Node
 from ..supports.nodalsupport import NodalSupport
@@ -128,6 +129,10 @@ class _ModelView:
     @property
     def member_hinges(self):
         return self._f.get_unique_member_hinges_from_all_member_sets()
+
+    @property
+    def scissor_hinges(self):
+        return self._f.get_unique_scissor_hinges_from_all_member_sets()
 
     @property
     def shape_paths(self):
@@ -466,6 +471,13 @@ class FERS:
                 "unity_checks": [c.to_dict() if hasattr(c, "to_dict") else c for c in self.unity_checks],
             },
         }
+        # Only a model that uses scissor hinges carries them, and it says so in its
+        # schema version: a solver older than 0.2.68 ignores unknown keys, so it would
+        # otherwise solve every such connection as rigid without a word.
+        scissor_hinges = self.get_unique_scissor_hinges_from_all_member_sets()
+        if scissor_hinges:
+            data["model"]["scissor_hinges"] = [hinge.to_dict() for hinge in scissor_hinges]
+            data["schema_version"] = max(data["schema_version"] or 1, 3)
         # Eigenvalue analysis requests are only emitted when set, so plain
         # static models keep their exact wire shape (`modal`/`buckling` absent).
         if self.modal_analysis is not None:
@@ -606,6 +618,10 @@ class FERS:
             h_data["id"]: MemberHinge.from_dict(h_data)
             for h_data in as_list(data.get("member_hinges"), "member_hinges")
         }
+        id_to_scissor_hinge = {
+            h_data["id"]: ScissorHinge.from_dict(h_data)
+            for h_data in as_list(data.get("scissor_hinges"), "scissor_hinges")
+        }
 
         id_to_node: dict[int, Node] = {}
         id_to_member: dict[int, Member] = {}
@@ -635,7 +651,11 @@ class FERS:
 
         # member sets reference members by id
         for ms_data in data.get("member_sets", []):
-            member_set = MemberSet.from_dict(ms_data, members_by_id=id_to_member)
+            member_set = MemberSet.from_dict(
+                ms_data,
+                members_by_id=id_to_member,
+                scissor_hinges_by_id=id_to_scissor_hinge,
+            )
             fers.add_member_set(member_set)
 
         for plate_surface_data in as_list(data.get("plate_surfaces"), "plate_surfaces"):
@@ -871,6 +891,7 @@ class FERS:
         Member.reset_counter()
         MemberHinge.reset_counter()
         MemberSet.reset_counter()
+        ScissorHinge.reset_counter()
         Node.reset_counter()
         NodalSupport.reset_counter()
         NodalLoad.reset_counter()
@@ -1296,6 +1317,15 @@ class FERS:
                 by_id[member.start_hinge.id] = member.start_hinge
             if member.end_hinge:
                 by_id[member.end_hinge.id] = member.end_hinge
+        return list(by_id.keys()) if ids_only else list(by_id.values())
+
+    def get_unique_scissor_hinges_from_all_member_sets(self, ids_only: bool = False):
+        """Collect the scissor hinges the member sets use, deduplicated by id."""
+        by_id = {}
+        for member_set in self.member_sets:
+            hinge = getattr(member_set, "scissor_hinge", None)
+            if hinge is not None:
+                by_id[hinge.id] = hinge
         return list(by_id.keys()) if ids_only else list(by_id.values())
 
     def generate_plate_meshes(self) -> list[PlateElement]:
