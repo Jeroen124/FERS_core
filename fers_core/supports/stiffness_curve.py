@@ -142,4 +142,8 @@ class StiffnessCurveConfig:
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, StiffnessCurveConfig):
             return NotImplemented
-        return self.depends_on == other.depends_on and self.points == other.points
+        return (
+            self.depends_on == other.depends_on
+            and self.points == other.points
+            and self.signed == other.signed
+        )

@@ -1,5 +1,422 @@
 # Changelog
 
+## 0.1.99
+
+### Engine 0.2.68: ask for only the results you read
+
+This release pins `fers_calculations==0.2.68`. The pin also brings engine
+0.2.67's fixes to Python callers, the first SDK release to do so, among them a
+regression 0.2.66 introduced: a hinge on a truss, tie or strut scaled that
+member's reported force, to zero for a released axial end, in linear analysis
+too.
+
+`result_filter` keeps or drops whole blocks. A `ResultRequest` names a block and
+narrows it: to members (the unity checks' selectors) or nodes, to load
+combinations by `limit_state` or id, to components, and to one member end:
+
+```python
+from fers_core import ResultBlock, ResultRequest
+from fers_core.result_requests import nodes_of
+from fers_core.unity_checks import classification
+
+uprights, beams = classification("Upright_1"), classification("beam")
+model.settings.analysis_options.result_requests = [
+    ResultRequest(ResultBlock.LOCAL_ENVELOPES, members=[uprights, classification("Bracing")],
+                  limit_state="ULS", components=["fx", "my", "mz"]),
+    ResultRequest(ResultBlock.LOCAL_END_FORCES, members=beams, limit_state="ULS",
+                  end="start", components=["my", "fz"]),
+    ResultRequest(ResultBlock.NODE_DISPLACEMENTS, nodes=nodes_of(uprights, beams),
+                  limit_state="SLS", components=["dx", "dy", "dz"]),
+    ResultRequest(ResultBlock.REACTIONS, limit_state="ULS"),
+]
+```
+
+On an integrator's 4-bay shuttle rack (8546 members, 31 combinations), the
+five-token filter writes 451.8 MB. With their selection the file is 40.7 MB, and
+every value in it equals the filter-only output exactly.
+
+The solver returns the selection as dense arrays, and the SDK loads them into the
+usual `member_results`, `displacement_nodes` and `reaction_nodes`, so code that
+reads results keeps working. Anything that was not requested reads as `None`
+rather than zero: a component, a block, or a reaction's location and support id.
+A check that reads a value nobody asked for therefore fails instead of seeing a
+zero. The arrays themselves are on `ResultsBundle.selections`, each shaped
+`(result_sets, ids, fields, components)`. `to_dict()` writes the selections back
+as the solver wrote them, so a saved result reloads unchanged.
+
+Combinations are matched on their `limit_state`, as unity checks match them. Set
+it on each `LoadCombination` to select by it; ULS or SLS in `situation` is not
+read. The solver refuses a request it cannot meet before it starts, including a
+`limit_state` that no combination carries.
+
+The README's "Reading results" section now covers requests and `selections`.
+`fers_core/examples/810_Result_Requests.py` runs a request end to end, and
+`ResultRequest`'s docstring lists what each argument takes.
+
+### Engine 0.2.68: sections with a product of inertia, and shear-centre offsets
+
+These engine fixes reach Python callers with the new pin.
+
+- **A section with `i_yz` is read the same whichever principal axis names it.**
+  The engine read such a section correctly only when `principal_axis_angle` was
+  its own Mohr angle θ. The other principal axis (θ ± 90°), θ ± 180°, or no angle
+  made it take the centroidal `i_y`/`i_z` as principal values, without a word. A
+  cantilever came out 3.8× too stiff. Now:
+  - any angle that names a principal axis works;
+  - an omitted angle is derived;
+  - an angle that names neither axis is refused with a `RuntimeError` that gives
+    both principal angles.
+
+  The SDK's section factories and catalogues send θ, so their bending is
+  unchanged.
+- **Shear-centre offsets are applied along the member's own axes, with the
+  right sign.**
+  - Sign: with coupling on, which is the default, every section with an offset
+    twisted the wrong way. That covers channels, tees and angles.
+  - Axes: angles and Z sections also twisted by the wrong amount. An equal angle
+    twisted 41 % too much under a load along y, and not at all under one along
+    z.
+
+  Displacements of the member axis were right. The twist, torsion and bimoment
+  of those sections change.
+- **The deflected shape of a turned section follows its principal axes.** This
+  affects `member_displacements` and `MemberDeflection` checks.
+- **EC3 checks a section with `i_yz` about its principal axes.** Forces,
+  inertias, moduli, shear areas and buckling curves are all taken about y′/z′,
+  and each principal axis takes the buckling length of the member axis nearest
+  it.
+  - The SDK's angle and Z sections now send their section moduli and shear areas
+    about the principal axes, since that is what the engine reads for them. For
+    an L 100x65x7, `wel_y`/`wel_z` are 19.25/6.33 cm³, where they were
+    7.83/17.07.
+  - The leg-axis values stay on the new `Section.geometric`, for anyone who
+    bends the section in one plane about a member axis. It is not sent to the
+    solver, and `scripts/export_sections.py` writes it beside the principal
+    values.
+- **EC3 pairs shear areas as the element does.** `a_sz` carries the shear
+  along y and `a_sy` the shear along z. EC3 paired them by letter, so a library
+  I-section's strong-axis shear was checked against its flanges: for an IPE300,
+  29.4 cm² instead of the 20.8 cm² web.
+
+`Section`'s docstring now describes the rule. It still described the old
+"principal values plus an angle" contract.
+
+### Engine 0.2.68: scissor hinges, a continuous beam that turns on what it crosses
+
+A rail running over beams and resting on each one is one continuous beam, free
+to turn on every beam. A `MemberHinge` releases a single member end, so
+releasing both rail ends at a beam split the rail into two spans. The workaround
+was a short link member and an extra node at every rail support.
+
+A member set is one beam, and it can now say how it connects to what it crosses:
+
+```python
+rail = MemberSet(
+    members=[rail_1, rail_2],
+    scissor_hinge=ScissorHinge(rotational_release_y=0.0, rotational_release_z=0.0),
+)
+```
+
+Where the set meets a member outside it, or a plate, its members stay joined to
+each other, keep the node's translations, and turn relative to the node about
+the released global axes. `None` holds an axis, `0.0` frees it, and a positive
+value is a rotational spring. On a rail-on-beam test model, four members and no
+link give 62 402 N·mm over the beam, against qL²/16 = 62 500 for a knife edge.
+The link workaround gave the same 62 402 with five members.
+
+- `ScissorHinge` is new and exported. `MemberSet(scissor_hinge=...)` takes one,
+  and `model.scissor_hinges` lists those in use.
+- A model that uses one is written with `model.scissor_hinges` and
+  `schema_version` 3, so a solver older than 0.2.68 refuses it rather than
+  solving the connections as rigid. A model without one is written exactly as
+  before.
+- The README has a "Scissor hinges" section, and
+  `fers_core/examples/054_Scissor_Hinge_Rail_On_Beam.py` compares the rigid
+  connection, member hinges, the scissor hinge and a spring.
+
+### Engine 0.2.68: sliding rails, chosen nodes, and release axes
+
+A scissor hinge also frees translations, can apply at some of the nodes a set
+meets rather than all, and can name axes of its own. A member hinge can release
+its rotations about global or user axes.
+
+- `ScissorHinge(translational_release_x=..., _y=..., _z=...)`: `0.0` frees the
+  translation, a positive value is a spring in force per length. A rail that
+  slides over its posts takes its whole pull to its anchor.
+- `MemberSet(scissor_hinge_nodes=[...])`: the nodes (or node ids) where the set's
+  hinge applies; omitted, every node where it meets another member or a plate.
+  Saved as node ids and read back as the set's own nodes.
+- `ReleaseAxes` is new and exported: `ReleaseAxes.LOCAL`, `ReleaseAxes.GLOBAL`
+  and `ReleaseAxes.user(x, y)`. `ScissorHinge(axes=...)` takes `GLOBAL` (the
+  default) or a user frame, as for a rack turned in plan.
+- `MemberHinge(rotation_axes=...)`: the axes its rotational releases, stiffness
+  curves and moment–rotation diagrams name. `LOCAL` is the default and is what
+  every existing model keeps; a hinge that sets another is written with
+  `rotation_axes`, and the model with `schema_version` 3.
+- The README's scissor-hinge section covers all four, with a sliding rail that
+  runs as written, and
+  `fers_core/examples/055_Scissor_Hinge_Sliding_Rail_And_Release_Axes.py`
+  slides a rail, limits the hinge to one post, turns the rack in plan, and pins
+  a skew purlin about its girders' axis.
+
+### Changed — a default nonlinear solve of a model with rigid members
+
+`AnalysisOptions` defaults to a nonlinear solve with `RigidStrategy.RIGID_MEMBER`.
+Engine 0.2.68 runs rigid members on the corotational path, which 0.2.67 left for
+P-Δ, so such a model's results now include the large-rotation terms P-Δ leaves
+out. They move by about the square of the rotations: on a cantilever with a
+rigid end link, 4e-6 of its end rotation. Ask for `AnalysisOrder.LINEAR` where
+the comparison is with a linear closed form.
+
+### Includes 0.1.98
+
+0.1.99 carries 0.1.98's fixes to saving and loading a model, below.
+
+### Fixed
+
+- `MemberSet.from_dict` dropped the buckling lengths and effective-length
+  factors that `to_dict` writes. A model loaded with `FERS.from_json` or
+  `FERS.from_dict` therefore lost its EC3 buckling lengths. It reads them back
+  now.
+
+## 0.1.98
+
+### Results load in a fraction of the memory
+
+`FERS.from_json` peaked at about 14 times the size of the result file. An
+integrator's nightly was killed for memory while loading an 81.5 MB result, after
+a solve that took 4 s. Three complete copies of the results existed at the peak:
+the parsed JSON, a full tree of the generated pydantic models used to validate it,
+and the SDK's own objects. Those objects were themselves about seven times the
+file: ten small objects per member per load combination, four of them zero
+placeholders for blocks a `result_filter` had removed.
+
+The file is now read one member or node entry at a time. Entries are validated in
+batches against the same generated models, and stored as one float64 array per
+block and per load case or combination. Measured on generated files of the same
+shape, with the peak working set above the post-import baseline, worst of three
+runs:
+
+| file | peak, 0.1.97 | peak, 0.1.98 | resident after load, 0.1.97 → 0.1.98 |
+|---|---|---|---|
+| 81.7 MB: 3090 members, 25 combinations, five-token filter | 17.96× | 0.63× | 9.34× → 0.63× |
+| 411 MB: 8546 members, 31 combinations + 15 load cases | 18.03× (7.4 GB) | 0.50× | 9.29× → 0.50× |
+| 206 MB, unfiltered | 19.96× | 0.64× | 10.01× → 0.64× |
+| 34.6 MB: one combination, 24,000 members | 15.09× | 2.16× | 8.87× → 1.43× |
+| `run_analysis`, 81.7 MB result string | 15.94× | ≤ 1.00× | 7.37× → 0.58× |
+
+The numbers are identical: `to_dict()` of a loaded result is byte-for-byte what
+0.1.97 produced, `-0.0` and the zero-filled filtered blocks included.
+`scripts/make_synthetic_result.py` and `scripts/bench_result_load.py` reproduce
+the table.
+
+### `member_results` and `displacement_nodes` are read-only now
+
+On a loaded result these two are read-only mappings over the arrays, and each
+lookup builds the `MemberResult` or `NodeDisplacement`. They behave like the
+dicts they replace for reading: same keys in the same order, `len`, `in`, `get`,
+`.items()`, `next(iter(...))`. The differences:
+
+- **Objects are read-only.** Setting or deleting an attribute raises
+  `AttributeError`, because an edit would change a copy that the next lookup
+  replaces. `section_forces`, `internal_force_series` and `member_displacements`
+  come back as tuples, so `.append()` raises too.
+- **`.copy()` gives back the old shape**: a plain dict of ordinary, editable
+  objects, at the old memory cost. `dict(table)` gives an editable dict whose
+  values are still read-only.
+- **Lookups build objects**, so `a[k] is a[k]` is false, and reading every
+  member once costs more than it did: 0.69 s instead of 0.06 s on the 81.7 MB
+  file, and 3.5 s instead of 0.35 s on the 411 MB one. Loading itself got faster
+  by more (4.9 s → 2.5 s, and 28.4 s → 18.2 s), so a load plus one full read
+  still takes less time than before.
+- `isinstance(x, dict)` is false; `isinstance(x, collections.abc.Mapping)` is
+  true. The objects are still instances of `MemberResult`, `NodeForces` and the
+  rest.
+
+Smaller changes to loading:
+
+- Files are decoded as UTF-8, with or without a BOM, as the engine writes them.
+  They used to be read in the platform codec, which on Windows garbled non-ASCII
+  names and failed on some. A file that is not UTF-8 is still read in the
+  platform codec.
+- Malformed JSON raises `json.JSONDecodeError` rather than ujson's error. Both
+  are `ValueError`s.
+- A validation error reports the first failing batch rather than every error in
+  the file.
+- A null `bw` or `warp` reads as 0.0. It used to raise `TypeError`.
+
+### Fixed
+
+- **`ResultsBundle.from_raw_dict` reads real results.** It raised `TypeError` on
+  any non-empty displacement, reaction, member or summary entry, and dropped ten
+  member fields, `local_*` and `section_forces` among them. It now builds the
+  same tables as the validated path, still without validating.
+- **`to_dict()` survives `json.dumps` when unity-check results are present.**
+  They carried enum objects, so `save_to_json`, a second `run_analysis` and
+  `cloud_update(include_results=True)` all failed. `to_dict()` now writes the wire
+  values; the result objects still hold the enums.
+- **`run_analysis` and `run_analysis_to_file` no longer send the previous results
+  to the solver** with every re-solve.
+- **`ReactionNodeResult()` and `PlateResult()` have real defaults.** They read
+  back `dataclasses.Field` objects, the same fault 0.1.95 fixed in
+  `ResultsBundle`.
+- **`MemberResult.plot_diagram` runs.** It called a `Member.calculate_length()`
+  that does not exist.
+- **`save_to_json()` works with its default arguments.** It passed
+  `indent=None` to ujson, which refuses it with `TypeError`; only the examples'
+  explicit `indent=4` worked.
+- **`LoadCase.apply_deadload_to_members` applies the dead load per unit
+  length.** It applied g times the member's whole mass, `member.weight`, as a load
+  per unit length, so a member got its weight times its length: five times too
+  much on a 5 m member, and too little on a member shorter than one length unit.
+  It now applies `9.81 · weight / length`, which is density·area·g. The
+  `direction` its docstring described, `'Y'`, produced a model the solver
+  schema refused; an axis letter now works as well as a vector. The helper
+  returns the loads it added.
+- **`FERS.create_combined_model_pattern` gives every copy its own ids.** It
+  restarted the id counters, so copies took the original's member and node ids
+  and replaced them: asking for three instances kept two. Copies also lost
+  their members' types, which made any rigid member raise and turned ties and
+  struts into ordinary members, along with offsets, pretension and the weight
+  override. Their reference members and buckling restraints pointed into the
+  first copy or the original, their buckling lengths were dropped, and the
+  combined model had default settings rather than the original's units. All of
+  that is carried over now, and node ids run on from the original's without
+  gaps.
+
+### Fixed — saving and loading a model
+
+Loading a model and saving it again lost or changed parts of it. Three of those
+made the solver refuse the saved file outright:
+
+- **A support on a node that only a plate surface, a reference node or an
+  opening reaches** was left out, while its node still named it: "node N
+  references missing nodal support M". Supports are now collected from every
+  node.
+- **Translation imperfections** were written as `memberset`. The solver reads
+  `memberset_ids`, so any model with one failed with "missing field
+  `memberset_ids`", and `validate_schema()` failed too. They are written as
+  `memberset_ids` now, and `memberset` is still read.
+- **An end offset given on one axis** wrote `null` on the other two, and the
+  solver refused it ("invalid type: null, expected f64"). A missing axis is 0
+  now.
+- **A file without a `pressureUnit`** is in pascal to the solver, but loading
+  made it MPa. Saved again, its E, G and yield stresses meant 10⁶ times larger
+  values. It stays Pa.
+- **Lost when loading:**
+  - a section's `ec3` block, so EC3 checks fell back to the default buckling
+    curves and an inferred section class;
+  - a member set's buckling lengths and effective-length factors;
+  - nodal masses;
+  - a `reference_member` listed after the member that names it;
+  - a member's per-length self-weight override (`weight` in the file).
+- **Lost when saving:**
+  - the nodes of a plate opening, and any node nothing else used. Unless they
+    had the highest ids, the saved file then had a gap in its node ids, which
+    the solver refuses: they must run from 1 without one;
+  - sections, materials, shape paths, hinges and supports that a loaded file
+    defines but nothing uses, such as an editor's library;
+  - a plate element's `classification`;
+  - the seismic analysis request and the `include_report_html` and
+    `render_unity_reports` options, which the SDK could not hold at all.
+- **Changed when loading:**
+  - an unclassified member, `classification: null`, came back as `""`;
+  - an option value this version does not know, such as a newer solver's
+    `nonlinear_method`, was replaced by the default. It is kept as written
+    now; validation still reports it.
+- **New objects after loading reused loaded ids.** A `Node`, `Section` or other
+  object made after `from_json` took id 1 again, and on the next save it
+  silently replaced the loaded entry with that id. Every id counter now moves
+  past the loaded model's ids.
+- `StiffnessCurveConfig` equality ignored `signed`.
+
+A test now builds one model with every entity and every optional field of the
+solver's input schema, saves it, loads it and saves it again, and requires the
+two documents to be the same. A second test fails when the solver schema gains
+a field that the model does not set.
+
+### Added
+
+- **`Member(weight_override=...)`** sets the solver's per-length self-weight
+  for a member, in force per length with gravity included: N/m in an SI model.
+  The solver applies it instead of density·area·g and divides it by g for the
+  member's mass in modal and seismic analysis.
+- **Seismic analysis**: `SeismicAnalysisSettings` and
+  `FERS.add_seismic_analysis(...)` request `analysis.seismic`: a modal
+  response-spectrum analysis, the lateral-force method, or both.
+  `eurocode_spectrum`, `direct_spectrum` and `custom_spectrum` build the
+  design spectra.
+- **`AnalysisOptions(include_report_html=..., render_unity_reports=...)`**:
+  the HTML report that `FERS.unity_report_html()` returns, and each checked
+  entity's `rendered_report`.
+- **`PlateOpening(boundary_nodes=[...])`** takes the nodes themselves, so saving
+  the model writes them too.
+
+### Upgrade notes
+
+- **`Member.weight` after loading.** It is still the member's mass as the SDK
+  computes it, density·area·length. Loading used to set it to the file's
+  `weight`, which is the per-length override and usually 0. It is computed
+  again now, and the file's value is in `weight_override`.
+- **`memberset_ids`.** Code that reads `to_dict()` output for translation
+  imperfections finds `memberset_ids` where `memberset` was.
+- **A loaded model's lists.** `get_all_nodes()`, and the `sections`,
+  `materials`, `nodal_supports`, `member_hinges` and `shape_paths` of
+  `FERS.model`, list everything the file defines, unused entries included, in
+  the file's order.
+- **Unknown option values.** `AnalysisOptions.order`, `rigid_strategy` and the
+  P-delta options can hold a string from a newer document rather than an enum.
+- **Dead load from `apply_deadload_to_members` changes.** Each member's load is
+  divided by its length in model units, so results built on the helper change by
+  that factor. For example, a 5 m member's dead load is a fifth of what it was,
+  and the 0.625 m elements of a 5 m beam meshed in eight get 1.6 times as much.
+  The load is right in the model's units when density is per cubic length unit
+  and forces are in newtons: kg/m³ with m, kg/mm³ with mm. For other units, use
+  the solver's own self-weight (`AnalysisOptions(enable_self_weight=True)`).
+- **`create_combined_model_pattern` returns more.** It now returns every copy,
+  and takes the original's settings, units included, instead of the defaults.
+
+### Documentation
+
+The README, which is also the PyPI page, has a new "Reading results" section.
+It covers:
+
+- how results are keyed;
+- the read-only tables and `.copy()`;
+- saving and loading;
+- solving straight to a file for large models.
+
+`fers_core/examples/809_Reading_Results.py` runs these end to end. Docstrings on
+`run_analysis`, `run_analysis_to_file`, `from_json`, `from_dict`,
+`save_to_json`, `ResultsBundle` and `SingleResults` now say where the results
+land and in what form. The examples index lists every example again: twelve were
+missing from it.
+
+The README's first example loaded its beam upward. It called it "5 kN/m
+downward" while passing `udl=-5000.0`, but `create_beam`'s `udl` is positive
+downward.
+
+The README also has new sections:
+
+- **"A member's self-weight"** covers `weight_override` and how it differs from
+  `Member.weight`.
+- **"Seismic analysis"** runs a mast through a response spectrum.
+- **"Unity-check reports"** covers the HTML report.
+- **"Saving and loading"** now says what a loaded model keeps.
+
+`fers_core/examples/151_Seismic_Response_Spectrum.py` runs a portal frame
+through both seismic methods, against hand checks.
+
+"Solving a model" in the README, and the `FERS` docstring, now say to create the
+`FERS` object before a model's nodes and members: creating it restarts the id
+counters.
+
+### Not changed
+
+The engine pin stays `==0.2.66`. `to_dict()`/`save_to_json` still build every
+value as Python objects. Unity-check, modal, buckling and seismic results stay
+plain dicts, and plate results stay objects.
+
 ## 0.1.97
 
 ### British Steel UB / UC / PFC and ASTM W / HP sections

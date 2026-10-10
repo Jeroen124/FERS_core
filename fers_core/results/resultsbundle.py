@@ -3,11 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Dict, Any, List, Mapping, Optional
 
-from fers_core.results.member import MemberResult
-from fers_core.results.plate import PlateResult
-from fers_core.results.nodes import NodeDisplacement, NodeLocation, ReactionNodeResult, NodeForces
-from fers_core.results.resultssummary import ResultsSummary
-from fers_core.results.singleresults import SingleResults
+from fers_core.results.compact import KeyIndexCache, normalize_selection, selected_results, selection_to_dict
+from fers_core.results.singleresults import SingleResults, jsonable
 
 
 def _to_plain(value: Any) -> Any:
@@ -30,6 +27,11 @@ def _to_plain(value: Any) -> Any:
 # for a partial result, and a Field object is truthy.
 @dataclass
 class ResultsBundle:
+    """Everything one solve returned: ``loadcases`` and ``loadcombinations`` by
+    name, each a :class:`SingleResults`, plus unity-check, eigenvalue and seismic
+    results and how the solve went (``solve_failures``, ``engine_version``). See
+    "Reading results" in the README."""
+
     loadcases: Dict[str, SingleResults] = field(default_factory=dict)
     loadcombinations: Dict[str, SingleResults] = field(default_factory=dict)
     # Unity-check results: one entry per check definition (see the solver's
@@ -69,21 +71,48 @@ class ResultsBundle:
     # as plain dicts mirroring the solver schema. None when not requested.
     seismic: Optional[Dict[str, Any]] = None
     buckling_runs: Optional[List[Dict[str, Any]]] = None
+    # What `analysis.options.result_requests` asked for (engine >= 0.2.68): one
+    # dict per request and group, its `values` a read-only numpy array shaped
+    # (result_sets, ids, fields, components). The same values are also loaded
+    # into each load case's or combination's member_results, displacement_nodes
+    # and reaction_nodes. None when nothing was requested.
+    selections: Optional[List[Dict[str, Any]]] = None
 
     # Factory from the generated Pydantic ResultsBundle
     @classmethod
     def from_pydantic(cls, pyd_bundle: Any) -> "ResultsBundle":
-        lc_map: Dict[str, SingleResults] = {}
-        for key, pyd_res in (getattr(pyd_bundle, "loadcases", {}) or {}).items():
-            lc_map[str(key)] = SingleResults.from_pydantic(pyd_res)
+        keys = KeyIndexCache()
+        instance = cls._from_shell(pyd_bundle)
+        instance.loadcases = {
+            str(key): SingleResults.from_pydantic(pyd_res, keys)
+            for key, pyd_res in (getattr(pyd_bundle, "loadcases", {}) or {}).items()
+        }
+        instance.loadcombinations = {
+            str(key): SingleResults.from_pydantic(pyd_res, keys)
+            for key, pyd_res in (getattr(pyd_bundle, "loadcombinations", {}) or {}).items()
+        }
+        selections = getattr(pyd_bundle, "selections", None)
+        if selections is not None:
+            instance.apply_selections([normalize_selection(s) for s in selections])
+        return instance
 
-        comb_map: Dict[str, SingleResults] = {}
-        for key, pyd_res in (getattr(pyd_bundle, "loadcombinations", {}) or {}).items():
-            comb_map[str(key)] = SingleResults.from_pydantic(pyd_res)
+    def apply_selections(self, selections: List[Dict[str, Any]]) -> None:
+        """Load normalized ``results.selections`` into the per-set result maps."""
+        self.selections = selections
+        keys: Dict[bytes, Any] = {}
+        for (group, name), selected in selected_results(selections).items():
+            single = getattr(self, group).get(name)
+            if single is None:
+                continue
+            single.member_results = selected.member_table(keys)
+            single.displacement_nodes = selected.node_table(keys)
+            single.reaction_nodes = selected.reactions()
+            single._from_selections = True
 
+    @classmethod
+    def _from_shell(cls, pyd_bundle: Any) -> "ResultsBundle":
+        """Everything except the load cases and combinations."""
         instance = cls()
-        instance.loadcases = lc_map
-        instance.loadcombinations = comb_map
         instance.unity_check_results = _to_plain(getattr(pyd_bundle, "unity_check_results", []) or [])
         # Eigenvalue result groups (None when the analysis was not requested).
         instance.modal = _to_plain(getattr(pyd_bundle, "modal", None))
@@ -94,83 +123,22 @@ class ResultsBundle:
         instance.engine_version = getattr(pyd_bundle, "engine_version", None)
         instance.seismic = _to_plain(getattr(pyd_bundle, "seismic", None))
         instance.buckling_runs = _to_plain(getattr(pyd_bundle, "buckling_runs", None))
-
         return instance
 
-    # Optional factory from already-parsed dicts (e.g., raw JSON)
+    # Optional factory from already-parsed dicts (e.g., raw JSON). Not validated:
+    # anything absent reads as empty or zero.
     @classmethod
     def from_raw_dict(cls, raw: Mapping[str, Any]) -> "ResultsBundle":
-        lc_map: Dict[str, SingleResults] = {}
-        for key, value in (raw.get("loadcases") or {}).items():
-            lc_map[str(key)] = SingleResults(
-                name=str(value.get("name", "")),
-                displacement_nodes={
-                    str(k): NodeDisplacement(**v) for k, v in (value.get("displacement_nodes") or {}).items()
-                },
-                reaction_nodes={
-                    str(k): ReactionNodeResult(
-                        location=NodeLocation(**v.get("location", {})),
-                        nodal_forces=NodeForces(**v.get("nodal_forces", {})),
-                        support_id=int(v.get("support_id", 0)),
-                    )
-                    for k, v in (value.get("reaction_nodes") or {}).items()
-                },
-                member_results={
-                    str(k): MemberResult(
-                        start_node_forces=NodeForces(**v.get("start_node_forces", {})),
-                        end_node_forces=NodeForces(**v.get("end_node_forces", {})),
-                        maximums=NodeForces(**v.get("maximums", {})),
-                        minimums=NodeForces(**v.get("minimums", {})),
-                    )
-                    for k, v in (value.get("member_results") or {}).items()
-                },
-                plate_results={
-                    str(k): PlateResult.from_dict(v) for k, v in (value.get("plate_results") or {}).items()
-                },
-                summary=ResultsSummary(**(value.get("summary") or {})) if value.get("summary") else None,
-                result_type=value.get("result_type"),
-                unity_checks=value.get("unity_checks"),
-                errors_and_warnings=value.get("errors_and_warnings"),
-                solver_diagnostics=value.get("solver_diagnostics"),
-            )
-
-        comb_map: Dict[str, SingleResults] = {}
-        for key, value in (raw.get("loadcombinations") or {}).items():
-            comb_map[str(key)] = SingleResults(
-                name=str(value.get("name", "")),
-                displacement_nodes={
-                    str(k): NodeDisplacement(**v) for k, v in (value.get("displacement_nodes") or {}).items()
-                },
-                reaction_nodes={
-                    str(k): ReactionNodeResult(
-                        location=NodeLocation(**v.get("location", {})),
-                        nodal_forces=NodeForces(**v.get("nodal_forces", {})),
-                        support_id=int(v.get("support_id", 0)),
-                    )
-                    for k, v in (value.get("reaction_nodes") or {}).items()
-                },
-                member_results={
-                    str(k): MemberResult(
-                        start_node_forces=NodeForces(**v.get("start_node_forces", {})),
-                        end_node_forces=NodeForces(**v.get("end_node_forces", {})),
-                        maximums=NodeForces(**v.get("maximums", {})),
-                        minimums=NodeForces(**v.get("minimums", {})),
-                    )
-                    for k, v in (value.get("member_results") or {}).items()
-                },
-                plate_results={
-                    str(k): PlateResult.from_dict(v) for k, v in (value.get("plate_results") or {}).items()
-                },
-                summary=ResultsSummary(**(value.get("summary") or {})) if value.get("summary") else None,
-                result_type=value.get("result_type"),
-                unity_checks=value.get("unity_checks"),
-                errors_and_warnings=value.get("errors_and_warnings"),
-                solver_diagnostics=value.get("solver_diagnostics"),
-            )
-
+        keys = KeyIndexCache()
         instance = cls()
-        instance.loadcases = lc_map
-        instance.loadcombinations = comb_map
+        instance.loadcases = {
+            str(key): SingleResults.from_raw_dict(value, keys)
+            for key, value in (raw.get("loadcases") or {}).items()
+        }
+        instance.loadcombinations = {
+            str(key): SingleResults.from_raw_dict(value, keys)
+            for key, value in (raw.get("loadcombinations") or {}).items()
+        }
         instance.unity_check_results = list(raw.get("unity_check_results") or [])
         instance.modal = raw.get("modal")
         instance.buckling = raw.get("buckling")
@@ -180,19 +148,25 @@ class ResultsBundle:
         instance.engine_version = raw.get("engine_version")
         instance.seismic = raw.get("seismic")
         instance.buckling_runs = raw.get("buckling_runs")
+        if raw.get("selections") is not None:
+            instance.apply_selections([normalize_selection(s) for s in raw["selections"]])
         return instance
 
     def to_dict(self) -> Dict[str, Any]:
-        return {
+        data = {
             "loadcases": {k: v.to_dict() for k, v in self.loadcases.items()},
             "loadcombinations": {k: v.to_dict() for k, v in self.loadcombinations.items()},
-            "unity_check_results": self.unity_check_results,
-            "modal": self.modal,
-            "buckling": self.buckling,
+            "unity_check_results": jsonable(self.unity_check_results),
+            "modal": jsonable(self.modal),
+            "buckling": jsonable(self.buckling),
             "report_html": self.report_html,
-            "attribution": self.attribution,
-            "solve_failures": self.solve_failures,
+            "attribution": jsonable(self.attribution),
+            "solve_failures": jsonable(self.solve_failures),
             "engine_version": self.engine_version,
-            "seismic": self.seismic,
-            "buckling_runs": self.buckling_runs,
+            "seismic": jsonable(self.seismic),
+            "buckling_runs": jsonable(self.buckling_runs),
         }
+        # Only when present, so a result without requests writes what it always did.
+        if self.selections is not None:
+            data["selections"] = [selection_to_dict(s) for s in self.selections]
+        return data

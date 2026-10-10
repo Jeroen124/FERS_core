@@ -4,6 +4,7 @@ from typing import Optional
 
 from ..supports.stiffness_curve import StiffnessCurveConfig
 from .moment_rotation import MomentRotationCurve
+from .releaseaxes import ReleaseAxes
 
 
 class MemberHinge:
@@ -36,6 +37,7 @@ class MemberHinge:
         moment_rotation_mx: Optional[MomentRotationCurve] = None,
         moment_rotation_my: Optional[MomentRotationCurve] = None,
         moment_rotation_mz: Optional[MomentRotationCurve] = None,
+        rotation_axes: ReleaseAxes = ReleaseAxes.LOCAL,
     ):
         """Initialize a new Member Hinge instance.
 
@@ -66,6 +68,15 @@ class MemberHinge:
             moment_rotation_mx: Moment-rotation diagram for rotational X.
             moment_rotation_my: Moment-rotation diagram for rotational Y.
             moment_rotation_mz: Moment-rotation diagram for rotational Z.
+            rotation_axes: The axes the rotational releases, curves and diagrams
+                name: ``ReleaseAxes.LOCAL``, the member's own (the default);
+                ``ReleaseAxes.GLOBAL``, X, Y and Z; or ``ReleaseAxes.user(x, y)``.
+                A beam at an angle in plan is freed about global Z this way
+                without freeing part of its torsion. The end moments a curve
+                reads are taken about the same axes; the member's results stay
+                in its local axes. Translational releases stay member-local.
+                Requires ``fers_calculations >= 0.2.68``, and a model that uses
+                it is written with ``schema_version`` 3.
 
         A ``moment_rotation_m*`` diagram is the form a connector is specified and
         tested in, and is preferred over the matching ``stiffness_curve_m*`` where
@@ -105,13 +116,14 @@ class MemberHinge:
         self.moment_rotation_mx = moment_rotation_mx
         self.moment_rotation_my = moment_rotation_my
         self.moment_rotation_mz = moment_rotation_mz
+        self.rotation_axes = rotation_axes
 
     @classmethod
     def reset_counter(cls):
         cls._hinge_counter = 1
 
     def to_dict(self):
-        return {
+        data = {
             "id": self.id,
             "hinge_type": self.hinge_type,
             "translational_release_vx": self.translational_release_vx,
@@ -138,6 +150,11 @@ class MemberHinge:
             "moment_rotation_my": self.moment_rotation_my.to_dict() if self.moment_rotation_my else None,
             "moment_rotation_mz": self.moment_rotation_mz.to_dict() if self.moment_rotation_mz else None,
         }
+        # Only when it differs from the member's own axes, so a hinge that does not use
+        # it is written exactly as before.
+        if self.rotation_axes != ReleaseAxes.LOCAL:
+            data["rotation_axes"] = self.rotation_axes.to_dict()
+        return data
 
     @classmethod
     def from_dict(cls, data: dict) -> "MemberHinge":
@@ -167,4 +184,5 @@ class MemberHinge:
             moment_rotation_mx=MomentRotationCurve.from_dict(data.get("moment_rotation_mx")),
             moment_rotation_my=MomentRotationCurve.from_dict(data.get("moment_rotation_my")),
             moment_rotation_mz=MomentRotationCurve.from_dict(data.get("moment_rotation_mz")),
+            rotation_axes=ReleaseAxes.from_dict(data.get("rotation_axes"), ReleaseAxes.LOCAL),
         )

@@ -23,13 +23,354 @@ pip install FERS
 ```python
 from fers_core.builders import create_beam
 
-model = create_beam(5.0, "IPE180", udl=-5000.0)   # 5 m span, 5 kN/m downward
+model = create_beam(5.0, "IPE180", udl=5000.0)    # 5 m span, 5 kN/m downward
 model.run_analysis()
 print(model.resultsbundle)
 ```
 
-Use `run_analysis_to_file(path, ...)` instead when the result is large — it
-streams the JSON straight to disk rather than through the Python heap.
+Building a model by hand, create the `FERS` object first, then its nodes,
+members and loads. Creating a `FERS` restarts the id counters, so a node made
+before it would share an id with one made after it, and the solver refuses
+node ids that do not run from 1 without gaps.
+
+## Reading results
+
+`run_analysis()` puts the results on `model.resultsbundle`. Load cases and load
+combinations are keyed by name. Within each, nodes and members are keyed by
+their id as a string, because results round-trip through JSON.
+
+```python
+case = model.resultsbundle.loadcases["Load"]    # or .loadcombinations["ULS 1"]
+
+case.displacement_nodes["5"].dy                  # dx dy dz rx ry rz warp
+case.reaction_nodes["1"].nodal_forces.fy         # fx fy fz mx my mz bw
+beam = case.member_results["4"]
+beam.local_maximums.mz, beam.local_minimums.mz   # envelope along the member
+beam.local_start_forces.fy                       # end forces, member axes
+```
+
+Since 0.1.98, `member_results` and `displacement_nodes` are read-only tables
+rather than dicts of objects. That is what keeps a large result small in
+memory. They read like dicts: `[]`, `get`, `in`, `len`, `.items()`, and
+iteration in the solver's order. Each lookup builds a fresh object, and nothing
+in it can be changed:
+
+```python
+beam.local_maximums.mz = 0.0                     # AttributeError: read-only
+editable = case.member_results.copy()            # a plain dict of editable objects
+editable["4"].local_maximums.mz = 0.0            # fine
+```
+
+`section_forces`, `internal_force_series` and `member_displacements` come back
+as tuples. To test for a table, use `isinstance(x, collections.abc.Mapping)`,
+not `dict`. `reaction_nodes` and `plate_results` are plain dicts, as before.
+
+### Saving and loading
+
+```python
+from fers_core import FERS
+
+model.save_to_json("beam.json")                  # the model and its results
+model = FERS.from_json("beam.json")
+```
+
+`FERS.from_json` reads any file the solver or the SDK wrote, one entry at a
+time. A typical result needs less memory than its file to load, and at most
+about twice the file's size; before 0.1.98 it needed 15 to 20 times. For a
+large model, let the solver write the file itself. The result then never
+passes through Python as one string:
+
+```python
+model.run_analysis_to_file("beam_results.json")
+solved = FERS.from_json("beam_results.json")
+```
+
+`fers_core/examples/809_Reading_Results.py` runs all of this end to end.
+
+Saving a loaded model writes back everything the solver reads, with the same
+ids. That includes what the file defines but nothing uses yet, such as a section
+an editor keeps in its library. Nodes, members and the rest created after
+loading get ids the loaded model does not use, so saving never lets a new object
+replace a loaded one.
+
+### Only the results you read (engine 0.2.68)
+
+`AnalysisOptions(result_filter=[...])` keeps or drops whole result blocks.
+`result_requests` goes further. Each `ResultRequest` names a block and narrows
+it to chosen members or nodes, load combinations, components and one member
+end:
+
+```python
+from fers_core import ResultBlock, ResultRequest
+from fers_core.builders import check_beam
+from fers_core.result_requests import nodes_of
+from fers_core.unity_checks import classification
+
+model = check_beam(5.0, "IPE300", udl=10000.0)    # one "Beam", one ULS combination
+beams = classification("Beam")
+model.settings.analysis_options.result_requests = [
+    ResultRequest(ResultBlock.LOCAL_ENVELOPES, members=[beams],
+                  limit_state="ULS", components=["fx", "my", "mz"]),
+    ResultRequest(ResultBlock.NODE_DISPLACEMENTS, nodes=nodes_of(beams),
+                  limit_state="ULS", components=["dy"]),
+    ResultRequest(ResultBlock.REACTIONS, limit_state="ULS"),
+]
+model.run_analysis()
+```
+
+The values load into the same `member_results`, `displacement_nodes` and
+`reaction_nodes`, so code that reads them keeps working. **Anything that was not
+requested reads as `None`, not zero.** A check that reads a value nobody asked
+for therefore fails instead of passing on a zero.
+
+- `members` takes the unity checks' selectors: `classification(...)`,
+  `members([...])`, `member_sets([...])` and `all_members()`. Several selectors
+  form a union.
+- `nodes` takes `nodes([...])`, or `nodes_of(*selectors)` for the end nodes of
+  the selected members.
+- Load combinations are matched on their `limit_state`, as unity checks match
+  them, or by `load_combination_ids`. To select by limit state, set
+  `limit_state` on each `LoadCombination`; the solver does not read `situation`.
+- A request with neither `limit_state` nor `load_combination_ids` also covers
+  the load cases.
+- `end="start"` or `end="end"` keeps one end of the end-force and
+  end-displacement blocks.
+- The solver refuses a request it cannot meet, before it starts. That includes
+  `section_forces`, `internal_force_series`, a component the block does not
+  have, a limit state no combination carries, and `result_filter` set as well.
+
+The values themselves are on `model.resultsbundle.selections`, one entry per
+request and group of result sets. Each entry's `values` is a read-only numpy
+array shaped `(result_sets, ids, fields, components)`, with each axis listed
+beside it:
+
+```python
+sel = model.resultsbundle.selections[0]
+sel["group"]                     # "loadcombinations" or "loadcases"
+sel["result_sets"], sel["ids"]   # combination names, member or node ids
+sel["fields"], sel["components"] # e.g. ["local_maximums", "local_minimums"], ["fx", "my", "mz"]
+my = sel["values"][..., sel["components"].index("my")]   # every set, member and field
+```
+
+`save_to_json` writes the selections back as the solver wrote them, so a saved
+result reloads unchanged. `fers_core/examples/810_Result_Requests.py` runs this
+end to end.
+
+## Scissor hinges: a continuous beam that turns on what it crosses (engine 0.2.68)
+
+A rail running over beams and resting on each one is continuous along its
+length, but free to turn on every beam. A `MemberHinge` releases one member end,
+so releasing both rail ends at a beam splits the rail into two spans. Put the
+rail's members in a member set of their own and give the set a
+`ScissorHinge` instead. No link member or extra node is needed:
+
+```python
+from fers_core import FERS, DistributedLoad, Material, Member, MemberSet, NodalSupport, Node, ScissorHinge, Section
+from fers_core.supports.supportcondition import SupportCondition as C
+
+model = FERS()
+steel = Material(name="S355", e_mod=210e9, g_mod=81e9, density=7850.0, yield_stress=355e6)
+rail_section = Section(name="rail", material=steel, i_y=1e-6, i_z=1e-6, j=1e-7, area=1e-3)
+beam_section = Section(name="beam", material=steel, i_y=1e-4, i_z=1e-4, j=1e-4, area=5e-3)
+
+turns = {"X": C.fixed(), "Y": C.free(), "Z": C.free()}
+a, m, b = Node(0.0, 0.0, 0.0), Node(1.0, 0.0, 0.0), Node(2.0, 0.0, 0.0)
+a.nodal_support = NodalSupport(rotation_conditions=turns)
+b.nodal_support = NodalSupport(
+    displacement_conditions={"X": C.free(), "Y": C.fixed(), "Z": C.fixed()}, rotation_conditions=turns
+)
+beam_start, beam_end = Node(1.0, 0.0, -0.5), Node(1.0, 0.0, 0.5)
+beam_start.nodal_support = beam_end.nodal_support = NodalSupport()  # clamped
+
+rail_1 = Member(start_node=a, end_node=m, section=rail_section)
+rail_2 = Member(start_node=m, end_node=b, section=rail_section)
+model.add_member_set(MemberSet(
+    members=[rail_1, rail_2],
+    scissor_hinge=ScissorHinge(rotational_release_y=0.0, rotational_release_z=0.0),
+))
+model.add_member_set(MemberSet(members=[
+    Member(start_node=beam_start, end_node=m, section=beam_section),
+    Member(start_node=m, end_node=beam_end, section=beam_section),
+]))
+
+span = model.create_load_case(name="span")
+DistributedLoad(member=rail_1, load_case=span, magnitude=1000.0, end_magnitude=1000.0, direction=(0, -1, 0))
+model.run_analysis()
+mz = model.resultsbundle.loadcases["span"].member_results[str(rail_1.id)].local_end_forces.mz
+print(f"{abs(mz):.1f} Nm")  # 62.4; a knife edge gives qL²/16 = 62.5, a rigid joint 122.6
+```
+
+- **Where it applies:** at every node where a member of the set meets a member
+  outside the set, or a plate. There the set's members stay joined to each
+  other and move relative to the node along and about the released axes.
+  Nothing is released where the set meets only itself or a support. So the
+  continuous beam's members belong in a set of their own; a set holding every
+  member meets nothing, and the solver refuses it.
+- **Only some of those nodes:** `MemberSet(scissor_hinge_nodes=[...])` lists
+  where the hinge applies, for a beam that turns on some of the members it
+  meets and is joined to the rest.
+- **Each value** works as a `MemberHinge` release does: `None` holds it, `0.0`
+  frees it, and a positive value is a spring between the set and the node, in
+  force per length for a translation (`translational_release_x/_y/_z`) and
+  moment per radian for a rotation (`rotational_release_x/_y/_z`).
+- **The axes are global** unless the hinge names its own:
+  `ScissorHinge(..., axes=ReleaseAxes.user(x=..., y=...))` takes the first axis
+  along `x`, the second along `y` made perpendicular to it, and the third as
+  their cross product, as a rack turned in plan needs.
+- **Supports and nodal loads** at a released node act on the node, meaning the
+  members outside the set. A node's reported displacement is theirs. The set's
+  own motion there is in its members' `local_displacement_start_node` and
+  `local_displacement_end_node`.
+- **Two hinged sets crossing** with nothing else are each released from the
+  node, so every axis either one releases is free between them.
+- **A set of one member** gives a release about the hinge's axes at that
+  member's ends.
+- **Second order:** as with member hinges, a model with scissor hinges takes the
+  corotational correction only when `NonlinearMethod.COROTATIONAL` is named.
+
+A rail that may also slide over its posts frees that translation. Here it slides
+over the first post only, so the second takes its share of the pull:
+
+```python
+from fers_core import (
+    FERS, DistributedLoad, Material, Member, MemberPointLoad, MemberSet, NodalSupport, Node,
+    ScissorHinge, Section,
+)
+
+model = FERS()
+steel = Material(name="S355", e_mod=210e9, g_mod=81e9, density=7850.0, yield_stress=355e6)
+frame = Section(name="frame", material=steel, i_y=4e-6, i_z=4e-6, j=1e-7, area=2e-3)
+anchor, top_1, top_2 = Node(0.0, 0.0, 0.0), Node(2.0, 0.0, 0.0), Node(4.0, 0.0, 0.0)
+foot_1, foot_2 = Node(2.0, -1.5, 0.0), Node(4.0, -1.5, 0.0)
+anchor.nodal_support = foot_1.nodal_support = foot_2.nodal_support = NodalSupport()
+
+rail_1 = Member(start_node=anchor, end_node=top_1, section=frame)
+rail_2 = Member(start_node=top_1, end_node=top_2, section=frame)
+model.add_member_set(MemberSet(
+    members=[rail_1, rail_2],
+    scissor_hinge=ScissorHinge(translational_release_x=0.0),  # slides along X
+    scissor_hinge_nodes=[top_1],                               # over the first post only
+))
+for foot, top in ((foot_1, top_1), (foot_2, top_2)):
+    model.add_member_set(MemberSet(members=[Member(start_node=foot, end_node=top, section=frame)]))
+
+pull = model.create_load_case(name="pull")
+DistributedLoad(member=rail_1, load_case=pull, magnitude=2000.0, end_magnitude=2000.0, direction=(0, -1, 0))
+MemberPointLoad(member=rail_2, load_case=pull, position=0.5, magnitude=1000.0, direction=(1, 0, 0))
+model.run_analysis()
+reactions = model.resultsbundle.loadcases["pull"].reaction_nodes
+takes = [abs(reactions[str(foot.id)].nodal_forces.fx) for foot in (foot_1, foot_2)]
+print(f"post 1 takes {takes[0]:.1f} N, post 2 {takes[1]:.1f} N")  # 0.0 N and 67.2 N
+```
+
+A model that uses scissor hinges is written with `schema_version` 3, so a solver
+older than 0.2.68 refuses it instead of solving every connection as rigid.
+Without them, a model is written exactly as before.
+`fers_core/examples/054_Scissor_Hinge_Rail_On_Beam.py` compares the rigid
+connection, member hinges, the scissor hinge and a spring, and
+`fers_core/examples/055_Scissor_Hinge_Sliding_Rail_And_Release_Axes.py` slides
+the rail, limits the hinge to one post, and turns the rack in plan.
+
+### Member hinges in global or user axes (engine 0.2.68)
+
+A `MemberHinge` releases its rotations about its member's own axes. A beam at an
+angle in plan, pinned about the girder it hangs from, needs a pin about the
+girder's axis instead, which in the beam's own axes mixes its bending with its
+torsion. `rotation_axes` names the axes the rotational releases, their stiffness
+curves and their moment–rotation diagrams use:
+
+```python
+from fers_core import MemberHinge, ReleaseAxes
+
+pin_about_x = MemberHinge(rotational_release_mx=0.0, rotation_axes=ReleaseAxes.GLOBAL)
+```
+
+`ReleaseAxes.LOCAL` (the default) keeps the member's axes; `ReleaseAxes.user(x, y)`
+names a frame as above. A curve on such a hinge reads the end moment about the
+same axes; the member's results stay in its local axes. Translational releases
+stay member-local. A model whose member hinges release in other axes is written
+with `schema_version` 3 as well. Release axes are fixed in space, so a
+corotational solve does not turn them with the structure.
+
+## A member's self-weight
+
+The solver works out each member's self-weight, density·area·g, and its mass for
+modal and seismic analysis from the section. A member that carries more, such as
+cladding or a services run, can override both:
+
+```python
+from fers_core.builders import create_beam
+
+model = create_beam(5.0, "IPE180")                  # no load but its own weight
+model.settings.analysis_options.enable_self_weight = True
+for member in model.members:
+    member.weight_override = 1500.0                 # N/m, gravity included
+model.run_analysis()
+
+self_weight = model.resultsbundle.loadcases["Self-weight"]
+print(round(sum(r.nodal_forces.fy for r in self_weight.reaction_nodes.values()), 1))   # 7500.0
+```
+
+The solver applies 1500 N/m in place of the section's 184 N/m, and takes
+1500 / 9.81 kg/m as the member's mass. `weight_override` is in the model's
+force/length units. `Member.weight` is a different thing: the member's mass as
+the SDK computes it, density·area·length, which is never sent to the solver.
+
+## Seismic analysis
+
+`add_seismic_analysis` asks the solver for a modal response-spectrum analysis
+(the default), the lateral-force method, or both. The spectrum helpers build
+EN 1998-1 design spectra. Accelerations are in m/s² and periods in seconds,
+whatever the model's units; nodal masses are in kg.
+
+```python
+from fers_core import (
+    FERS, Member, MemberSet, MaterialLibrary, NodalMass, NodalSupport, Node, Section,
+    SeismicAnalysisSettings,
+)
+
+model = FERS()                                                    # first: it restarts the ids
+steel = MaterialLibrary.S235()
+column = Section.from_name("HEB200", steel)
+nodes = [Node(0.0, float(height), 0.0) for height in range(7)]    # a 6 m mast
+nodes[0].nodal_support = NodalSupport()                           # fixed base
+model.add_member_set(MemberSet(members=[Member(a, b, section=column) for a, b in zip(nodes, nodes[1:])]))
+model.add_nodal_mass(NodalMass(nodes[-1], 2000.0))                # 2 t of equipment on top
+
+model.add_seismic_analysis(
+    SeismicAnalysisSettings.eurocode_spectrum(ag=2.5, ground_type="C", q=1.5),
+    directions=["X"],
+    num_modes=4,
+)
+model.run_analysis()
+
+x = model.resultsbundle.seismic["modal_response_spectrum"]["per_direction"][0]
+print(f"{x['participating_mass_ratio']:.0%} of the mass, base shear {x['base_shear'] / 1000:.1f} kN")
+```
+
+`mass_sources=[(load_case, psi)]` turns gravity load cases into seismic mass
+(ψE = 1.0 for permanent loads). `direct_spectrum` takes S, T_B, T_C and T_D
+directly for a national annex, and `custom_spectrum` a table of periods and
+accelerations. The results are plain dicts in `resultsbundle.seismic`, one
+entry per method. `fers_core/examples/151_Seismic_Response_Spectrum.py` runs a
+portal frame through both methods.
+
+## Unity-check reports
+
+The solver can embed one HTML report of every unity check in the result:
+
+```python
+from fers_core.builders import check_beam
+
+model = check_beam(5.0, "IPE300", udl=10000.0)
+model.settings.analysis_options.include_report_html = True
+model.run_analysis()
+html = model.unity_report_html()                    # a complete HTML page
+```
+
+`render_unity_reports = True` also fills each checked member's
+`rendered_report` from its check's `report_template`, and adds those narratives
+to the HTML report. Both are off by default, which keeps the result small.
 
 ## Premium solves and timeouts
 

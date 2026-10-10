@@ -65,6 +65,7 @@ class Section:
         centroid_y: Optional[float] = None,
         centroid_z: Optional[float] = None,
         ec3: Optional[Dict[str, Any]] = None,
+        geometric: Optional[Dict[str, Optional[float]]] = None,
     ):
         """
         Initializes a Section object representing a structural element.
@@ -79,17 +80,32 @@ class Section:
         h (float, optional): Height of the section, if applicable.
         b (float, optional): Width of the section, if applicable.
         i_w (float, optional): Warping constant (m^6), for thin-walled open sections.
-        y_s (float, optional): Shear center Y-coordinate relative to centroid (m).
-        z_s (float, optional): Shear center Z-coordinate relative to centroid (m).
+        y_s (float, optional): Shear centre offset from the centroid along local y (m).
+        z_s (float, optional): Shear centre offset from the centroid along local z (m).
         wagner_coeff (float, optional): Wagner coefficient for lateral-torsional buckling.
-        a_sy (float, optional): Effective shear area in Y-direction (m^2) for Timoshenko beam.
-        a_sz (float, optional): Effective shear area in Z-direction (m^2) for Timoshenko beam.
-        principal_axis_angle (float, optional): Angle (degrees) from centroidal to principal
-            axes.  When i_y/i_z are principal MOIs and the section has non-zero Iyz,
-            this rotates the member's local y-z axes to align with principal directions.
-        i_yz (float, optional): Product of inertia about centroidal axes (mm^4).
+        a_sy (float, optional): Shear area (m^2) for the shear force along z, the one
+            that goes with bending about y: the Timoshenko area and EC3's A_v for V_z.
+        a_sz (float, optional): Shear area (m^2) for the shear force along y, the one
+            that goes with bending about z (the web of a library I-section).
+        wel_y, wel_z, wpl_y, wpl_z (float, optional): Elastic and plastic section moduli
+            about y and z (m^3).
+        principal_axis_angle (float, optional): Angle (degrees) from local y to the
+            principal axis y', positive turning y toward z. With i_yz it must name a
+            principal axis of the centroidal values: theta = 0.5*atan2(-2*i_yz, i_y - i_z)
+            for the major one or theta +/- 90 for the minor, each +/- 180 (engine 0.2.68;
+            older engines accept theta only). Left out, the engine takes the principal
+            axis nearest local y. Without i_yz, i_y/i_z are the principal values and the
+            member is rotated by this angle.
+        i_yz (float, optional): Product of inertia int(y*z dA) about the centroidal local
+            axes (m^4). With it, i_y/i_z are the centroidal values, and the section is
+            bent about its principal axes: its shear areas, section moduli and EC3
+            buckling curves must then be principal-axis values, about y'/z' where the
+            names say y/z (engine 0.2.68). The angle and Z factories send them so.
         centroid_y (float, optional): Centroid Y-coordinate in shape path coords (mm).
         centroid_z (float, optional): Centroid Z-coordinate in shape path coords (mm).
+        geometric (dict, optional): For a turned section, its moduli and shear areas
+            about the leg (member) axes, under the same keys. Not sent to the solver;
+            for a consumer that bends the section in one plane about a member axis.
         """
         self.id = id or Section._section_counter
         if id is None:
@@ -125,6 +141,7 @@ class Section:
         self.ec3 = ec3
         self.centroid_y = centroid_y
         self.centroid_z = centroid_z
+        self.geometric = geometric
 
     @classmethod
     def reset_counter(cls):
@@ -194,17 +211,17 @@ class Section:
         #
         # Derived here rather than read from sp.phi, for two reasons. sp.phi is
         # already in DEGREES (an angle section reports -135.0), so the old
-        # math.degrees() call turned it into -7734.9. And even unconverted it
-        # would not do: the solver decides whether i_y/i_z are centroidal by
-        # checking this angle against its own Mohr angle
-        # theta = 0.5*atan2(-2*I_yz, I_y - I_z), which for that same angle is
-        # +45 deg. -135 names the same axis but fails the comparison, so the
-        # rotation is skipped and the CENTROIDAL pair is used as if it were
-        # principal - for an L 100x100x10 that is 177 cm4 in place of 73 cm4,
-        # a factor 2.4 on N_cr in the unconservative direction.
+        # math.degrees() call turned it into -7734.9. And it is measured in
+        # sectionproperties' own axes, which the mapping above crosses: for an
+        # unequal angle it names neither principal axis in FERS axes, which
+        # engine 0.2.68 refuses. Engines before 0.2.68 also accepted the Mohr
+        # angle theta = 0.5*atan2(-2*I_yz, I_y - I_z) and nothing else, not even
+        # -135 for an equal angle (the same axis as +45): any other angle made
+        # them use the CENTROIDAL pair as if it were principal - for an
+        # L 100x100x10 that is 177 cm4 in place of 73 cm4, a factor 2.4 on N_cr
+        # in the unconservative direction.
         #
-        # Computing it from the same two quantities the solver compares against
-        # makes the match true by construction.
+        # theta is what every engine reads correctly; it makes y' the major axis.
         try:
             import math
 
@@ -253,7 +270,40 @@ class Section:
         except (AttributeError, TypeError, IndexError, ValueError):
             props["wpl_z"] = None
             props["wpl_y"] = None
+        if props["i_yz"] is not None:
+            props.update(Section._principal_props(analysis_section, props))
         return props
+
+    @staticmethod
+    def _principal_props(analysis_section, props: dict) -> dict:
+        """Moduli and shear areas of a turned section about its principal axes.
+
+        The engine bends a section with a product of inertia about its principal
+        axes and, since 0.2.68, reads its moduli and shear areas as principal-axis
+        values. principal_axis_angle above makes y' the major axis, sectionproperties'
+        11 axis. The leg-axis values move to `geometric`, for a consumer that bends
+        the section in one plane about a member axis.
+        """
+        out = {"geometric": {k: props[k] for k in ("wel_y", "wel_z", "wpl_y", "wpl_z", "a_sy", "a_sz")}}
+        try:
+            z = analysis_section.get_zp()  # (z11+, z11-, z22+, z22-)
+            out["wel_y"] = min(abs(float(z[0])), abs(float(z[1])))
+            out["wel_z"] = min(abs(float(z[2])), abs(float(z[3])))
+        except (AttributeError, TypeError, IndexError, ValueError):
+            out["wel_y"] = out["wel_z"] = None
+        try:
+            s = analysis_section.get_sp()  # (s11, s22)
+            out["wpl_y"], out["wpl_z"] = float(s[0]), float(s[1])
+        except (AttributeError, TypeError, IndexError, ValueError):
+            out["wpl_y"] = out["wpl_z"] = None
+        try:
+            # A_s11 is the shear area for shear along the 11 axis (= y'), which
+            # the engine's a_sz carries; A_s22 goes to a_sy.
+            a = analysis_section.get_as_p()  # (A_s11, A_s22)
+            out["a_sz"], out["a_sy"] = float(a[0]), float(a[1])
+        except (AttributeError, TypeError, IndexError, ValueError):
+            out["a_sz"] = out["a_sy"] = None
+        return out
 
     def to_dict(self):
         d = {
@@ -339,6 +389,7 @@ class Section:
             i_yz=data.get("i_yz"),
             centroid_y=data.get("centroid_y"),
             centroid_z=data.get("centroid_z"),
+            ec3=dict(data["ec3"]) if data.get("ec3") else None,
         )
 
     @staticmethod
