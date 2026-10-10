@@ -389,6 +389,7 @@ class Section:
             i_yz=data.get("i_yz"),
             centroid_y=data.get("centroid_y"),
             centroid_z=data.get("centroid_z"),
+            ec3=dict(data["ec3"]) if data.get("ec3") else None,
         )
 
     @staticmethod

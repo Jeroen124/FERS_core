@@ -81,6 +81,10 @@ of the FERS structural-analysis library.  Examples are grouped by number range:
 141  Plate Surface Mesh             – a slab meshed automatically from its outline.
 142  Plate Strip Surface Load       – a cantilevered plate strip under pressure,
                                     against the beam formula.
+151  Seismic Response Spectrum      – a portal frame under an EN 1998-1 spectrum,
+                                    by MRSA and by the lateral-force method; a
+                                    roof beam's self-weight and mass set with
+                                    weight_override.
 181  Visual Double Cantilever
 182  Visual Double Cantilever – Double Supported
 

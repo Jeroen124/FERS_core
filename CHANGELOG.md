@@ -227,6 +227,116 @@ Smaller changes to loading:
 - **`save_to_json()` works with its default arguments.** It passed
   `indent=None` to ujson, which refuses it with `TypeError`; only the examples'
   explicit `indent=4` worked.
+- **`LoadCase.apply_deadload_to_members` applies the dead load per unit
+  length.** It applied g times the member's whole mass, `member.weight`, as a load
+  per unit length, so a member got its weight times its length: five times too
+  much on a 5 m member, and too little on a member shorter than one length unit.
+  It now applies `9.81 · weight / length`, which is density·area·g. The
+  `direction` its docstring described, `'Y'`, produced a model the solver
+  schema refused; an axis letter now works as well as a vector. The helper
+  returns the loads it added.
+- **`FERS.create_combined_model_pattern` gives every copy its own ids.** It
+  restarted the id counters, so copies took the original's member and node ids
+  and replaced them: asking for three instances kept two. Copies also lost
+  their members' types, which made any rigid member raise and turned ties and
+  struts into ordinary members, along with offsets, pretension and the weight
+  override. Their reference members and buckling restraints pointed into the
+  first copy or the original, their buckling lengths were dropped, and the
+  combined model had default settings rather than the original's units. All of
+  that is carried over now, and node ids run on from the original's without
+  gaps.
+
+### Fixed — saving and loading a model
+
+Loading a model and saving it again lost or changed parts of it. Three of those
+made the solver refuse the saved file outright:
+
+- **A support on a node that only a plate surface, a reference node or an
+  opening reaches** was left out, while its node still named it: "node N
+  references missing nodal support M". Supports are now collected from every
+  node.
+- **Translation imperfections** were written as `memberset`. The solver reads
+  `memberset_ids`, so any model with one failed with "missing field
+  `memberset_ids`", and `validate_schema()` failed too. They are written as
+  `memberset_ids` now, and `memberset` is still read.
+- **An end offset given on one axis** wrote `null` on the other two, and the
+  solver refused it ("invalid type: null, expected f64"). A missing axis is 0
+  now.
+- **A file without a `pressureUnit`** is in pascal to the solver, but loading
+  made it MPa. Saved again, its E, G and yield stresses meant 10⁶ times larger
+  values. It stays Pa.
+- **Lost when loading:**
+  - a section's `ec3` block, so EC3 checks fell back to the default buckling
+    curves and an inferred section class;
+  - a member set's buckling lengths and effective-length factors;
+  - nodal masses;
+  - a `reference_member` listed after the member that names it;
+  - a member's per-length self-weight override (`weight` in the file).
+- **Lost when saving:**
+  - the nodes of a plate opening, and any node nothing else used. Unless they
+    had the highest ids, the saved file then had a gap in its node ids, which
+    the solver refuses: they must run from 1 without one;
+  - sections, materials, shape paths, hinges and supports that a loaded file
+    defines but nothing uses, such as an editor's library;
+  - a plate element's `classification`;
+  - the seismic analysis request and the `include_report_html` and
+    `render_unity_reports` options, which the SDK could not hold at all.
+- **Changed when loading:**
+  - an unclassified member, `classification: null`, came back as `""`;
+  - an option value this version does not know, such as a newer solver's
+    `nonlinear_method`, was replaced by the default. It is kept as written
+    now; validation still reports it.
+- **New objects after loading reused loaded ids.** A `Node`, `Section` or other
+  object made after `from_json` took id 1 again, and on the next save it
+  silently replaced the loaded entry with that id. Every id counter now moves
+  past the loaded model's ids.
+- `StiffnessCurveConfig` equality ignored `signed`.
+
+A test now builds one model with every entity and every optional field of the
+solver's input schema, saves it, loads it and saves it again, and requires the
+two documents to be the same. A second test fails when the solver schema gains
+a field that the model does not set.
+
+### Added
+
+- **`Member(weight_override=...)`** sets the solver's per-length self-weight
+  for a member, in force per length with gravity included: N/m in an SI model.
+  The solver applies it instead of density·area·g and divides it by g for the
+  member's mass in modal and seismic analysis.
+- **Seismic analysis**: `SeismicAnalysisSettings` and
+  `FERS.add_seismic_analysis(...)` request `analysis.seismic`: a modal
+  response-spectrum analysis, the lateral-force method, or both.
+  `eurocode_spectrum`, `direct_spectrum` and `custom_spectrum` build the
+  design spectra.
+- **`AnalysisOptions(include_report_html=..., render_unity_reports=...)`**:
+  the HTML report that `FERS.unity_report_html()` returns, and each checked
+  entity's `rendered_report`.
+- **`PlateOpening(boundary_nodes=[...])`** takes the nodes themselves, so saving
+  the model writes them too.
+
+### Upgrade notes
+
+- **`Member.weight` after loading.** It is still the member's mass as the SDK
+  computes it, density·area·length. Loading used to set it to the file's
+  `weight`, which is the per-length override and usually 0. It is computed
+  again now, and the file's value is in `weight_override`.
+- **`memberset_ids`.** Code that reads `to_dict()` output for translation
+  imperfections finds `memberset_ids` where `memberset` was.
+- **A loaded model's lists.** `get_all_nodes()`, and the `sections`,
+  `materials`, `nodal_supports`, `member_hinges` and `shape_paths` of
+  `FERS.model`, list everything the file defines, unused entries included, in
+  the file's order.
+- **Unknown option values.** `AnalysisOptions.order`, `rigid_strategy` and the
+  P-delta options can hold a string from a newer document rather than an enum.
+- **Dead load from `apply_deadload_to_members` changes.** Each member's load is
+  divided by its length in model units, so results built on the helper change by
+  that factor. For example, a 5 m member's dead load is a fifth of what it was,
+  and the 0.625 m elements of a 5 m beam meshed in eight get 1.6 times as much.
+  The load is right in the model's units when density is per cubic length unit
+  and forces are in newtons: kg/m³ with m, kg/mm³ with mm. For other units, use
+  the solver's own self-weight (`AnalysisOptions(enable_self_weight=True)`).
+- **`create_combined_model_pattern` returns more.** It now returns every copy,
+  and takes the original's settings, units included, instead of the defaults.
 
 ### Documentation
 
@@ -247,6 +357,21 @@ missing from it.
 The README's first example loaded its beam upward. It called it "5 kN/m
 downward" while passing `udl=-5000.0`, but `create_beam`'s `udl` is positive
 downward.
+
+The README also has new sections:
+
+- **"A member's self-weight"** covers `weight_override` and how it differs from
+  `Member.weight`.
+- **"Seismic analysis"** runs a mast through a response spectrum.
+- **"Unity-check reports"** covers the HTML report.
+- **"Saving and loading"** now says what a loaded model keeps.
+
+`fers_core/examples/151_Seismic_Response_Spectrum.py` runs a portal frame
+through both seismic methods, against hand checks.
+
+"Solving a model" in the README, and the `FERS` docstring, now say to create the
+`FERS` object before a model's nodes and members: creating it restarts the id
+counters.
 
 ### Not changed
 

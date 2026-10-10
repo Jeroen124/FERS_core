@@ -53,7 +53,11 @@ from .settings.anlysis_options import (
 )
 from .settings.enums import MassFormulation
 from .result_requests import ResultRequest
-from .settings.eigen_analysis import BucklingAnalysisSettings, ModalAnalysisSettings
+from .settings.eigen_analysis import (
+    BucklingAnalysisSettings,
+    ModalAnalysisSettings,
+    SeismicAnalysisSettings,
+)
 from .members.memberhinge import MemberHinge
 from .members.scissorhinge import ScissorHinge
 from .members.moment_rotation import CurveEndBehaviour, MomentRotationCurve
@@ -143,6 +147,7 @@ __all__ = [
     "RigidStrategy",
     "ScissorHinge",
     "Section",
+    "SeismicAnalysisSettings",
     "SurfaceLoad",
     "SurfaceLoadVertex",
     "list_sections",

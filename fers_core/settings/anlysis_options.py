@@ -52,6 +52,19 @@ class AnalysisOptions:
     chosen members or nodes, combinations, components and member end, and
     returns only that — see ``fers_core.result_requests``. Not combinable with
     ``result_filter``.
+
+    Unity-check reports: ``include_report_html=True`` makes the solver embed one
+    consolidated HTML report of every unity check, read back with
+    :meth:`FERS.unity_report_html`. ``render_unity_reports=True`` fills each
+    checked entity's ``rendered_report`` from its check's ``report_template``,
+    and puts those narratives in the HTML report as well. Both are off by
+    default, which keeps the result small.
+
+    Loading a document whose options name a value this version does not know,
+    such as a newer solver's ``nonlinear_method``, keeps that value as a string,
+    so saving the model again does not swap it for a default. Validation
+    (``FERS.validate_schema()``, and ``run_analysis`` by default) still reports
+    it, because this version's solver cannot read it.
     """
 
     _analysis_options_counter = 1
@@ -81,6 +94,8 @@ class AnalysisOptions:
         include_member_deflected_shape: Optional[bool] = None,
         result_filter: Optional[List[Union[ResultBlock, str]]] = None,
         result_requests: Optional[List[Union[ResultRequest, Dict[str, Any]]]] = None,
+        include_report_html: Optional[bool] = None,
+        render_unity_reports: Optional[bool] = None,
     ):
         self.analysis_options_id = id or AnalysisOptions._analysis_options_counter
         if id is None:
@@ -118,6 +133,8 @@ class AnalysisOptions:
             if result_requests is not None
             else None
         )
+        self.include_report_html = include_report_html
+        self.render_unity_reports = render_unity_reports
 
     def to_dict(self):
         data = {
@@ -125,9 +142,9 @@ class AnalysisOptions:
             "solver": self.solver,
             "tolerance": self.tolerance,
             "max_iterations": self.max_iterations,
-            "dimensionality": self.dimensionality.value,
-            "order": self.order.value,
-            "rigid_strategy": self.rigid_strategy.value,
+            "dimensionality": _wire(self.dimensionality),
+            "order": _wire(self.order),
+            "rigid_strategy": _wire(self.rigid_strategy),
             "axial_slack": self.axial_slack,
             "include_shear_deformation": self.include_shear_deformation,
             "include_warping": self.include_warping,
@@ -137,11 +154,11 @@ class AnalysisOptions:
         # the solver falls back to its own defaults (each Rust field is
         # `#[serde(default)]` and would reject an explicit null).
         if self.nonlinear_method is not None:
-            data["nonlinear_method"] = self.nonlinear_method.value
+            data["nonlinear_method"] = _wire(self.nonlinear_method)
         if self.pdelta_formulation is not None:
-            data["pdelta_formulation"] = self.pdelta_formulation.value
+            data["pdelta_formulation"] = _wire(self.pdelta_formulation)
         if self.pdelta_mode is not None:
-            data["pdelta_mode"] = self.pdelta_mode.value
+            data["pdelta_mode"] = _wire(self.pdelta_mode)
         if self.pdelta_suppress_axes is not None:
             data["pdelta_suppress_axes"] = list(self.pdelta_suppress_axes)
         # Self-weight options are only emitted when explicitly set, so the solver
@@ -166,6 +183,10 @@ class AnalysisOptions:
             ]
         if self.result_requests is not None:
             data["result_requests"] = [request.to_dict() for request in self.result_requests]
+        if self.include_report_html is not None:
+            data["include_report_html"] = self.include_report_html
+        if self.render_unity_reports is not None:
+            data["render_unity_reports"] = self.render_unity_reports
         return data
 
     @classmethod
@@ -176,6 +197,9 @@ class AnalysisOptions:
           - their enum value (as written by to_dict),
           - their enum name,
           - or already as enum instances.
+
+        A value matching neither is kept as the string it is, not replaced by a
+        default (see the class docstring).
         """
 
         def parse_enum(enum_type, raw_value, default):
@@ -195,8 +219,7 @@ class AnalysisOptions:
                 if member.name.upper() == raw_str:
                     return member
 
-            # Fallback to default if nothing matches
-            return default
+            return raw_value
 
         dimensionality = parse_enum(
             Dimensionality,
@@ -252,4 +275,11 @@ class AnalysisOptions:
             include_member_deflected_shape=data.get("include_member_deflected_shape"),
             result_filter=result_filter,
             result_requests=data.get("result_requests"),
+            include_report_html=data.get("include_report_html"),
+            render_unity_reports=data.get("render_unity_reports"),
         )
+
+
+def _wire(value):
+    """An option's wire value: the enum's value, or a string kept from a document."""
+    return getattr(value, "value", value)

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import re
 from typing import Any, Optional, Tuple, Union, TYPE_CHECKING
 import fers_calculations
@@ -43,6 +44,7 @@ from ..plates.components import PlateOpening
 from ..geometry.workaxis import WorkAxis
 from ..geometry.workplane import WorkPlane
 from ..entities.entitygroup import EntityGroup
+from ..members.bucklingrestraint import BucklingRestraint
 from ..members.material import Material
 from ..members.member import Member
 from ..members.section import Section
@@ -51,9 +53,14 @@ from ..members.memberset import MemberSet
 from ..members.scissorhinge import ScissorHinge
 from ..members.shapepath import ShapePath
 from ..nodes.node import Node
+from ..nodes.nodalmass import NodalMass
 from ..supports.nodalsupport import NodalSupport
 from ..settings.settings import Settings
-from ..settings.eigen_analysis import BucklingAnalysisSettings, ModalAnalysisSettings
+from ..settings.eigen_analysis import (
+    BucklingAnalysisSettings,
+    ModalAnalysisSettings,
+    SeismicAnalysisSettings,
+)
 from pydantic import ValidationError as _PydValidationError
 
 from ..types.pydantic_models import FERS as FERSInputSchema
@@ -204,6 +211,15 @@ class _AnalysisView:
     def buckling(self, value):
         self._f.buckling_analysis = value
 
+    @property
+    def seismic(self):
+        """Seismic analysis request (``SeismicAnalysisSettings``), or ``None``."""
+        return self._f.seismic_analysis
+
+    @seismic.setter
+    def seismic(self, value):
+        self._f.seismic_analysis = value
+
     def add_buckling_analysis(self, reference=None, num_modes: int = 1, **kwargs):
         """Delegate to :meth:`FERS.add_buckling_analysis`."""
         return self._f.add_buckling_analysis(reference=reference, num_modes=num_modes, **kwargs)
@@ -211,6 +227,10 @@ class _AnalysisView:
     def add_modal_analysis(self, num_modes: int = 1, **kwargs):
         """Delegate to :meth:`FERS.add_modal_analysis`."""
         return self._f.add_modal_analysis(num_modes=num_modes, **kwargs)
+
+    def add_seismic_analysis(self, spectrum_x, **kwargs):
+        """Delegate to :meth:`FERS.add_seismic_analysis`."""
+        return self._f.add_seismic_analysis(spectrum_x, **kwargs)
 
     @property
     def load_cases(self):
@@ -251,12 +271,30 @@ class _AnalysisView:
 
 
 class FERS:
+    """A structural model, its analysis requests and, once solved, its results.
+
+    Create the ``FERS`` object before the nodes, members, sections and loads of
+    its model. Creating one restarts every id counter (unless
+    ``reset_counters=False``), so objects made before it would share ids with
+    the ones made after it, and the solver refuses node ids that do not run
+    from 1 without gaps.
+    """
+
     def __init__(self, settings=None, reset_counters=True):
         if reset_counters:
             self.reset_counters()
         # Backing list for top-level members (the `members` property returns the
         # deduplicated union of these and any members referenced by member sets).
         self._members = []
+        # What a loaded document defines, in its order, used or not. Saving writes
+        # these first, so a library section nothing uses yet, a support on a plate
+        # surface's edge, or an opening's nodes are not dropped.
+        self._nodes = []
+        self._materials = []
+        self._sections = []
+        self._shape_paths = []
+        self._nodal_supports = []
+        self._member_hinges = []
         self.member_sets = []
         self.plate_surfaces = []
         self.plates = []
@@ -274,6 +312,7 @@ class FERS:
         # None means "not requested" and the key is omitted from the document.
         self.modal_analysis: Optional[ModalAnalysisSettings] = None
         self.buckling_analysis: Optional[BucklingAnalysisSettings] = None
+        self.seismic_analysis: Optional[SeismicAnalysisSettings] = None
         self.settings = (
             settings if settings is not None else Settings()
         )  # Use provided settings or create default
@@ -486,6 +525,9 @@ class FERS:
         if self.buckling_analysis is not None:
             buckling = self.buckling_analysis
             data["analysis"]["buckling"] = buckling.to_dict() if hasattr(buckling, "to_dict") else buckling
+        if self.seismic_analysis is not None:
+            seismic = self.seismic_analysis
+            data["analysis"]["seismic"] = seismic.to_dict() if hasattr(seismic, "to_dict") else seismic
         if include_results and self.resultsbundle is not None:
             data["results"] = self.resultsbundle.to_dict()
         else:
@@ -535,6 +577,10 @@ class FERS:
         twice it, rather than 15 to 20 times. ``member_results`` and
         ``displacement_nodes`` come back as read-only tables; ``.copy()`` gives
         editable dicts.
+
+        The model keeps its ids and everything the file defines, used or not, so
+        saving it writes the same model back. Objects created afterwards get ids
+        it does not use.
         """
         try:
             return cls._from_json_file(file_path, "utf-8-sig")
@@ -554,7 +600,9 @@ class FERS:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "FERS":
         """Build a model, with its results if present, from a dict shaped like
-        :meth:`to_dict`'s output. :meth:`from_json` reads a file in less memory."""
+        :meth:`to_dict`'s output; ids and unused entries are kept as
+        :meth:`from_json` keeps them. :meth:`from_json` reads a file in less
+        memory."""
         fers = cls._from_model_dict(data)
         res_data = data.get("results") or data.get("resultsbundle")
         if res_data:
@@ -593,6 +641,8 @@ class FERS:
             fers.modal_analysis = ModalAnalysisSettings.from_dict(analysis["modal"])
         if analysis.get("buckling") is not None:
             fers.buckling_analysis = BucklingAnalysisSettings.from_dict(analysis["buckling"])
+        if analysis.get("seismic") is not None:
+            fers.seismic_analysis = SeismicAnalysisSettings.from_dict(analysis["seismic"])
 
         # lookup tables as you already have...
         id_to_shape_path = {
@@ -638,6 +688,7 @@ class FERS:
 
         # Top-level members — the single source of truth. Member sets reference
         # these by id, so build them first.
+        loaded_members = []
         for m_data in as_list(data.get("members"), "members"):
             member = Member.from_dict(
                 m_data,
@@ -648,6 +699,15 @@ class FERS:
                 members_by_id=id_to_member,
             )
             fers.add_member(member)
+            loaded_members.append((member, m_data))
+        # A reference_member may be listed after the member that names it.
+        for member, m_data in loaded_members:
+            reference_id = m_data.get("reference_member")
+            if member.reference_member is None and reference_id is not None:
+                member.reference_member = id_to_member.get(reference_id)
+
+        for mass_data in as_list(data.get("nodal_masses"), "nodal_masses"):
+            fers.add_nodal_mass(NodalMass.from_dict(mass_data, nodes_by_id=id_to_node))
 
         # member sets reference members by id
         for ms_data in data.get("member_sets", []):
@@ -706,6 +766,13 @@ class FERS:
             )
             fers.add_imperfection_case(ic)
 
+        fers._nodes = list(id_to_node.values())
+        fers._materials = list(id_to_material.values())
+        fers._sections = list(id_to_section.values())
+        fers._shape_paths = list(id_to_shape_path.values())
+        fers._nodal_supports = list(id_to_support.values())
+        fers._member_hinges = list(id_to_hinge.values())
+        fers._advance_id_counters()
         return fers
 
     def create_load_case(self, name):
@@ -806,6 +873,24 @@ class FERS:
         """
         settings = ModalAnalysisSettings(num_modes=num_modes, **kwargs)
         self.modal_analysis = settings
+        return settings
+
+    def add_seismic_analysis(self, spectrum_x, **kwargs):
+        """Request a seismic analysis, and return its settings.
+
+        Accepts every :class:`SeismicAnalysisSettings` keyword. The spectrum
+        helpers build the design spectra::
+
+            spectrum = SeismicAnalysisSettings.eurocode_spectrum(
+                ag=2.0, ground_type="C", spectrum_type="TYPE1", q=2.0
+            )
+            model.add_seismic_analysis(spectrum, num_modes=12,
+                                       mass_sources=[(live_load, 0.3)])
+
+        The results arrive in ``model.resultsbundle.seismic``.
+        """
+        settings = SeismicAnalysisSettings(spectrum_x, **kwargs)
+        self.seismic_analysis = settings
         return settings
 
     def add_unity_check(self, *checks):
@@ -911,6 +996,58 @@ class FERS:
         Material.reset_counter()
         ShapePath.reset_counter()
 
+    def _advance_id_counters(self) -> None:
+        """Move every id counter past the ids this model uses, so that an object
+        created after loading the model never takes the id of a loaded one."""
+
+        def advance(cls, counter, ids):
+            top = max((i for i in ids if isinstance(i, int)), default=0)
+            if getattr(cls, counter) <= top:
+                setattr(cls, counter, top + 1)
+
+        advance(Node, "_node_counter", (node.id for node in self.get_all_nodes()))
+        advance(Member, "_member_counter", (member.id for member in self.get_all_members()))
+        advance(MemberSet, "_member_set_counter", (member_set.id for member_set in self.member_sets))
+        advance(Section, "_section_counter", self.get_unique_sections_from_all_member_sets(ids_only=True))
+        advance(Material, "_material_counter", self.get_unique_materials_from_all_member_sets(ids_only=True))
+        advance(ShapePath, "_shape_counter", self.get_unique_shape_paths_from_all_member_sets(ids_only=True))
+        advance(
+            MemberHinge, "_hinge_counter", self.get_unique_member_hinges_from_all_member_sets(ids_only=True)
+        )
+        # NodalSupport keeps its counter in the class attribute `id`.
+        advance(NodalSupport, "id", self.get_unique_nodal_support_from_all_member_sets(ids_only=True))
+        advance(PlateSurface, "_plate_surface_counter", (surface.id for surface in self.plate_surfaces))
+        advance(PlateElement, "_plate_counter", (plate.id for plate in self.plates))
+        advance(
+            PlateOpening,
+            "_plate_opening_counter",
+            (opening.id for surface in self.plate_surfaces for opening in surface.openings or []),
+        )
+        advance(WorkAxis, "_work_axis_counter", (axis.id for axis in self.work_axes))
+        advance(WorkPlane, "_work_plane_counter", (plane.id for plane in self.work_planes))
+        advance(EntityGroup, "_entity_group_counter", (group.id for group in self.entity_groups))
+        advance(LoadCase, "_load_case_counter", (case.id for case in self.load_cases))
+        advance(
+            LoadCombination,
+            "_load_combination_counter",
+            (combination.id for combination in self.load_combinations),
+        )
+        advance(
+            ImperfectionCase,
+            "_imperfection_case_counter",
+            (case.imperfection_case_id for case in self.imperfection_cases),
+        )
+        for cls, counter, loads in (
+            (NodalLoad, "_nodal_load_counter", "nodal_loads"),
+            (NodalMoment, "_nodal_moment_counter", "nodal_moments"),
+            (DistributedLoad, "_distributed_load_counter", "distributed_loads"),
+            (SurfaceLoad, "_surface_load_counter", "surface_loads"),
+            (MemberPointLoad, "_member_point_load_counter", "member_point_loads"),
+            (MemberPointMoment, "_member_point_moment_counter", "member_point_moments"),
+            (PlatePressure, "_plate_pressure_counter", "plate_pressures"),
+        ):
+            advance(cls, counter, (load.id for case in self.load_cases for load in getattr(case, loads)))
+
     @staticmethod
     def translate_member_set(member_set, translation_vector):
         """
@@ -948,89 +1085,127 @@ class FERS:
 
     def create_combined_model_pattern(original_model, count, spacing_vector):
         """
-        Creates a single model instance that contains the original model and additional
-        replicated and translated member sets according to the specified pattern.
+        Creates a single model instance that contains the original model's member sets
+        and ``count - 1`` copies of them, each one ``spacing_vector`` further along.
+
+        The copies get ids above the original's, so none replaces an original node
+        or member, and node ids stay consecutive, as the solver requires. Each copy
+        keeps its members' types, hinges, offsets and other properties, its member
+        sets' buckling restraints and lengths, and its reference members within the
+        same copy. The combined model takes a copy of the original's settings. Only
+        member sets are combined: load cases, plates and nodal masses are not.
 
         Args:
             original_model (FERS): The original model to replicate.
-            count (int): The number of times the model should be replicated, including the original.
-            spacing_vector (tuple): A tuple (dx, dy, dz) representing the spacing between each model instance.
+            count (int): The number of instances, the original included.
+            spacing_vector (tuple): (dx, dy, dz) from one instance to the next.
 
         Returns:
-            FERS: A single model instance with combined member sets from the original and replicated models.
+            FERS: A model with the original member sets and their translated copies.
         """
-        combined_model = FERS()
-        node_mapping = {}
-        member_mapping = {}
-
-        for original_member_set in original_model.get_all_member_sets():
+        settings = copy.deepcopy(original_model.settings)
+        # Load cases are not copied, so self-weight goes to a load case of its own.
+        settings.analysis_options.self_weight_load_case_id = None
+        # Not FERS(): it restarts the id counters, and the copies then took the
+        # original's ids and replaced its members and nodes.
+        combined_model = FERS(settings=settings, reset_counters=False)
+        member_sets = original_model.get_all_member_sets()
+        for original_member_set in member_sets:
             combined_model.add_member_set(original_member_set)
 
-        # Start replicating and translating the member sets
-        for i in range(1, count):
-            total_translation = (spacing_vector[0] * i, spacing_vector[1] * i, spacing_vector[2] * i)
-            for original_node in original_model.get_all_nodes():
-                # Translate node coordinates
-                new_node_coords = (
-                    original_node.X + total_translation[0],
-                    original_node.Y + total_translation[1],
-                    original_node.Z + total_translation[2],
-                )
-                # Create a new node or find an existing one with the same coordinates
-                if new_node_coords not in node_mapping:
-                    new_node = Node(
-                        X=new_node_coords[0],
-                        Y=new_node_coords[1],
-                        Z=new_node_coords[2],
-                        nodal_support=original_node.nodal_support,
-                        classification=original_node.classification,
-                    )
-                    node_mapping[(original_node.id, i)] = new_node
+        set_nodes = {}
+        for member_set in member_sets:
+            for member in member_set.members:
+                for node in (member.start_node, member.end_node, member.reference_node):
+                    if node is not None:
+                        set_nodes.setdefault(node.id, node)
+        next_node_id = max(set_nodes, default=0) + 1
+        next_member_id = max((member.id for member in original_model.get_all_members()), default=0) + 1
+        next_set_id = max((member_set.id for member_set in member_sets), default=0) + 1
 
+        node_mapping = {}  # (original node id, copy) -> node
+        member_mapping = {}  # (original member id, copy) -> member
+        copied = []  # (original member, copy, its member)
         for i in range(1, count):
-            for original_member_set in original_model.get_all_member_sets():
+            shift = [component * i for component in spacing_vector]
+            for original_node in set_nodes.values():
+                node_mapping[(original_node.id, i)] = Node(
+                    X=original_node.X + shift[0],
+                    Y=original_node.Y + shift[1],
+                    Z=original_node.Z + shift[2],
+                    id=next_node_id,
+                    nodal_support=original_node.nodal_support,
+                    classification=original_node.classification,
+                )
+                next_node_id += 1
+
+            for original_member_set in member_sets:
                 new_members = []
                 for member in original_member_set.members:
-                    new_start_node = node_mapping[(member.start_node.id, i)]
-                    new_end_node = node_mapping[(member.end_node.id, i)]
-                    if member.reference_node is not None:
-                        new_reference_node = node_mapping[(member.reference_node.id, i)]
-                    else:
-                        new_reference_node = None
-
                     new_member = Member(
-                        start_node=new_start_node,
-                        end_node=new_end_node,
+                        start_node=node_mapping[(member.start_node.id, i)],
+                        end_node=node_mapping[(member.end_node.id, i)],
                         section=member.section,
+                        id=next_member_id,
                         start_hinge=member.start_hinge,
                         end_hinge=member.end_hinge,
                         classification=member.classification,
                         rotation_angle=member.rotation_angle,
+                        mirror=member.mirror,
+                        weight=member.weight,
                         chi=member.chi,
-                        reference_member=member.reference_member,
-                        reference_node=new_reference_node,
+                        reference_node=(
+                            node_mapping[(member.reference_node.id, i)]
+                            if member.reference_node is not None
+                            else None
+                        ),
+                        member_type=member.member_type,
+                        start_offset=member.start_offset,
+                        end_offset=member.end_offset,
+                        pretension=member.pretension,
+                        unstretched_length=member.unstretched_length,
+                        weight_override=member.weight_override,
                     )
+                    next_member_id += 1
                     new_members.append(new_member)
-                    if member not in member_mapping:
-                        member_mapping[member] = []
-                    member_mapping[member].append(new_member)
-                # Create and add the new member set to the combined model
-                translated_member_set = MemberSet(
-                    members=new_members,
-                    classification=original_member_set.classification,
-                    buckling_restraints=original_member_set.buckling_restraints,
+                    member_mapping[(member.id, i)] = new_member
+                    copied.append((member, i, new_member))
+
+                restraints = [
+                    BucklingRestraint(
+                        node_id=(
+                            node_mapping[(restraint.node_id, i)].id
+                            if (restraint.node_id, i) in node_mapping
+                            else restraint.node_id
+                        ),
+                        restrains_local_y=restraint.restrains_local_y,
+                        restrains_local_z=restraint.restrains_local_z,
+                        restrains_torsion=restraint.restrains_torsion,
+                    )
+                    for restraint in original_member_set.buckling_restraints
+                ]
+                combined_model.add_member_set(
+                    MemberSet(
+                        members=new_members,
+                        classification=original_member_set.classification,
+                        buckling_restraints=restraints,
+                        id=next_set_id,
+                        buckling_length_y=original_member_set.buckling_length_y,
+                        buckling_length_z=original_member_set.buckling_length_z,
+                        ltb_length=original_member_set.ltb_length,
+                        buckling_length_t=original_member_set.buckling_length_t,
+                        effective_length_factor_y=original_member_set.effective_length_factor_y,
+                        effective_length_factor_z=original_member_set.effective_length_factor_z,
+                    )
                 )
-                combined_model.add_member_set(translated_member_set)
+                next_set_id += 1
 
-        for new_member_lists in member_mapping.values():
-            for new_member in new_member_lists:
-                if new_member.reference_member:
-                    # Find the new reference member corresponding to the original reference member
-                    new_reference_member = member_mapping.get(new_member.reference_member, [None])[
-                        0
-                    ]  # Assuming a one-to-one mapping
-                    new_member.reference_member = new_reference_member
+        # A copy's reference member is the same member of that copy.
+        for member, i, new_member in copied:
+            if member.reference_member is not None:
+                new_member.reference_member = member_mapping.get((member.reference_member.id, i))
 
+        combined_model._advance_id_counters()
         return combined_model
 
     def translate_model(model, translation_vector):
@@ -1192,36 +1367,23 @@ class FERS:
         return matching_members
 
     def get_all_nodes(self):
-        """Returns a list of all unique nodes in the model."""
-        nodes = []
-        node_ids = set()
+        """Returns a list of all unique nodes in the model: those of a loaded
+        document, in its order, then any the members, plates and nodal masses
+        reach."""
+        used = []
         for member in self.get_all_members():
-            if member.start_node.id not in node_ids:
-                nodes.append(member.start_node)
-                node_ids.add(member.start_node.id)
-
-            if member.end_node.id not in node_ids:
-                nodes.append(member.end_node)
-                node_ids.add(member.end_node.id)
-
-            ref_node = member.reference_node
-            if ref_node is not None and ref_node.id not in node_ids:
-                nodes.append(ref_node)
-                node_ids.add(ref_node.id)
-
+            used.append(member.start_node)
+            used.append(member.end_node)
+            if member.reference_node is not None:
+                used.append(member.reference_node)
         for plate in self.plates:
-            for node in plate.nodes:
-                if node.id not in node_ids:
-                    nodes.append(node)
-                    node_ids.add(node.id)
-
+            used.extend(plate.nodes)
         for plate_surface in self.plate_surfaces:
-            for node in plate_surface.boundary_nodes:
-                if node.id not in node_ids:
-                    nodes.append(node)
-                    node_ids.add(node.id)
-
-        return nodes
+            used.extend(plate_surface.boundary_nodes)
+            for opening in plate_surface.openings or []:
+                used.extend(opening.boundary_nodes or [])
+        used.extend(mass.node for mass in self.nodal_masses if isinstance(mass.node, Node))
+        return _defined_then_used(self._nodes, used)
 
     def get_node_by_pk(self, pk):
         """Returns a node by its PK."""
@@ -1248,7 +1410,8 @@ class FERS:
             by_id[plate_surface.material.id] = plate_surface.material
         for plate in self.plates:
             by_id[plate.material.id] = plate.material
-        return list(by_id.keys()) if ids_only else list(by_id.values())
+        materials = _defined_then_used(self._materials, by_id.values())
+        return [material.id for material in materials] if ids_only else materials
 
     def get_unique_shape_paths_from_all_member_sets(self, ids_only: bool = False):
         """
@@ -1263,7 +1426,8 @@ class FERS:
             sp = section.shape_path
             if sp.id not in unique_shape_paths:
                 unique_shape_paths[sp.id] = sp
-        return list(unique_shape_paths.keys()) if ids_only else list(unique_shape_paths.values())
+        shape_paths = _defined_then_used(self._shape_paths, unique_shape_paths.values())
+        return [path.id for path in shape_paths] if ids_only else shape_paths
 
     def get_unique_nodal_support_from_all_member_sets(self, ids_only=False):
         """
@@ -1278,20 +1442,14 @@ class FERS:
         """
         unique_nodal_supports = {}
 
-        for member in self.get_all_members():
-            # Check nodal supports for start and end nodes
-            for node in [member.start_node, member.end_node]:
-                if node.nodal_support and node.nodal_support.id not in unique_nodal_supports:
-                    # Store unique nodal supports by ID
-                    unique_nodal_supports[node.nodal_support.id] = node.nodal_support
+        # Every node, not only the members' end nodes: a support on a reference
+        # node or on a plate surface's edge is written too.
+        for node in self.get_all_nodes():
+            if node.nodal_support and node.nodal_support.id not in unique_nodal_supports:
+                unique_nodal_supports[node.nodal_support.id] = node.nodal_support
 
-        for plate in self.plates:
-            for node in plate.nodes:
-                if node.nodal_support and node.nodal_support.id not in unique_nodal_supports:
-                    unique_nodal_supports[node.nodal_support.id] = node.nodal_support
-
-        # Return only the IDs if ids_only is True
-        return list(unique_nodal_supports.keys()) if ids_only else list(unique_nodal_supports.values())
+        supports = _defined_then_used(self._nodal_supports, unique_nodal_supports.values())
+        return [support.id for support in supports] if ids_only else supports
 
     def get_unique_sections_from_all_member_sets(self, ids_only: bool = False):
         """
@@ -1304,7 +1462,8 @@ class FERS:
             if section is None:
                 continue
             by_id[section.id] = section
-        return list(by_id.keys()) if ids_only else list(by_id.values())
+        sections = _defined_then_used(self._sections, by_id.values())
+        return [section.id for section in sections] if ids_only else sections
 
     def get_unique_member_hinges_from_all_member_sets(self, ids_only: bool = False):
         """
@@ -1317,7 +1476,8 @@ class FERS:
                 by_id[member.start_hinge.id] = member.start_hinge
             if member.end_hinge:
                 by_id[member.end_hinge.id] = member.end_hinge
-        return list(by_id.keys()) if ids_only else list(by_id.values())
+        hinges = _defined_then_used(self._member_hinges, by_id.values())
+        return [hinge.id for hinge in hinges] if ids_only else hinges
 
     def get_unique_scissor_hinges_from_all_member_sets(self, ids_only: bool = False):
         """Collect the scissor hinges the member sets use, deduplicated by id."""
@@ -4287,3 +4447,19 @@ def _uc_get(obj, key):
     if isinstance(obj, dict):
         return obj.get(key)
     return getattr(obj, key, None)
+
+
+def _defined_then_used(defined, used):
+    """``defined`` (a loaded document's entries, in its order) followed by the
+    entries of ``used`` it lacks, each id once. Where both hold an id, the
+    object in use wins, so a replaced node or section is the one written."""
+    used = list(used)
+    in_use = {}
+    for item in used:
+        in_use.setdefault(item.id, item)
+    merged, seen = [], set()
+    for item in list(defined) + used:
+        if item.id not in seen:
+            seen.add(item.id)
+            merged.append(in_use.get(item.id, item))
+    return merged
