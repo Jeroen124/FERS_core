@@ -96,6 +96,10 @@ class PlateElement:
             data["stiffness_modifiers"] = self.stiffness_modifiers.to_dict()
         if self.local_x_direction is not None:
             data["local_x_direction"] = self.local_x_direction
+        # Not part of the solver's PlateElement, which ignores it; written so a
+        # model saved and loaded through the SDK keeps it.
+        if self.classification:
+            data["classification"] = self.classification
         return data
 
     @classmethod

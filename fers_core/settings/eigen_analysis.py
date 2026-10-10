@@ -1,14 +1,15 @@
 """First-class settings for the solver's eigenvalue analyses.
 
-``ModalAnalysisSettings`` maps to the wire ``analysis.modal`` object and
-``BucklingAnalysisSettings`` to ``analysis.buckling``. Both mirror the style of
+``ModalAnalysisSettings`` maps to the wire ``analysis.modal`` object,
+``BucklingAnalysisSettings`` to ``analysis.buckling`` and
+``SeismicAnalysisSettings`` to ``analysis.seismic``. All mirror the style of
 :class:`~fers_core.settings.anlysis_options.AnalysisOptions`: plain classes with
 typed constructor args, a ``to_dict()`` that omits unset optionals (the Rust
 side uses ``skip_serializing_if`` and would reject an explicit ``null``), and a
 ``from_dict()`` for round-tripping saved documents.
 """
 
-from typing import Any, Optional, Sequence, Union
+from typing import Any, Iterable, Optional, Sequence, Union
 
 from ..settings.enums import MassFormulation
 
@@ -319,4 +320,266 @@ class BucklingAnalysisSettings:
             all_combinations=all_combinations,
             member_effective_lengths=data.get("member_effective_lengths"),
             participation_threshold=data.get("participation_threshold"),
+        )
+
+
+_SEISMIC_METHODS = ("MODAL_RESPONSE_SPECTRUM", "LATERAL_FORCE", "BOTH")
+_MODAL_COMBINATIONS = ("CQC", "SRSS")
+_DIRECTIONAL_COMBINATIONS = ("SRSS", "PERCENT30")
+_SEISMIC_DIRECTIONS = ("X", "Y", "Z")
+_SPECTRUM_KINDS = ("EurocodeParametric", "DirectParameters", "CustomPoints")
+
+
+def _seismic_token(value: Any, known: Sequence[str]) -> Any:
+    """The wire spelling of ``value`` when it names one of ``known``, in any case;
+    otherwise ``value`` itself, so a newer solver's token survives a save."""
+    raw = getattr(value, "value", value)
+    for token in known:
+        if str(raw).upper() == token:
+            return token
+    return raw
+
+
+def _seismic_spectrum(value: Any, label: str) -> dict:
+    if not (isinstance(value, dict) and len(value) == 1):
+        raise ValueError(
+            f"{label} must be one spectrum, from SeismicAnalysisSettings.eurocode_spectrum(), "
+            f"direct_spectrum() or custom_spectrum(), or a dict with exactly one of "
+            f"{', '.join(_SPECTRUM_KINDS)}; got {value!r}"
+        )
+    ((kind, params),) = value.items()
+    if not isinstance(params, dict):
+        raise ValueError(f"{label}: the parameters of {kind} must be a dict, got {params!r}")
+    copied = dict(params)
+    if "points" in copied:
+        copied["points"] = [list(point) for point in copied["points"]]
+    return {kind: copied}
+
+
+def _seismic_mass_source(entry: Any) -> dict:
+    from ..loads.loadcase import LoadCase
+
+    if isinstance(entry, dict):
+        return {"load_case_id": int(entry["load_case_id"]), "psi": float(entry["psi"])}
+    load_case, psi = entry
+    case_id = load_case.id if isinstance(load_case, LoadCase) else load_case
+    return {"load_case_id": int(case_id), "psi": float(psi)}
+
+
+class SeismicAnalysisSettings:
+    """Seismic analysis request (wire: ``analysis.seismic``).
+
+    Runs a modal response-spectrum analysis (MRSA), the lateral-force method or
+    both for each excitation direction, and combines the directions. The
+    results arrive in ``resultsbundle.seismic``. Accelerations are in m/s² and
+    periods in seconds, whatever the model's units. Options left as ``None``
+    are not written, and the solver's default applies.
+
+    Args:
+        spectrum_x: Design spectrum for the X direction, from
+            :meth:`eurocode_spectrum`, :meth:`direct_spectrum` or
+            :meth:`custom_spectrum` (or the solver's tagged dict).
+        method: ``"MODAL_RESPONSE_SPECTRUM"`` (the default), ``"LATERAL_FORCE"``
+            or ``"BOTH"``, in any case.
+        num_modes: Vibration modes to extract for MRSA (>= 1). Check the
+            participating mass ratio in the results; EN 1998-1 §4.3.3.3.1 asks
+            for 90 %.
+        spectrum_y: Spectrum for Y. ``None``: the solver uses ``spectrum_x``.
+        spectrum_z: Spectrum for Z, used when ``directions`` includes Z.
+            ``None``: the solver uses ``spectrum_x``.
+        directions: Excitation directions, for example ``["X", "Y"]``.
+            ``None``: X and Y.
+        modal_combination: ``"CQC"`` (solver default) or ``"SRSS"``.
+        directional_combination: ``"SRSS"`` (solver default) or
+            ``"PERCENT30"``: 100 % in one direction and 30 % in the others,
+            enveloped (EN 1998-1 §4.3.3.5.1(b)).
+        damping: Viscous damping ratio for CQC. ``None``: 0.05.
+        mass_sources: Gravity load cases that become seismic mass, as
+            ``(load_case, psi)`` pairs, the load case given as a ``LoadCase`` or
+            its id; psi is ψE, 1.0 for a permanent load.
+        include_structural_mass: Count the members' own mass, density·area or a
+            member's ``weight_override`` divided by g. ``None``: true.
+        mass_formulation: ``"CONSISTENT"`` (solver default) or ``"LUMPED"``.
+        stiffness_reference: Load case or combination at which force-dependent
+            stiffness is linearized, as in :class:`ModalAnalysisSettings`.
+        include_geometric_stiffness: Add the reference state's geometric
+            stiffness, so a gravity preload lengthens the periods. Requires
+            ``stiffness_reference``.
+        tolerance: Eigen convergence tolerance. ``None``: 1e-6.
+        max_iterations: Maximum subspace-iteration sweeps. ``None``: 100.
+    """
+
+    def __init__(
+        self,
+        spectrum_x: dict,
+        method: str = "MODAL_RESPONSE_SPECTRUM",
+        num_modes: int = 10,
+        spectrum_y: Optional[dict] = None,
+        spectrum_z: Optional[dict] = None,
+        directions: Optional[Sequence[str]] = None,
+        modal_combination: Optional[str] = None,
+        directional_combination: Optional[str] = None,
+        damping: Optional[float] = None,
+        mass_sources: Optional[Iterable[Any]] = None,
+        include_structural_mass: Optional[bool] = None,
+        mass_formulation: Union[MassFormulation, str, None] = None,
+        stiffness_reference: Any = None,
+        include_geometric_stiffness: Optional[bool] = None,
+        tolerance: Optional[float] = None,
+        max_iterations: Optional[int] = None,
+    ):
+        if int(num_modes) < 1:
+            raise ValueError(f"num_modes must be >= 1, got {num_modes}")
+        self.spectrum_x = _seismic_spectrum(spectrum_x, "spectrum_x")
+        self.method = _seismic_token(method, _SEISMIC_METHODS)
+        self.num_modes = int(num_modes)
+        self.spectrum_y = _seismic_spectrum(spectrum_y, "spectrum_y") if spectrum_y is not None else None
+        self.spectrum_z = _seismic_spectrum(spectrum_z, "spectrum_z") if spectrum_z is not None else None
+        self.directions = (
+            [_seismic_token(d, _SEISMIC_DIRECTIONS) for d in directions] if directions is not None else None
+        )
+        self.modal_combination = (
+            _seismic_token(modal_combination, _MODAL_COMBINATIONS) if modal_combination is not None else None
+        )
+        self.directional_combination = (
+            _seismic_token(directional_combination, _DIRECTIONAL_COMBINATIONS)
+            if directional_combination is not None
+            else None
+        )
+        self.damping = float(damping) if damping is not None else None
+        self.mass_sources = (
+            [_seismic_mass_source(entry) for entry in mass_sources] if mass_sources is not None else None
+        )
+        self.include_structural_mass = (
+            bool(include_structural_mass) if include_structural_mass is not None else None
+        )
+        self.mass_formulation = _parse_mass_formulation(mass_formulation)
+        self.stiffness_reference = (
+            _normalize_eigen_reference(stiffness_reference, label="stiffness_reference")
+            if stiffness_reference is not None
+            else None
+        )
+        self.include_geometric_stiffness = (
+            bool(include_geometric_stiffness) if include_geometric_stiffness is not None else None
+        )
+        if self.include_geometric_stiffness and self.stiffness_reference is None:
+            raise ValueError(
+                "include_geometric_stiffness requires a stiffness_reference — the "
+                "geometric stiffness is the stress state of a specific load."
+            )
+        self.tolerance = float(tolerance) if tolerance is not None else None
+        self.max_iterations = int(max_iterations) if max_iterations is not None else None
+
+    @staticmethod
+    def eurocode_spectrum(
+        ag: float,
+        ground_type: str,
+        spectrum_type: str = "TYPE1",
+        q: float = 1.5,
+        beta: Optional[float] = None,
+    ) -> dict:
+        """EN 1998-1 §3.2.2.5 design spectrum. S, T_B, T_C and T_D come from the
+        ground type (``"A"`` to ``"E"``, Table 3.1) and the spectrum type
+        (``"TYPE1"`` or ``"TYPE2"``, Tables 3.2 and 3.3).
+
+        Args:
+            ag: Design ground acceleration on type A ground, γ_I·a_gR, in m/s².
+            q: Behaviour factor, >= 1.
+            beta: Lower-bound factor. ``None``: 0.2.
+        """
+        params = {
+            "ag": float(ag),
+            "ground_type": str(ground_type).upper(),
+            "spectrum_type": str(spectrum_type).upper(),
+            "q": float(q),
+        }
+        if beta is not None:
+            params["beta"] = float(beta)
+        return {"EurocodeParametric": params}
+
+    @staticmethod
+    def direct_spectrum(
+        ag: float,
+        s: float,
+        tb: float,
+        tc: float,
+        td: float,
+        q: float,
+        beta: Optional[float] = None,
+    ) -> dict:
+        """The EN 1998-1 spectrum shape with S, T_B, T_C and T_D given directly, for
+        a national annex the presets do not cover. ``ag`` in m/s², periods in s."""
+        params = {
+            "ag": float(ag),
+            "s": float(s),
+            "tb": float(tb),
+            "tc": float(tc),
+            "td": float(td),
+            "q": float(q),
+        }
+        if beta is not None:
+            params["beta"] = float(beta)
+        return {"DirectParameters": params}
+
+    @staticmethod
+    def custom_spectrum(points: Sequence[Sequence[float]]) -> dict:
+        """A tabulated spectrum: ``[period, spectral acceleration]`` pairs in s and
+        m/s², interpolated linearly and held constant beyond the ends."""
+        return {"CustomPoints": {"points": [[float(t), float(sa)] for t, sa in points]}}
+
+    def to_dict(self) -> dict:
+        data: dict = {
+            "method": self.method,
+            "num_modes": self.num_modes,
+            "spectrum_x": _seismic_spectrum(self.spectrum_x, "spectrum_x"),
+        }
+        if self.spectrum_y is not None:
+            data["spectrum_y"] = _seismic_spectrum(self.spectrum_y, "spectrum_y")
+        if self.spectrum_z is not None:
+            data["spectrum_z"] = _seismic_spectrum(self.spectrum_z, "spectrum_z")
+        if self.directions is not None:
+            data["directions"] = list(self.directions)
+        if self.modal_combination is not None:
+            data["modal_combination"] = self.modal_combination
+        if self.directional_combination is not None:
+            data["directional_combination"] = self.directional_combination
+        if self.damping is not None:
+            data["damping"] = self.damping
+        if self.mass_sources is not None:
+            data["mass_sources"] = [_seismic_mass_source(entry) for entry in self.mass_sources]
+        if self.include_structural_mass is not None:
+            data["include_structural_mass"] = self.include_structural_mass
+        if self.mass_formulation is not None:
+            data["mass_formulation"] = self.mass_formulation.value
+        if self.stiffness_reference is not None:
+            data["stiffness_reference"] = _normalize_eigen_reference(
+                self.stiffness_reference, label="stiffness_reference"
+            )
+        if self.include_geometric_stiffness is not None:
+            data["include_geometric_stiffness"] = self.include_geometric_stiffness
+        if self.tolerance is not None:
+            data["tolerance"] = self.tolerance
+        if self.max_iterations is not None:
+            data["max_iterations"] = self.max_iterations
+        return data
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "SeismicAnalysisSettings":
+        return cls(
+            spectrum_x=data["spectrum_x"],
+            method=data.get("method", "MODAL_RESPONSE_SPECTRUM"),
+            num_modes=data.get("num_modes", 10),
+            spectrum_y=data.get("spectrum_y"),
+            spectrum_z=data.get("spectrum_z"),
+            directions=data.get("directions"),
+            modal_combination=data.get("modal_combination"),
+            directional_combination=data.get("directional_combination"),
+            damping=data.get("damping"),
+            mass_sources=data.get("mass_sources"),
+            include_structural_mass=data.get("include_structural_mass"),
+            mass_formulation=data.get("mass_formulation"),
+            stiffness_reference=data.get("stiffness_reference"),
+            include_geometric_stiffness=data.get("include_geometric_stiffness"),
+            tolerance=data.get("tolerance"),
+            max_iterations=data.get("max_iterations"),
         )

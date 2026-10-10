@@ -52,6 +52,8 @@ class UnitSettings:
             force_unit=get("forceUnit", "force_unit", default="N"),
             density_unit=get("densityUnit", "density_unit", default="kg/m3"),
             weight_unit=get("weightUnit", "weight_unit", default="kg"),
-            pressure_unit=get("pressureUnit", "pressure_unit", default="MPa"),
+            # The solver reads a missing pressureUnit as Pa; "MPa" here made such a
+            # document's E and stresses 10^6 times larger once saved again.
+            pressure_unit=get("pressureUnit", "pressure_unit", default="Pa"),
             temperature_unit=get("temperatureUnit", "temperature_unit", default="celsius"),
         )

@@ -96,6 +96,12 @@ class MemberSet:
             classification=data.get("classification"),
             buckling_restraints=buckling_restraints,
             id=data.get("id"),
+            buckling_length_y=data.get("buckling_length_y"),
+            buckling_length_z=data.get("buckling_length_z"),
+            ltb_length=data.get("ltb_length"),
+            buckling_length_t=data.get("buckling_length_t"),
+            effective_length_factor_y=data.get("effective_length_factor_y"),
+            effective_length_factor_z=data.get("effective_length_factor_z"),
         )
 
     @staticmethod
