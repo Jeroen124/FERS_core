@@ -134,6 +134,44 @@ The link workaround gave the same 62 402 with five members.
   `fers_core/examples/054_Scissor_Hinge_Rail_On_Beam.py` compares the rigid
   connection, member hinges, the scissor hinge and a spring.
 
+### Engine 0.2.68: sliding rails, chosen nodes, and release axes
+
+A scissor hinge also frees translations, can apply at some of the nodes a set
+meets rather than all, and can name axes of its own. A member hinge can release
+its rotations about global or user axes.
+
+- `ScissorHinge(translational_release_x=..., _y=..., _z=...)`: `0.0` frees the
+  translation, a positive value is a spring in force per length. A rail that
+  slides over its posts takes its whole pull to its anchor.
+- `MemberSet(scissor_hinge_nodes=[...])`: the nodes (or node ids) where the set's
+  hinge applies; omitted, every node where it meets another member or a plate.
+  Saved as node ids and read back as the set's own nodes.
+- `ReleaseAxes` is new and exported: `ReleaseAxes.LOCAL`, `ReleaseAxes.GLOBAL`
+  and `ReleaseAxes.user(x, y)`. `ScissorHinge(axes=...)` takes `GLOBAL` (the
+  default) or a user frame, as for a rack turned in plan.
+- `MemberHinge(rotation_axes=...)`: the axes its rotational releases, stiffness
+  curves and moment–rotation diagrams name. `LOCAL` is the default and is what
+  every existing model keeps; a hinge that sets another is written with
+  `rotation_axes`, and the model with `schema_version` 3.
+- The README's scissor-hinge section covers all four, with a sliding rail that
+  runs as written, and
+  `fers_core/examples/055_Scissor_Hinge_Sliding_Rail_And_Release_Axes.py`
+  slides a rail, limits the hinge to one post, turns the rack in plan, and pins
+  a skew purlin about its girders' axis.
+
+### Changed — a default nonlinear solve of a model with rigid members
+
+`AnalysisOptions` defaults to a nonlinear solve with `RigidStrategy.RIGID_MEMBER`.
+Engine 0.2.68 runs rigid members on the corotational path, which 0.2.67 left for
+P-Δ, so such a model's results now include the large-rotation terms P-Δ leaves
+out. They move by about the square of the rotations: on a cantilever with a
+rigid end link, 4e-6 of its end rotation. Ask for `AnalysisOrder.LINEAR` where
+the comparison is with a linear closed form.
+
+### Includes 0.1.98
+
+0.1.99 carries 0.1.98's fixes to saving and loading a model, below.
+
 ### Fixed
 
 - `MemberSet.from_dict` dropped the buckling lengths and effective-length

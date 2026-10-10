@@ -517,6 +517,9 @@ class FERS:
         if scissor_hinges:
             data["model"]["scissor_hinges"] = [hinge.to_dict() for hinge in scissor_hinges]
             data["schema_version"] = max(data["schema_version"] or 1, 3)
+        # The same for a member hinge that releases in other axes than its member's.
+        if any("rotation_axes" in hinge for hinge in data["model"].get("member_hinges", [])):
+            data["schema_version"] = max(data["schema_version"] or 1, 3)
         # Eigenvalue analysis requests are only emitted when set, so plain
         # static models keep their exact wire shape (`modal`/`buckling` absent).
         if self.modal_analysis is not None:

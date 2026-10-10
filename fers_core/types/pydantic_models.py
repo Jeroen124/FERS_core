@@ -667,6 +667,10 @@ class MemberSet(BaseModel):
         None,
         description="Id of a `ScissorHinge` (in `model.scissor_hinges`): where this beam\nmeets a member outside the set, its members stay joined to each other\nand rotate relative to the node about the hinge's released global axes.\nA member may belong to only one set that carries one.",
     )
+    scissor_hinge_nodes: list[conint(ge=0)] | None = Field(
+        None,
+        description='The nodes where `scissor_hinge` applies, when the beam turns on only some\nof the members it meets: elsewhere it is joined to them as if it carried\nno hinge. Omitted, every node where it meets a member outside the set or a\nplate. Each listed node must be one of those.',
+    )
 
 
 class Point(RootModel[tuple[float, float]]):
@@ -1156,6 +1160,36 @@ class ReactionNodeResult(BaseModel):
     support_id: conint(ge=0)
 
 
+class ReleaseAxes1(Enum):
+    Local = 'Local'
+
+
+class ReleaseAxes2(Enum):
+    Global = 'Global'
+
+
+class User(BaseModel):
+    x: list[float]
+    y: list[float]
+
+
+class ReleaseAxes3(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    User_1: User = Field(
+        ...,
+        alias='User',
+        description='A frame of your own, in global components: the first axis along `x`;\nthe second along `y` made perpendicular to it; the third their cross\nproduct. A rack turned in plan names its own directions this way.',
+    )
+
+
+class ReleaseAxes(RootModel[ReleaseAxes1 | ReleaseAxes2 | ReleaseAxes3]):
+    root: ReleaseAxes1 | ReleaseAxes2 | ReleaseAxes3 = Field(
+        ..., description='The axes a release names: what its `_x`, `_y` and `_z` mean.'
+    )
+
+
 class DirectParameters(BaseModel):
     ag: float
     beta: float | None = None
@@ -1305,16 +1339,35 @@ class RigidStrategy(Enum):
 
 
 class ScissorHinge(BaseModel):
+    axes: ReleaseAxes | None = Field(
+        'Global',
+        description='The axes the releases name: `Global` (the default), or a `User` frame,\nas for a rack turned in plan whose beams run along neither X nor Z. Not\n`Local`: the members of a set need not share one frame. Release axes\nare fixed in space, so in a large-rotation (corotational) solve they do\nnot turn with the structure.',
+        validate_default=True,
+    )
     id: conint(ge=0)
     rotational_release_x: float | None = Field(
         None,
-        description='Rotation about global X. Omitted: held, as at any node. `0.0`: free.\nA positive value: a linear rotational spring between the set and the\nnode, in moment per radian.',
+        description='Rotation about the first axis (global X by default). Omitted: held, as at any node. `0.0`: free.\nA positive value: a linear rotational spring between the set and the\nnode, in moment per radian.',
     )
     rotational_release_y: float | None = Field(
-        None, description='Rotation about global Y; as `rotational_release_x`.'
+        None,
+        description='Rotation about the second axis (global Y); as `rotational_release_x`.',
     )
     rotational_release_z: float | None = Field(
-        None, description='Rotation about global Z; as `rotational_release_x`.'
+        None,
+        description='Rotation about the third axis (global Z); as `rotational_release_x`.',
+    )
+    translational_release_x: float | None = Field(
+        None,
+        description='Translation along the first axis (global X by default). Omitted: held, as at any node. `0.0`: free.\nA positive value: a linear spring between the set and the node, in force\nper length.',
+    )
+    translational_release_y: float | None = Field(
+        None,
+        description='Translation along the second axis (global Y); as `translational_release_x`.',
+    )
+    translational_release_z: float | None = Field(
+        None,
+        description='Translation along the third axis (global Z); as `translational_release_x`.',
     )
 
 
@@ -2506,6 +2559,11 @@ class MemberHinge(BaseModel):
     moment_rotation_mx: MomentRotationCurve | None = None
     moment_rotation_my: MomentRotationCurve | None = None
     moment_rotation_mz: MomentRotationCurve | None = None
+    rotation_axes: ReleaseAxes | None = Field(
+        'Local',
+        description="The axes `rotational_release_mx`, `_my` and `_mz` (with their stiffness\ncurves and moment–rotation diagrams) name: `Local`, the member's own\n(the default); `Global`, X, Y and Z; or a `User` frame. The end's moments\na curve reads are taken about the same axes; the member's results stay\nin its local axes. Translations stay member-local. The axes are fixed in\nspace, so a corotational solve does not turn them with the member.",
+        validate_default=True,
+    )
     rotational_release_mx: float | None = None
     rotational_release_my: float | None = None
     rotational_release_mz: float | None = None

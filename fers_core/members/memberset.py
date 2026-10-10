@@ -16,9 +16,12 @@ class MemberSet:
     ids (``member_ids``) referencing the top-level ``FERS.members`` list.
 
     ``scissor_hinge`` says how the beam connects to the members it crosses: it
-    stays continuous and turns relative to them about the released global axes
-    (see :class:`ScissorHinge`). A member can belong to only one set that
-    carries one.
+    stays continuous and moves relative to them along and about the released
+    axes (see :class:`ScissorHinge`). A member can belong to only one set that
+    carries one. ``scissor_hinge_nodes`` limits it to some of the nodes where the
+    beam meets another member, for a beam that turns on some of them and is
+    joined to the rest; each must be such a node (``fers_calculations >=
+    0.2.68``).
     """
 
     _member_set_counter = 1
@@ -36,6 +39,7 @@ class MemberSet:
         effective_length_factor_y: Optional[float] = None,
         effective_length_factor_z: Optional[float] = None,
         scissor_hinge: Optional[ScissorHinge] = None,
+        scissor_hinge_nodes: Optional[list] = None,
     ):
         self.id = id or MemberSet._member_set_counter
         if id is None:
@@ -57,6 +61,8 @@ class MemberSet:
         self.effective_length_factor_y = effective_length_factor_y
         self.effective_length_factor_z = effective_length_factor_z
         self.scissor_hinge = scissor_hinge
+        # Nodes or node ids; written as ids.
+        self.scissor_hinge_nodes = list(scissor_hinge_nodes) if scissor_hinge_nodes is not None else None
 
     @classmethod
     def reset_counter(cls):
@@ -82,6 +88,8 @@ class MemberSet:
                 d[key] = value
         if self.scissor_hinge is not None:
             d["scissor_hinge"] = self.scissor_hinge.id
+        if self.scissor_hinge_nodes is not None:
+            d["scissor_hinge_nodes"] = [getattr(node, "id", node) for node in self.scissor_hinge_nodes]
         return d
 
     @classmethod
@@ -122,7 +130,19 @@ class MemberSet:
             effective_length_factor_y=data.get("effective_length_factor_y"),
             effective_length_factor_z=data.get("effective_length_factor_z"),
             scissor_hinge=scissor_hinge,
+            scissor_hinge_nodes=cls._nodes_of(members, data.get("scissor_hinge_nodes")),
         )
+
+    @staticmethod
+    def _nodes_of(members: list[Member], ids: Optional[list]) -> Optional[list]:
+        """The set's own nodes for ``ids``, an id kept as is where none matches."""
+        if ids is None:
+            return None
+        by_id = {}
+        for member in members:
+            for node in (member.start_node, member.end_node):
+                by_id[node.id] = node
+        return [by_id.get(int(node_id), int(node_id)) for node_id in ids]
 
     @staticmethod
     def find_member_sets_containing_member(id, all_member_sets):

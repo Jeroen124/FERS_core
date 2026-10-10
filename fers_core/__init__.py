@@ -59,6 +59,7 @@ from .settings.eigen_analysis import (
     SeismicAnalysisSettings,
 )
 from .members.memberhinge import MemberHinge
+from .members.releaseaxes import ReleaseAxes
 from .members.scissorhinge import ScissorHinge
 from .members.moment_rotation import CurveEndBehaviour, MomentRotationCurve
 from .results.resultsbundle import ResultsBundle
@@ -140,6 +141,7 @@ __all__ = [
     "PdeltaFormulation",
     "PdeltaMode",
     "ReactionNodeResult",
+    "ReleaseAxes",
     "ResultBlock",
     "ResultRequest",
     "ResultRenderer",

@@ -43,6 +43,9 @@ from fers_core import (
     PlatePressure,
     PlateStiffnessModifiers,
     PlateSurface,
+    ReleaseAxes,
+    ResultRequest,
+    ScissorHinge,
     Section,
     SeismicAnalysisSettings,
     ShapePath,
@@ -71,12 +74,16 @@ from fers_core.settings.settings import Settings
 from fers_core.settings.units_settings import UnitSettings
 from fers_core.supports.stiffness_curve import ForceComponent
 from fers_core.types import pydantic_models
-from fers_core.unity_checks import ec3_steel_check
+from fers_core.result_requests import nodes, nodes_of
+from fers_core.unity_checks import all_members, classification, ec3_steel_check, member_sets
+from fers_core.unity_checks import members as members_with_ids
 
 
-def kitchen_sink(buckling: str = "references") -> FERS:
+def kitchen_sink(buckling: str = "references", results: str = "filter") -> FERS:
     """One of every entity, every optional field set. ``buckling`` picks which of
-    the three mutually exclusive reference forms the buckling request uses."""
+    the three mutually exclusive reference forms the buckling request uses, and
+    ``results`` whether the analysis asks for a ``result_filter`` or for
+    ``result_requests``, which the solver will not take together."""
     model = FERS()
     model.settings = Settings(
         analysis_options=AnalysisOptions(
@@ -219,6 +226,7 @@ def kitchen_sink(buckling: str = "references") -> FERS:
             end=CurveEndBehaviour.FAILURE,
         ),
         moment_rotation_mz=MomentRotationCurve([[0.0, 0.0], [0.03, 4.0e3]], end=CurveEndBehaviour.YIELDING),
+        rotation_axes=ReleaseAxes.GLOBAL,
     )
 
     base = Node(0.0, 0.0, 0.0, nodal_support=fixed_base)
@@ -273,6 +281,25 @@ def kitchen_sink(buckling: str = "references") -> FERS:
         effective_length_factor_z=0.7,
     )
     model.add_member_set(frame)
+    # A rail across the frame at its apex, sliding and turning on it there.
+    rail = MemberSet(
+        members=[
+            Member(start_node=Node(4.0, 3.0, -1.0), end_node=apex, section=beam_section),
+            Member(start_node=apex, end_node=Node(4.0, 3.0, 1.0), section=beam_section),
+        ],
+        classification="rail",
+        scissor_hinge=ScissorHinge(
+            translational_release_x=0.0,
+            translational_release_y=5.0e6,
+            translational_release_z=6.0e6,
+            rotational_release_x=7.0e4,
+            rotational_release_y=0.0,
+            rotational_release_z=0.0,
+            axes=ReleaseAxes.user(x=(0.0, 0.0, 1.0), y=(0.0, 1.0, 0.0)),
+        ),
+        scissor_hinge_nodes=[apex],
+    )
+    model.add_member_set(rail)
     model.add_nodal_mass(NodalMass(knee, 150.0, inertia_x=1.0, inertia_y=2.0, inertia_z=3.0))
 
     corners = [
@@ -375,6 +402,27 @@ def kitchen_sink(buckling: str = "references") -> FERS:
         limit_state="ULS",
     )
     model.add_load_combination(uls)
+    if results == "requests":
+        options = model.settings.analysis_options
+        options.result_filter = None
+        options.result_requests = [
+            ResultRequest(
+                ResultBlock.LOCAL_ENVELOPES,
+                members=[
+                    all_members(),
+                    members_with_ids([rafter.id]),
+                    member_sets([frame.id]),
+                    classification("rail"),
+                ],
+                limit_state="ULS",
+                components=["fx", "my"],
+                end="start",
+            ),
+            ResultRequest(
+                ResultBlock.NODE_DISPLACEMENTS, nodes=nodes([apex.id]), load_combination_ids=[uls.id]
+            ),
+            ResultRequest(ResultBlock.REACTIONS, nodes=nodes_of(classification("frame"))),
+        ]
     model.add_imperfection_case(
         ImperfectionCase(
             loadcombinations=[uls],
@@ -491,6 +539,11 @@ def _dangling_references(document: dict) -> list[str]:
         need("sections", member.get("section"), where)
         need("member_hinges", member.get("start_hinge"), where)
         need("member_hinges", member.get("end_hinge"), where)
+    for member_set in model.get("member_sets") or []:
+        where = f"member set {member_set['id']}"
+        need("scissor_hinges", member_set.get("scissor_hinge"), where)
+        for node_id in member_set.get("scissor_hinge_nodes") or []:
+            need("nodes", node_id, where)
     for section in model["sections"]:
         need("materials", section["material"], f"section {section['id']}")
         need("shape_paths", section.get("shape_path"), f"section {section['id']}")
@@ -511,16 +564,20 @@ def _dangling_references(document: dict) -> list[str]:
     return problems
 
 
-@pytest.mark.parametrize("buckling", BUCKLING_FORMS)
-def test_kitchen_sink_survives_saving_and_loading(buckling):
-    saved = _save(kitchen_sink(buckling))
+# Each buckling reference form, and result requests in place of the filter.
+VARIANTS = [(buckling, "filter") for buckling in BUCKLING_FORMS] + [("references", "requests")]
+
+
+@pytest.mark.parametrize("buckling,results", VARIANTS)
+def test_kitchen_sink_survives_saving_and_loading(buckling, results):
+    saved = _save(kitchen_sink(buckling, results))
     difference = _first_difference(saved, _reload(saved))
     assert difference is None, difference
 
 
-@pytest.mark.parametrize("buckling", BUCKLING_FORMS)
-def test_kitchen_sink_conforms_to_the_solver_schema(buckling):
-    saved = _save(kitchen_sink(buckling))
+@pytest.mark.parametrize("buckling,results", VARIANTS)
+def test_kitchen_sink_conforms_to_the_solver_schema(buckling, results):
+    saved = _save(kitchen_sink(buckling, results))
     pydantic_models.FERS(**{**saved, "results": None})
     pydantic_models.FERS(**{**_reload(saved), "results": None})
 
@@ -542,6 +599,18 @@ OPAQUE = {pydantic_models.UnityCheckDefinition}
 # (schema class, field) -> why the kitchen sink does not set it.
 EXEMPT = {
     ("FERS", "results"): "output, not input",
+    ("FERS", "schema_version"): (
+        "written from the features a model uses: the kitchen sink uses the newest, so it "
+        "writes the current version, which is the schema's default"
+    ),
+    # Outside the opaque unity checks, only a result request takes a selector, and
+    # the solver refuses a plate selector there. The SDK passes selectors through
+    # as plain dicts, so a round trip cannot lose a field inside one.
+    ("EntitySelector5", "type"): "AllPlates: refused in a result request",
+    ("EntitySelector6", "type"): "PlateSurfaces: refused in a result request",
+    ("EntitySelector6", "ids"): "PlateSurfaces: refused in a result request",
+    ("EntitySelector7", "type"): "PlateElements: refused in a result request",
+    ("EntitySelector7", "ids"): "PlateElements: refused in a result request",
 }
 
 
@@ -628,8 +697,8 @@ def _walk(annotation, value, covered):
 
 def test_kitchen_sink_sets_every_input_field():
     covered: set[tuple[str, str]] = set()
-    for buckling in BUCKLING_FORMS:
-        _walk(pydantic_models.FERS, _save(kitchen_sink(buckling)), covered)
+    for buckling, results in VARIANTS:
+        _walk(pydantic_models.FERS, _save(kitchen_sink(buckling, results)), covered)
     missing = sorted(_input_fields() - covered - set(EXEMPT))
     assert not missing, (
         "The solver schema has fields the kitchen sink never sets, so nothing checks that "
