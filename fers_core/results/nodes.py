@@ -1,11 +1,20 @@
 from __future__ import annotations
 
-from dataclasses import field
-from typing import Dict, Any, List, Tuple, TYPE_CHECKING
+from typing import Dict, Any, List, Mapping, Optional, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
     import numpy as np
     import pyvista as pv
+
+
+def number(value: Any) -> float:
+    """A result component as a float; the schema allows ``bw``/``warp`` to be null.
+
+    Written as a test on None rather than ``value or 0.0``, which would turn -0.0
+    into 0.0.
+    """
+    return 0.0 if value is None else float(value)
+
 
 # -------------------------------
 # Leaf data classes
@@ -24,13 +33,21 @@ class NodeDisplacement:
     @classmethod
     def from_pydantic(cls, source) -> "NodeDisplacement":
         instance = cls()
-        instance.dx = float(getattr(source, "dx", 0.0))
-        instance.dy = float(getattr(source, "dy", 0.0))
-        instance.dz = float(getattr(source, "dz", 0.0))
-        instance.rx = float(getattr(source, "rx", 0.0))
-        instance.ry = float(getattr(source, "ry", 0.0))
-        instance.rz = float(getattr(source, "rz", 0.0))
-        instance.warp = float(getattr(source, "warp", 0.0))
+        instance.dx = number(getattr(source, "dx", 0.0))
+        instance.dy = number(getattr(source, "dy", 0.0))
+        instance.dz = number(getattr(source, "dz", 0.0))
+        instance.rx = number(getattr(source, "rx", 0.0))
+        instance.ry = number(getattr(source, "ry", 0.0))
+        instance.rz = number(getattr(source, "rz", 0.0))
+        instance.warp = number(getattr(source, "warp", 0.0))
+        return instance
+
+    @classmethod
+    def from_dict(cls, data: Optional[Mapping[str, Any]]) -> "NodeDisplacement":
+        data = data or {}
+        instance = cls()
+        for name in ("dx", "dy", "dz", "rx", "ry", "rz", "warp"):
+            setattr(instance, name, number(data.get(name)))
         return instance
 
     def to_dict(self) -> Dict[str, float]:
@@ -94,13 +111,21 @@ class NodeForces:
     @classmethod
     def from_pydantic(cls, pyd_object: Any) -> "NodeForces":
         instance = cls()
-        instance.fx = float(getattr(pyd_object, "fx", 0.0))
-        instance.fy = float(getattr(pyd_object, "fy", 0.0))
-        instance.fz = float(getattr(pyd_object, "fz", 0.0))
-        instance.mx = float(getattr(pyd_object, "mx", 0.0))
-        instance.my = float(getattr(pyd_object, "my", 0.0))
-        instance.mz = float(getattr(pyd_object, "mz", 0.0))
-        instance.bw = float(getattr(pyd_object, "bw", 0.0))
+        instance.fx = number(getattr(pyd_object, "fx", 0.0))
+        instance.fy = number(getattr(pyd_object, "fy", 0.0))
+        instance.fz = number(getattr(pyd_object, "fz", 0.0))
+        instance.mx = number(getattr(pyd_object, "mx", 0.0))
+        instance.my = number(getattr(pyd_object, "my", 0.0))
+        instance.mz = number(getattr(pyd_object, "mz", 0.0))
+        instance.bw = number(getattr(pyd_object, "bw", 0.0))
+        return instance
+
+    @classmethod
+    def from_dict(cls, data: Optional[Mapping[str, Any]]) -> "NodeForces":
+        data = data or {}
+        instance = cls()
+        for name in ("fx", "fy", "fz", "mx", "my", "mz", "bw"):
+            setattr(instance, name, number(data.get(name)))
         return instance
 
     def to_dict(self) -> Dict[str, float]:
@@ -192,14 +217,33 @@ class NodeLocation:
         instance.Z = float(getattr(pyd_object, "Z", 0.0))
         return instance
 
+    @classmethod
+    def from_dict(cls, data: Optional[Mapping[str, Any]]) -> "NodeLocation":
+        data = data or {}
+        instance = cls()
+        instance.X, instance.Y, instance.Z = (number(data.get(axis)) for axis in ("X", "Y", "Z"))
+        return instance
+
     def to_dict(self) -> Dict[str, float]:
         return {"X": self.X, "Y": self.Y, "Z": self.Z}
 
 
 class ReactionNodeResult:
-    location: NodeLocation = field(default_factory=NodeLocation)
-    nodal_forces: NodeForces = field(default_factory=NodeForces)
+    location: NodeLocation
+    nodal_forces: NodeForces
     support_id: int = 0
+
+    # Real defaults: these were `field(default_factory=...)` on a class that is not a
+    # dataclass, so a bare ReactionNodeResult() read back `dataclasses.Field` objects.
+    def __init__(
+        self,
+        location: Optional[NodeLocation] = None,
+        nodal_forces: Optional[NodeForces] = None,
+        support_id: int = 0,
+    ) -> None:
+        self.location = location if location is not None else NodeLocation()
+        self.nodal_forces = nodal_forces if nodal_forces is not None else NodeForces()
+        self.support_id = support_id
 
     @classmethod
     def from_pydantic(cls, pyd_object: Any) -> "ReactionNodeResult":
@@ -208,6 +252,15 @@ class ReactionNodeResult:
         instance.nodal_forces = NodeForces.from_pydantic(getattr(pyd_object, "nodal_forces", None))
         instance.support_id = int(getattr(pyd_object, "support_id", 0) or 0)
         return instance
+
+    @classmethod
+    def from_dict(cls, data: Optional[Mapping[str, Any]]) -> "ReactionNodeResult":
+        data = data or {}
+        return cls(
+            location=NodeLocation.from_dict(data.get("location")),
+            nodal_forces=NodeForces.from_dict(data.get("nodal_forces")),
+            support_id=int(data.get("support_id") or 0),
+        )
 
     def to_dict(self) -> Dict[str, Any]:
         return {

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import field
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from fers_core.results.nodes import NodeDisplacement, NodeForces, NodeLocation
 
@@ -57,11 +56,33 @@ class PlateResultants:
 
 class PlateResult:
     plate_id: int = 0
-    centroid: NodeLocation = field(default_factory=NodeLocation)
-    centroid_displacement_global: NodeDisplacement = field(default_factory=NodeDisplacement)
-    centroid_displacement_local: NodeDisplacement = field(default_factory=NodeDisplacement)
-    resultants: PlateResultants = field(default_factory=PlateResultants)
-    nodal_forces_global: Dict[str, NodeForces] = field(default_factory=dict)
+    centroid: NodeLocation
+    centroid_displacement_global: NodeDisplacement
+    centroid_displacement_local: NodeDisplacement
+    resultants: PlateResultants
+    nodal_forces_global: Dict[str, NodeForces]
+
+    # Real defaults: as ReactionNodeResult, these were `field(default_factory=...)`
+    # on a class that is not a dataclass, so they read back `dataclasses.Field`.
+    def __init__(
+        self,
+        plate_id: int = 0,
+        centroid: Optional[NodeLocation] = None,
+        centroid_displacement_global: Optional[NodeDisplacement] = None,
+        centroid_displacement_local: Optional[NodeDisplacement] = None,
+        resultants: Optional[PlateResultants] = None,
+        nodal_forces_global: Optional[Dict[str, NodeForces]] = None,
+    ) -> None:
+        self.plate_id = plate_id
+        self.centroid = centroid if centroid is not None else NodeLocation()
+        self.centroid_displacement_global = (
+            centroid_displacement_global if centroid_displacement_global is not None else NodeDisplacement()
+        )
+        self.centroid_displacement_local = (
+            centroid_displacement_local if centroid_displacement_local is not None else NodeDisplacement()
+        )
+        self.resultants = resultants if resultants is not None else PlateResultants()
+        self.nodal_forces_global = nodal_forces_global if nodal_forces_global is not None else {}
 
     @classmethod
     def from_pydantic(cls, pyd_object: Any) -> "PlateResult":
