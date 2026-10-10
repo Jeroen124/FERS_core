@@ -12,13 +12,17 @@ class TranslationImperfection:
         axis: tuple,
     ):
         """
-        Initialize a translation imperfection applied to a member.
+        Initialize a translational imperfection of one or more member sets.
+
+        Each set's nodes are displaced along ``axis``, growing linearly from zero
+        at the set's base node to ``magnitude`` at its farthest node. Which load
+        combinations receive it is set on the owning ``ImperfectionCase``.
 
         Args:
-            member: The member to which the imperfection is applied.
-            load_case: The LoadCase instance this imperfection is associated with.
-            magnitude (float): The magnitude of the translation.
-            direction (tuple): The direction of the translation (e.g., (1, 0, 0) for X-axis).
+            memberset (list[MemberSet]): The member sets to displace.
+            magnitude (float): The displacement at the farthest node, in the
+                model's length unit.
+            axis (tuple): The direction of the displacement (e.g. (1, 0, 0) for X).
         """
         self.memberset = memberset
         self.magnitude = magnitude
@@ -26,7 +30,7 @@ class TranslationImperfection:
 
     def to_dict(self):
         return {
-            "memberset": [ms.id for ms in self.memberset],
+            "memberset_ids": [ms.id for ms in self.memberset],
             "magnitude": self.magnitude,
             "axis": self.axis,
         }
@@ -39,21 +43,24 @@ class TranslationImperfection:
         membersets_by_id: dict[int, MemberSet],
     ) -> "TranslationImperfection":
         """
-        data schema (typical):
+        data schema (the solver's):
         {
-            "memberset": [1, 2],            # or "membersets"
+            "memberset_ids": [1, 2],
             "magnitude": 0.01,
             "axis": [0, 1, 0]
         }
+
+        Documents written before 0.1.98 name the sets "memberset" (or
+        "membersets"); those keys are still read.
         """
 
         # Resolve member sets
         ms_ids = as_list(
-            data.get("memberset") or data.get("membersets") or data.get("memberset_ids"),
-            "memberset",
+            data.get("memberset_ids") or data.get("memberset") or data.get("membersets"),
+            "memberset_ids",
         )
         if not ms_ids:
-            raise ValueError("TranslationImperfection.from_dict: 'memberset' list is required.")
+            raise ValueError("TranslationImperfection.from_dict: 'memberset_ids' list is required.")
 
         membersets: list[MemberSet] = []
         for ms_id in ms_ids:

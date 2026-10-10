@@ -52,7 +52,11 @@ from .settings.anlysis_options import (
     RigidStrategy,
 )
 from .settings.enums import MassFormulation
-from .settings.eigen_analysis import BucklingAnalysisSettings, ModalAnalysisSettings
+from .settings.eigen_analysis import (
+    BucklingAnalysisSettings,
+    ModalAnalysisSettings,
+    SeismicAnalysisSettings,
+)
 from .members.memberhinge import MemberHinge
 from .members.moment_rotation import CurveEndBehaviour, MomentRotationCurve
 from .results.resultsbundle import ResultsBundle
@@ -139,6 +143,7 @@ __all__ = [
     "ResultsBundle",
     "RigidStrategy",
     "Section",
+    "SeismicAnalysisSettings",
     "SurfaceLoad",
     "SurfaceLoadVertex",
     "list_sections",

@@ -376,7 +376,7 @@ class MemberResult:
         """
         import matplotlib.pyplot as _plt
 
-        length = member.calculate_length()
+        length = member.length()
 
         _local_nonzero = any(
             getattr(self.local_start_forces, c, 0) != 0 or getattr(self.local_end_forces, c, 0) != 0

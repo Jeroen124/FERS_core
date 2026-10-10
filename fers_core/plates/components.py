@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
+
+if TYPE_CHECKING:
+    from ..nodes.node import Node
 
 
 class PlateBehavior(Enum):
@@ -151,7 +154,12 @@ class PlateMeshSettings:
 
 
 class PlateOpening:
-    """A hole in a PlateSurface, defined by a boundary of node ids."""
+    """A hole in a PlateSurface, bounded by at least three model nodes.
+
+    Give the boundary as ``boundary_nodes``, the ``Node`` objects, and saving
+    the model writes those nodes along with it. ``boundary_node_ids`` alone
+    names nodes the model has to reach some other way, such as through a member.
+    """
 
     _plate_opening_counter = 1
 
@@ -159,10 +167,14 @@ class PlateOpening:
         self,
         boundary_node_ids: Optional[List[int]] = None,
         id: Optional[int] = None,
+        boundary_nodes: Optional[List["Node"]] = None,
     ) -> None:
         self.id = id or PlateOpening._plate_opening_counter
         if id is None:
             PlateOpening._plate_opening_counter += 1
+        self.boundary_nodes = list(boundary_nodes) if boundary_nodes is not None else None
+        if self.boundary_nodes is not None:
+            boundary_node_ids = [node.id for node in self.boundary_nodes]
         self.boundary_node_ids = list(boundary_node_ids) if boundary_node_ids is not None else None
 
     @classmethod
@@ -170,11 +182,19 @@ class PlateOpening:
         cls._plate_opening_counter = 1
 
     def to_dict(self) -> Dict[str, Any]:
+        if self.boundary_nodes is not None:
+            return {"id": self.id, "boundary_node_ids": [node.id for node in self.boundary_nodes]}
         return {"id": self.id, "boundary_node_ids": self.boundary_node_ids}
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "PlateOpening":
-        obj = cls(id=data.get("id"), boundary_node_ids=data.get("boundary_node_ids"))
+    def from_dict(
+        cls, data: Dict[str, Any], nodes_by_id: Optional[Dict[int, "Node"]] = None
+    ) -> "PlateOpening":
+        node_ids = data.get("boundary_node_ids")
+        nodes = None
+        if nodes_by_id is not None and node_ids is not None and all(i in nodes_by_id for i in node_ids):
+            nodes = [nodes_by_id[i] for i in node_ids]
+        obj = cls(id=data.get("id"), boundary_node_ids=node_ids, boundary_nodes=nodes)
         if obj.id is not None and obj.id >= cls._plate_opening_counter:
             cls._plate_opening_counter = obj.id + 1
         return obj

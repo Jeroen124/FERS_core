@@ -199,29 +199,54 @@ class LoadCase:
     @staticmethod
     def apply_deadload_to_members(members, load_case, direction):
         """
-        Apply a distributed load to all members
+        Add each member's own weight to ``load_case``, as a uniform load along it.
+
+        The load per unit length is g = 9.81 m/s² times the member's mass per
+        unit length, ``member.weight / member.length()``: density·area·g when
+        ``weight`` is the mass the SDK computed, or a total mass you gave the
+        member, spread evenly over it.
+
+        That is in the model's force per unit length when density is in
+        kilograms per cubic length unit and forces are in newtons: kg/m³ in a
+        metre model gives N/m, kg/mm³ in a millimetre model N/mm. It is not with
+        density in kg/m³ in a millimetre model, or with forces in kN. There, let
+        the solver add the self-weight (``AnalysisOptions(enable_self_weight=True)``),
+        which converts the units itself.
 
         Args:
-            members (list): The list of members to search through.
-            type (str): The type to search for in member.
-            load_case (LoadCase): The load case to which the load belongs.
-            magnitude (float): The magnitude of the load per unit length.
-            direction (str): The direction of the load ('Y' for vertical loads, etc.).
-            start_frac (float): The relative start position of the load along the member (0 = start, 1 = end).
-            end_frac (float): The relative end position of the load along the member (0 = start, 1 = end).
+            members (list[Member]): The members to load.
+            load_case (LoadCase): The load case the loads are added to.
+            direction: The upward global axis, as a vector such as ``(0, 1, 0)``
+                or the letter ``"X"``, ``"Y"`` or ``"Z"``. The load's magnitude is
+                negative, so it acts the other way: ``"Y"`` loads along -Y.
+
+        Returns:
+            list[DistributedLoad]: The loads added, one per member.
         """
         from ..loads.distributedload import DistributedLoad
 
+        if isinstance(direction, str):
+            axes = {"X": (1.0, 0.0, 0.0), "Y": (0.0, 1.0, 0.0), "Z": (0.0, 0.0, 1.0)}
+            try:
+                direction = axes[direction.strip().upper()]
+            except KeyError:
+                raise ValueError(f"direction must be a vector or one of X, Y, Z; got {direction!r}") from None
+
+        loads = []
         for member in members:
-            magnitude = -9.81 * member.weight
-            DistributedLoad(
-                member=member,
-                load_case=load_case,
-                magnitude=magnitude,
-                direction=direction,
-                start_frac=0,
-                end_frac=1,
+            # `weight` is the member's whole mass: spread it over the length.
+            mass_per_length = member.weight / member.length() if member.weight else 0.0
+            loads.append(
+                DistributedLoad(
+                    member=member,
+                    load_case=load_case,
+                    magnitude=-9.81 * mass_per_length,
+                    direction=direction,
+                    start_frac=0,
+                    end_frac=1,
+                )
             )
+        return loads
 
     @staticmethod
     def apply_load_to_members_with_classification(

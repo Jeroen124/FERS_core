@@ -8,6 +8,7 @@ enum and the unity-check ``report_template`` placement diverge silently.
 import glob
 import inspect
 import os
+import typing
 
 import pytest
 
@@ -16,6 +17,13 @@ from fers_core.supports.supportcondition import SupportCondition, SupportConditi
 from fers_core.types import pydantic_models
 from fers_core.types.pydantic_models import (
     SupportConditionType as GeneratedSupportConditionType,
+)
+from fers_core.results.compact import (
+    DISPLACEMENT_BLOCKS,
+    DISPLACEMENT_COMPONENTS,
+    FORCE_BLOCKS,
+    FORCE_COMPONENTS,
+    MEMBER_FIELDS,
 )
 from fers_core.results.resultsbundle import ResultsBundle
 from fers_core.results.singleresults import SingleResults
@@ -271,6 +279,29 @@ def test_result_class_carries_every_generated_field(hand_written, generated_name
         f"{missing} declared by the solver schema and not carried. A caller reading "
         f"the result object cannot see them at all."
     )
+
+
+def test_compact_storage_covers_every_generated_member_field():
+    """Loaded member results are stored field by field in arrays, by name.
+
+    A field the solver adds and the compact tables do not know would be dropped on
+    load, so the registry is held to the generated models both ways -- every
+    generated field stored, nothing stored the solver does not send -- and each
+    block to the width of the type the solver gives it.
+    """
+    generated = pydantic_models.MemberResult.model_fields
+    assert set(MEMBER_FIELDS) == set(generated)
+    assert len(MEMBER_FIELDS) == len(set(MEMBER_FIELDS))
+
+    def typed(model):
+        return {name for name, f in generated.items() if model in typing.get_args(f.annotation)}
+
+    assert typed(pydantic_models.NodeForces) == set(FORCE_BLOCKS)
+    assert typed(pydantic_models.NodeDisplacement) == set(DISPLACEMENT_BLOCKS)
+    assert set(FORCE_COMPONENTS) == set(pydantic_models.NodeForces.model_fields)
+    assert set(DISPLACEMENT_COMPONENTS) == set(pydantic_models.NodeDisplacement.model_fields)
+    assert set(pydantic_models.SectionForce.model_fields) == {"x_frac", "forces"}
+    assert set(pydantic_models.MemberDisplacementSample.model_fields) == {"x_frac", "displacement"}
 
 
 def test_solve_failures_survives_from_raw_dict():
