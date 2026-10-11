@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Dict, Any, List, Mapping, Optional
 
-from fers_core.results.compact import KeyIndexCache
+from fers_core.results.compact import KeyIndexCache, normalize_selection, selected_results, selection_to_dict
 from fers_core.results.singleresults import SingleResults, jsonable
 
 
@@ -71,6 +71,12 @@ class ResultsBundle:
     # as plain dicts mirroring the solver schema. None when not requested.
     seismic: Optional[Dict[str, Any]] = None
     buckling_runs: Optional[List[Dict[str, Any]]] = None
+    # What `analysis.options.result_requests` asked for (engine >= 0.2.68): one
+    # dict per request and group, its `values` a read-only numpy array shaped
+    # (result_sets, ids, fields, components). The same values are also loaded
+    # into each load case's or combination's member_results, displacement_nodes
+    # and reaction_nodes. None when nothing was requested.
+    selections: Optional[List[Dict[str, Any]]] = None
 
     # Factory from the generated Pydantic ResultsBundle
     @classmethod
@@ -85,7 +91,23 @@ class ResultsBundle:
             str(key): SingleResults.from_pydantic(pyd_res, keys)
             for key, pyd_res in (getattr(pyd_bundle, "loadcombinations", {}) or {}).items()
         }
+        selections = getattr(pyd_bundle, "selections", None)
+        if selections is not None:
+            instance.apply_selections([normalize_selection(s) for s in selections])
         return instance
+
+    def apply_selections(self, selections: List[Dict[str, Any]]) -> None:
+        """Load normalized ``results.selections`` into the per-set result maps."""
+        self.selections = selections
+        keys: Dict[bytes, Any] = {}
+        for (group, name), selected in selected_results(selections).items():
+            single = getattr(self, group).get(name)
+            if single is None:
+                continue
+            single.member_results = selected.member_table(keys)
+            single.displacement_nodes = selected.node_table(keys)
+            single.reaction_nodes = selected.reactions()
+            single._from_selections = True
 
     @classmethod
     def _from_shell(cls, pyd_bundle: Any) -> "ResultsBundle":
@@ -126,10 +148,12 @@ class ResultsBundle:
         instance.engine_version = raw.get("engine_version")
         instance.seismic = raw.get("seismic")
         instance.buckling_runs = raw.get("buckling_runs")
+        if raw.get("selections") is not None:
+            instance.apply_selections([normalize_selection(s) for s in raw["selections"]])
         return instance
 
     def to_dict(self) -> Dict[str, Any]:
-        return {
+        data = {
             "loadcases": {k: v.to_dict() for k, v in self.loadcases.items()},
             "loadcombinations": {k: v.to_dict() for k, v in self.loadcombinations.items()},
             "unity_check_results": jsonable(self.unity_check_results),
@@ -142,3 +166,7 @@ class ResultsBundle:
             "seismic": jsonable(self.seismic),
             "buckling_runs": jsonable(self.buckling_runs),
         }
+        # Only when present, so a result without requests writes what it always did.
+        if self.selections is not None:
+            data["selections"] = [selection_to_dict(s) for s in self.selections]
+        return data

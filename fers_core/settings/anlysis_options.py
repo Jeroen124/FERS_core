@@ -1,4 +1,5 @@
-from typing import List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
+from ..result_requests import ResultRequest
 from ..settings.enums import (
     AnalysisOrder,
     Dimensionality,
@@ -47,6 +48,11 @@ class AnalysisOptions:
     ``include_member_deflected_shape``, and unity checks always evaluate on
     the full results regardless of the filter. Older engines ignore the field.
 
+    Result requests (engine >= 0.2.68): ``result_requests`` narrows a block to
+    chosen members or nodes, combinations, components and member end, and
+    returns only that — see ``fers_core.result_requests``. Not combinable with
+    ``result_filter``.
+
     Unity-check reports: ``include_report_html=True`` makes the solver embed one
     consolidated HTML report of every unity check, read back with
     :meth:`FERS.unity_report_html`. ``render_unity_reports=True`` fills each
@@ -87,6 +93,7 @@ class AnalysisOptions:
         self_weight_load_case_id: Optional[int] = None,
         include_member_deflected_shape: Optional[bool] = None,
         result_filter: Optional[List[Union[ResultBlock, str]]] = None,
+        result_requests: Optional[List[Union[ResultRequest, Dict[str, Any]]]] = None,
         include_report_html: Optional[bool] = None,
         render_unity_reports: Optional[bool] = None,
     ):
@@ -121,6 +128,11 @@ class AnalysisOptions:
         # Whitelist of result blocks to emit (None = full output). Items may be
         # ResultBlock members or their raw wire strings.
         self.result_filter = list(result_filter) if result_filter is not None else None
+        self.result_requests = (
+            [r if isinstance(r, ResultRequest) else ResultRequest.from_dict(r) for r in result_requests]
+            if result_requests is not None
+            else None
+        )
         self.include_report_html = include_report_html
         self.render_unity_reports = render_unity_reports
 
@@ -169,6 +181,8 @@ class AnalysisOptions:
             data["result_filter"] = [
                 block.value if isinstance(block, ResultBlock) else str(block) for block in self.result_filter
             ]
+        if self.result_requests is not None:
+            data["result_requests"] = [request.to_dict() for request in self.result_requests]
         if self.include_report_html is not None:
             data["include_report_html"] = self.include_report_html
         if self.render_unity_reports is not None:
@@ -260,6 +274,7 @@ class AnalysisOptions:
             self_weight_load_case_id=data.get("self_weight_load_case_id"),
             include_member_deflected_shape=data.get("include_member_deflected_shape"),
             result_filter=result_filter,
+            result_requests=data.get("result_requests"),
             include_report_html=data.get("include_report_html"),
             render_unity_reports=data.get("render_unity_reports"),
         )
