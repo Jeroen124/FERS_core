@@ -40,6 +40,8 @@ of the FERS structural-analysis library.  Examples are grouped by number range:
 051  Member Hinge at Half
 052  Bending Moment Development
 053  Bending Moment Development – Rigid Member
+054  Scissor Hinge – a Rail on a Beam
+055  Scissor Hinge – a Sliding Rail, a Turned Rack, and Release Axes
 
 061  Tension Member
 
@@ -128,6 +130,10 @@ of the FERS structural-analysis library.  Examples are grouped by number range:
                                     forces; the read-only result tables and
                                     .copy(); save_to_json / from_json; solving
                                     straight to a file for large models.
+810  Result Requests              – Ask the solver for only the results a check
+                                    reads (engine 0.2.68): result_requests,
+                                    None for anything not asked for, and the
+                                    selections arrays.
 
 
 ──────────────────────────────────────────────────────────────────
