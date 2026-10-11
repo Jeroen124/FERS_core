@@ -128,7 +128,10 @@ def _payload(catalogue: str, sections: dict) -> dict:
                 "Geometry, elastic/plastic section moduli (wel/wpl), the product of "
                 "inertia and principal-axis angle where the section has one, and the "
                 "EN 1993-1-1 `ec3` block (section class, buckling curves, and a_eff "
-                "for a class 4 section) derived by fers_core.members.ec3_section."
+                "for a class 4 section) derived by fers_core.members.ec3_section. "
+                "Where the section has a product of inertia (an angle), wel/wpl and "
+                "a_sy/a_sz are about its principal axes, as the solver reads them, and "
+                "`geometric` holds the leg-axis values."
             ),
             "sections": sections,
         }
@@ -164,9 +167,15 @@ def main() -> int:
     for i, name in enumerate(names):
         catalogue = section_catalogue(name)
         try:
-            d = Section.from_name(name, _STEEL).to_dict()
+            section = Section.from_name(name, _STEEL)
+            d = section.to_dict()
             keys = _US_KEYS if catalogue == "us" else _GEOM_KEYS
             entry = {k: d[k] for k in keys if d.get(k) is not None}
+            # A turned section (an angle) carries principal-axis moduli and shear
+            # areas, which is what the solver reads. A tool that bends it in one
+            # plane about a leg axis needs the leg-axis ones, kept beside them.
+            if section.geometric:
+                entry["geometric"] = {k: v for k, v in section.geometric.items() if v is not None}
             if catalogue != "en":
                 entry.update(_tabulated_extras(name))
             result[catalogue][name] = entry

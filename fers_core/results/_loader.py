@@ -10,18 +10,24 @@ combination is small and is validated whole, exactly as before.
 
 from __future__ import annotations
 
-from typing import Any, Callable, Dict, Iterable, Iterator, Mapping, Optional, Tuple
+from typing import Any, Callable, Dict, Iterable, Iterator, List, Mapping, Optional, Tuple
 
 from pydantic import TypeAdapter, ValidationError
 
 from fers_core.results._json_stream import JsonStream
-from fers_core.results.compact import KeyIndexCache, MemberResultTableBuilder, NodeDisplacementTableBuilder
+from fers_core.results.compact import (
+    KeyIndexCache,
+    MemberResultTableBuilder,
+    NodeDisplacementTableBuilder,
+    normalize_selection,
+)
 from fers_core.results.nodes import ReactionNodeResult
 from fers_core.results.plate import PlateResult
 from fers_core.results.resultsbundle import ResultsBundle
 from fers_core.results.singleresults import SingleResults
 from fers_core.types.pydantic_models import Results as ResultsSchema
 from fers_core.types.pydantic_models import ResultsBundle as ResultsBundleSchema
+from fers_core.types.pydantic_models import ResultSelection as ResultSelectionSchema
 
 _BATCH = 512
 _ENTRY_MAPS = ("displacement_nodes", "reaction_nodes", "member_results", "plate_results")
@@ -133,6 +139,7 @@ def bundle_from_stream(js: JsonStream) -> Optional[ResultsBundle]:
     keys = KeyIndexCache()
     shell: Dict[str, Any] = {}
     groups: Dict[str, Dict[str, SingleResults]] = {}
+    selections: Optional[List[Dict[str, Any]]] = None
     empty = True
     for name in js.iter_object():
         empty = False
@@ -144,17 +151,30 @@ def bundle_from_stream(js: JsonStream) -> Optional[ResultsBundle]:
                 else:
                     _validate(ResultsSchema.model_validate, js.read_value(), (name, set_name))
             shell[name] = {}
+        elif name == "selections" and js.peek() == "[":
+            # One request's selection at a time: the values are most of the file.
+            selections = [_selection(js.read_value(), index) for index in js.iter_array()]
         else:
             shell[name] = js.read_value()
     if empty:
         return None
-    return _assemble_bundle(shell, groups)
+    return _assemble_bundle(shell, groups, selections)
 
 
-def _assemble_bundle(shell: Dict[str, Any], groups: Dict[str, Dict[str, SingleResults]]) -> ResultsBundle:
+def _selection(raw: Any, index: int) -> Dict[str, Any]:
+    return normalize_selection(_validate(ResultSelectionSchema.model_validate, raw, ("selections", index)))
+
+
+def _assemble_bundle(
+    shell: Dict[str, Any],
+    groups: Dict[str, Dict[str, SingleResults]],
+    selections: Optional[List[Dict[str, Any]]] = None,
+) -> ResultsBundle:
     bundle = ResultsBundle._from_shell(_validate(ResultsBundleSchema.model_validate, shell, ()))
     bundle.loadcases = groups.get("loadcases", {})
     bundle.loadcombinations = groups.get("loadcombinations", {})
+    if selections is not None:
+        bundle.apply_selections(selections)
     return bundle
 
 
@@ -224,6 +244,7 @@ def bundle_from_mapping(raw: Mapping[str, Any]) -> ResultsBundle:
     keys = KeyIndexCache()
     shell: Dict[str, Any] = {}
     groups: Dict[str, Dict[str, SingleResults]] = {}
+    selections: Optional[List[Dict[str, Any]]] = None
     for name, value in raw.items():
         if name in _RESULT_SETS and isinstance(value, Mapping):
             group = groups[name] = {}
@@ -233,9 +254,11 @@ def bundle_from_mapping(raw: Mapping[str, Any]) -> ResultsBundle:
                 else:
                     _validate(ResultsSchema.model_validate, single, (name, set_name))
             shell[name] = {}
+        elif name == "selections" and isinstance(value, list):
+            selections = [_selection(item, index) for index, item in enumerate(value)]
         else:
             shell[name] = value
-    return _assemble_bundle(shell, groups)
+    return _assemble_bundle(shell, groups, selections)
 
 
 def _single_from_mapping(raw: Mapping[str, Any], keys: KeyIndexCache, loc: Tuple[Any, ...]) -> SingleResults:

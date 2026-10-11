@@ -73,6 +73,9 @@ class SingleResults:
     # tell a converged combination from one the solver had reservations about.
     errors_and_warnings: Optional[Dict[str, Any]] = None
     solver_diagnostics: Optional[Dict[str, Any]] = None
+    # The three maps were rebuilt from `results.selections`; to_dict() writes them
+    # empty again, as the solver did, since the selections carry the values.
+    _from_selections: bool = field(default=False, init=False, repr=False, compare=False)
 
     @classmethod
     def from_pydantic(cls, pyd_results: Any, _keys: Optional[KeyIndexCache] = None) -> "SingleResults":
@@ -169,11 +172,14 @@ class SingleResults:
         )
 
     def to_dict(self) -> Dict[str, Any]:
+        selected = self._from_selections
         return {
             "name": self.name,
-            "displacement_nodes": {k: v.to_dict() for k, v in self.displacement_nodes.items()},
-            "reaction_nodes": {k: v.to_dict() for k, v in self.reaction_nodes.items()},
-            "member_results": {k: v.to_dict() for k, v in self.member_results.items()},
+            "displacement_nodes": {}
+            if selected
+            else {k: v.to_dict() for k, v in self.displacement_nodes.items()},
+            "reaction_nodes": {} if selected else {k: v.to_dict() for k, v in self.reaction_nodes.items()},
+            "member_results": {} if selected else {k: v.to_dict() for k, v in self.member_results.items()},
             "plate_results": {k: v.to_dict() for k, v in self.plate_results.items()},
             "summary": self.summary.to_dict() if self.summary else None,
             "result_type": jsonable(self.result_type),

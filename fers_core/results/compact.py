@@ -20,7 +20,14 @@ from typing import Any, Dict, Iterable, Iterator, List, Optional, Sequence, Tupl
 import numpy as np
 
 from fers_core.results.member import MemberResult
-from fers_core.results.nodes import NodeDisplacement, NodeForces, SectionForce, number
+from fers_core.results.nodes import (
+    NodeDisplacement,
+    NodeForces,
+    NodeLocation,
+    ReactionNodeResult,
+    SectionForce,
+    number,
+)
 
 FORCE_COMPONENTS = ("fx", "fy", "fz", "mx", "my", "mz", "bw")
 DISPLACEMENT_COMPONENTS = ("dx", "dy", "dz", "rx", "ry", "rz", "warp")
@@ -98,8 +105,8 @@ class _Kinds:
         "section",
         "member",
         "sequence",
-        "zero_forces",
-        "zero_displacement",
+        "absent_forces",
+        "absent_displacement",
     )
 
     def __init__(self, frozen: bool):
@@ -108,16 +115,33 @@ class _Kinds:
         self.section = _FrozenSectionForce if frozen else SectionForce
         self.member = _FrozenMemberResult if frozen else MemberResult
         self.sequence = tuple if frozen else list
-        zeros = (0.0,) * 7
-        if frozen:
-            # Shared: nothing can change them.
-            forces = _make(self.forces, zip(FORCE_COMPONENTS, zeros))
-            displacement = _make(self.displacement, zip(DISPLACEMENT_COMPONENTS, zeros))
-            self.zero_forces = lambda: forces
-            self.zero_displacement = lambda: displacement
-        else:
-            self.zero_forces = lambda: _make(NodeForces, zip(FORCE_COMPONENTS, zeros))
-            self.zero_displacement = lambda: _make(NodeDisplacement, zip(DISPLACEMENT_COMPONENTS, zeros))
+        # A block the solver did not send: zeros, as before, or -- for results that
+        # came back as selections -- None, which nothing can mistake for a value.
+        self.absent_forces = {}
+        self.absent_displacement = {}
+        for fill in (0.0, None):
+            values = (fill,) * 7
+            if frozen:
+                # Shared: nothing can change them.
+                forces = _make(self.forces, zip(FORCE_COMPONENTS, values))
+                displacement = _make(self.displacement, zip(DISPLACEMENT_COMPONENTS, values))
+                self.absent_forces[fill] = lambda forces=forces: forces
+                self.absent_displacement[fill] = lambda displacement=displacement: displacement
+            else:
+                self.absent_forces[fill] = lambda values=values: _make(
+                    NodeForces, zip(FORCE_COMPONENTS, values)
+                )
+                self.absent_displacement[fill] = lambda values=values: _make(
+                    NodeDisplacement, zip(DISPLACEMENT_COMPONENTS, values)
+                )
+
+
+def _row_values(block: np.ndarray, row: int, missing_as_none: bool) -> List[Optional[float]]:
+    values = block[row].tolist()
+    if missing_as_none:
+        # NaN marks a component nobody requested; the solver never writes one.
+        return [None if v != v else v for v in values]
+    return values
 
 
 _FROZEN = _Kinds(frozen=True)
@@ -177,6 +201,7 @@ class MemberResultTable(Mapping):
         "_samples",
         "_peaks",
         "_has_peak",
+        "_missing_as_none",
     )
 
     def __init__(
@@ -189,6 +214,7 @@ class MemberResultTable(Mapping):
         samples: _Series,
         peaks: Optional[np.ndarray],
         has_peak: Optional[bytes],
+        missing_as_none: bool = False,
     ):
         self._index = index
         self._forces = forces
@@ -199,6 +225,12 @@ class MemberResultTable(Mapping):
         self._samples = samples
         self._peaks = peaks
         self._has_peak = has_peak
+        self._missing_as_none = missing_as_none
+
+    @property
+    def from_selections(self) -> bool:
+        """Built from ``results.selections``: anything not requested reads as None."""
+        return self._missing_as_none
 
     def __getitem__(self, key: str) -> MemberResult:
         return self._build(self._index.rows[key], _FROZEN)
@@ -222,20 +254,22 @@ class MemberResultTable(Mapping):
         return {key: self._build(row, _PLAIN) for row, key in enumerate(self._index.keys)}
 
     def _build(self, row: int, kinds: _Kinds) -> MemberResult:
+        missing = self._missing_as_none
+        fill = None if missing else 0.0
         fields: Dict[str, Any] = {}
         for name in FORCE_BLOCKS:
             block = self._forces.get(name)
             fields[name] = (
-                _make(kinds.forces, zip(FORCE_COMPONENTS, block[row].tolist()))
+                _make(kinds.forces, zip(FORCE_COMPONENTS, _row_values(block, row, missing)))
                 if block is not None
-                else kinds.zero_forces()
+                else kinds.absent_forces[fill]()
             )
         for name in DISPLACEMENT_BLOCKS:
             block = self._displacements.get(name)
             fields[name] = (
-                _make(kinds.displacement, zip(DISPLACEMENT_COMPONENTS, block[row].tolist()))
+                _make(kinds.displacement, zip(DISPLACEMENT_COMPONENTS, _row_values(block, row, missing)))
                 if block is not None
-                else kinds.zero_displacement()
+                else kinds.absent_displacement[fill]()
             )
         fields["section_forces"] = kinds.sequence(self._sections("section_forces", row, kinds))
         if self._series_none is not None and self._series_none[row]:
@@ -274,15 +308,21 @@ class NodeDisplacementTable(Mapping):
     Behaves like the ``dict`` it replaces; see ``MemberResultTable``.
     """
 
-    __slots__ = ("_index", "_values")
+    __slots__ = ("_index", "_values", "_missing_as_none")
 
-    def __init__(self, index: KeyIndex, values: np.ndarray):
+    def __init__(self, index: KeyIndex, values: np.ndarray, missing_as_none: bool = False):
         self._index = index
         self._values = values
+        self._missing_as_none = missing_as_none
+
+    @property
+    def from_selections(self) -> bool:
+        """Built from ``results.selections``: anything not requested reads as None."""
+        return self._missing_as_none
 
     def __getitem__(self, key: str) -> NodeDisplacement:
-        row = self._index.rows[key]
-        return _make(_FrozenNodeDisplacement, zip(DISPLACEMENT_COMPONENTS, self._values[row].tolist()))
+        values = _row_values(self._values, self._index.rows[key], self._missing_as_none)
+        return _make(_FrozenNodeDisplacement, zip(DISPLACEMENT_COMPONENTS, values))
 
     def __iter__(self) -> Iterator[str]:
         return iter(self._index.keys)
@@ -301,9 +341,142 @@ class NodeDisplacementTable(Mapping):
 
     def copy(self) -> Dict[str, NodeDisplacement]:
         return {
-            key: _make(NodeDisplacement, zip(DISPLACEMENT_COMPONENTS, values))
-            for key, values in zip(self._index.keys, self._values.tolist())
+            key: _make(
+                NodeDisplacement,
+                zip(DISPLACEMENT_COMPONENTS, _row_values(self._values, row, self._missing_as_none)),
+            )
+            for row, key in enumerate(self._index.keys)
         }
+
+
+# ---------------------------------------------------------------------------
+# Selections (results.selections, engine >= 0.2.68)
+# ---------------------------------------------------------------------------
+
+
+def normalize_selection(selection: Any) -> Dict[str, Any]:
+    """One ``results.selections`` entry, from a validated model or parsed JSON, with
+    its values as a read-only ``(result_sets, ids, fields, components)`` array."""
+
+    def get(name: str) -> Any:
+        return selection.get(name) if isinstance(selection, Mapping) else getattr(selection, name)
+
+    def wire(value: Any) -> Any:
+        return value.value if hasattr(value, "value") else value
+
+    sets = [str(s) for s in get("result_sets")]
+    ids = [int(i) for i in get("ids")]
+    fields = [str(f) for f in get("fields")]
+    components = [wire(c) for c in get("components")]
+    values = np.asarray(get("values"), dtype=np.float64).reshape(
+        len(sets), len(ids), len(fields), len(components)
+    )
+    values.flags.writeable = False
+    return {
+        "request": int(get("request")),
+        "block": wire(get("block")),
+        "group": wire(get("group")),
+        "fields": fields,
+        "components": components,
+        "result_sets": sets,
+        "ids": ids,
+        "values": values,
+    }
+
+
+def selection_to_dict(selection: Mapping[str, Any]) -> Dict[str, Any]:
+    """The wire form of a normalized selection, as the solver wrote it."""
+    out = dict(selection)
+    out["values"] = selection["values"].ravel().tolist()
+    return out
+
+
+class SelectedResults:
+    """What the selections hold for one load case or combination."""
+
+    def __init__(self) -> None:
+        self._members: Dict[str, List[Tuple[np.ndarray, np.ndarray, np.ndarray]]] = {}
+        self._nodes: List[Tuple[np.ndarray, np.ndarray, np.ndarray]] = []
+        self._reactions: List[Tuple[np.ndarray, np.ndarray, np.ndarray]] = []
+
+    def add(self, field: str, components: List[str], ids: np.ndarray, values: np.ndarray) -> None:
+        names = (
+            DISPLACEMENT_COMPONENTS
+            if field in DISPLACEMENT_BLOCKS or field == "displacement"
+            else FORCE_COMPONENTS
+        )
+        part = (ids, np.asarray([names.index(c) for c in components], dtype=np.intp), values)
+        if field == "displacement":
+            self._nodes.append(part)
+        elif field == "nodal_forces":
+            self._reactions.append(part)
+        else:
+            self._members.setdefault(field, []).append(part)
+
+    def member_table(self, keys: Dict[bytes, KeyIndex]) -> MemberResultTable:
+        ids = _union(part[0] for parts in self._members.values() for part in parts)
+        blocks = {name: _scatter(parts, ids) for name, parts in self._members.items()}
+        return MemberResultTable(
+            _index_of(ids, keys),
+            {n: b for n, b in blocks.items() if n in FORCE_BLOCKS},
+            {n: b for n, b in blocks.items() if n in DISPLACEMENT_BLOCKS},
+            {name: None for name in SECTION_SERIES},
+            None,
+            None,
+            None,
+            None,
+            missing_as_none=True,
+        )
+
+    def node_table(self, keys: Dict[bytes, KeyIndex]) -> NodeDisplacementTable:
+        ids = _union(part[0] for part in self._nodes)
+        return NodeDisplacementTable(_index_of(ids, keys), _scatter(self._nodes, ids), missing_as_none=True)
+
+    def reactions(self) -> Dict[str, ReactionNodeResult]:
+        ids = _union(part[0] for part in self._reactions)
+        forces = _scatter(self._reactions, ids)
+        out = {}
+        for row, node in enumerate(ids.tolist()):
+            values = _row_values(forces, row, True)
+            # Location and support id are not part of a selection.
+            location = _make(NodeLocation, (("X", None), ("Y", None), ("Z", None)))
+            nodal_forces = _make(NodeForces, zip(FORCE_COMPONENTS, values))
+            out[str(node)] = ReactionNodeResult(location=location, nodal_forces=nodal_forces, support_id=None)
+        return out
+
+
+def selected_results(selections: Iterable[Mapping[str, Any]]) -> Dict[Tuple[str, str], SelectedResults]:
+    """Normalized selections regrouped by ``(group, result set name)``."""
+    out: Dict[Tuple[str, str], SelectedResults] = {}
+    for selection in selections:
+        ids = np.asarray(selection["ids"], dtype=np.int64)
+        values = selection["values"]
+        for s, name in enumerate(selection["result_sets"]):
+            entry = out.setdefault((selection["group"], name), SelectedResults())
+            for f, field in enumerate(selection["fields"]):
+                entry.add(field, selection["components"], ids, values[s, :, f, :])
+    return out
+
+
+def _union(id_arrays: Iterable[np.ndarray]) -> np.ndarray:
+    arrays = list(id_arrays)
+    return np.unique(np.concatenate(arrays)) if arrays else np.empty(0, dtype=np.int64)
+
+
+def _scatter(parts: List[Tuple[np.ndarray, np.ndarray, np.ndarray]], ids: np.ndarray) -> np.ndarray:
+    # NaN where nothing was requested; _row_values turns it into None.
+    out = np.full((len(ids), 7), np.nan)
+    for part_ids, columns, values in parts:
+        out[np.ix_(np.searchsorted(ids, part_ids), columns)] = values
+    out.flags.writeable = False
+    return out
+
+
+def _index_of(ids: np.ndarray, keys: Dict[bytes, KeyIndex]) -> KeyIndex:
+    index = keys.get(ids.tobytes())
+    if index is None:
+        index = keys[ids.tobytes()] = KeyIndex(tuple(str(i) for i in ids.tolist()))
+    return index
 
 
 # ---------------------------------------------------------------------------

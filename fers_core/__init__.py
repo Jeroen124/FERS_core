@@ -52,12 +52,15 @@ from .settings.anlysis_options import (
     RigidStrategy,
 )
 from .settings.enums import MassFormulation
+from .result_requests import ResultRequest
 from .settings.eigen_analysis import (
     BucklingAnalysisSettings,
     ModalAnalysisSettings,
     SeismicAnalysisSettings,
 )
 from .members.memberhinge import MemberHinge
+from .members.releaseaxes import ReleaseAxes
+from .members.scissorhinge import ScissorHinge
 from .members.moment_rotation import CurveEndBehaviour, MomentRotationCurve
 from .results.resultsbundle import ResultsBundle
 from .results.singleresults import SingleResults
@@ -138,10 +141,13 @@ __all__ = [
     "PdeltaFormulation",
     "PdeltaMode",
     "ReactionNodeResult",
+    "ReleaseAxes",
     "ResultBlock",
+    "ResultRequest",
     "ResultRenderer",
     "ResultsBundle",
     "RigidStrategy",
+    "ScissorHinge",
     "Section",
     "SeismicAnalysisSettings",
     "SurfaceLoad",
