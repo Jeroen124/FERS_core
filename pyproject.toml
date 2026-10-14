@@ -52,6 +52,9 @@ dependencies = [
 # every doc gives, and until now its project page linked nowhere at all — no
 # homepage, no docs, no source. That is a dead end for a developer and for the
 # agents that read package pages before choosing a dependency.
+[project.scripts]
+fers = "fers_core.cli:main"
+
 [project.urls]
 Homepage = "https://ferscloud.com"
 Documentation = "https://ferscloud.com/docs/installation"

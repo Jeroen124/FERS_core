@@ -18,6 +18,9 @@ You can install `FERS_core` via pip:
 pip install FERS
 ```
 
+The package also installs the `fers` command; see "From the terminal and from
+coding agents" below.
+
 ## Solving a model
 
 ```python
@@ -415,3 +418,41 @@ by the engine.
 > killable subprocess — that also reclaims its memory.
 
 Requires engine `fers_calculations >= 0.2.53`.
+
+## From the terminal and from coding agents
+
+`pip install FERS` puts a `fers` command on the path: a thin layer over the
+objects above and the engine, for shells, scripts, CI jobs and coding agents.
+Every large output goes to a file; stdout carries one line per command, or a
+JSON object with `--json`.
+
+```bash
+fers validate model.json                 # the input schema, naming the field that fails
+fers solve model.json --out results.json # the engine streams the results to the file
+fers check model.json                    # solve and print each unity check's utilization
+fers report results.json --out report.html
+fers schema --list                       # the schema's definitions; `fers schema Member` prints one
+fers sections get IPE200                 # catalogue properties in SI; also `sections list --series HEB`
+fers materials list
+fers examples list                       # the numbered examples; `examples show 001`, `examples run 001`
+fers doctor                              # versions, and whether the key is accepted
+```
+
+`fers solve` sends the file to the engine as it is and never parses the results:
+a model that writes hundreds of megabytes costs this process nothing. The
+summary line counts load cases, combinations, recorded failures, non-converged
+result sets and messages. Exit codes: 0 done, 1 the engine refused or failed,
+2 bad input, 3 licence (no key where one is needed, a rejected key, a licence
+timeout), 4 solved with recorded failures.
+
+`FERS_API_KEY` supplies the key for Premium limits when `--api-key` is not
+given; without a key the engine runs at Free-tier limits and makes no network
+call, as above.
+
+For an agent, `skills/fers/SKILL.md` in this repository is the working loop in
+one page: author with the objects, validate, solve to a file, read a selection
+(`ResultRequest`), check. Copy it into the agent's skills directory, or point
+the agent at it. Clients without a shell use the hosted MCP server at
+https://ferscloud.com/mcp instead; it is the same engine.
+
+`fers_core/examples/811_Command_Line_Workflow.py` runs the loop end to end.
