@@ -202,6 +202,17 @@ def test_report_refuses_a_document_without_checks(beam_file, tmp_path, capsys):
     assert code == cli.EXIT_INPUT and "unity checks" in err
 
 
+def test_skill_prints_and_installs_the_skill_file(tmp_path, capsys):
+    code, out, _ = _run(capsys, ["skill"])
+    assert code == cli.EXIT_OK and out.startswith("---\nname: fers")
+    code, out, _ = _run(capsys, ["skill", "--path"])
+    assert code == cli.EXIT_OK and out.strip().endswith("SKILL.md")
+    code, out, _ = _run(capsys, ["skill", "--install", str(tmp_path)])
+    assert code == cli.EXIT_OK
+    installed = tmp_path / ".claude" / "skills" / "fers" / "SKILL.md"
+    assert installed.read_text(encoding="utf-8").startswith("---\nname: fers")
+
+
 def test_doctor_offline_reports_versions(capsys, monkeypatch):
     monkeypatch.delenv("FERS_API_KEY", raising=False)
     code, out, _ = _run(capsys, ["doctor", "--offline", "--json"])

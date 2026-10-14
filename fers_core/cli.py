@@ -549,6 +549,35 @@ def _licence_status(key: str, timeout: float) -> dict[str, Any]:
     }
 
 
+def _skill_path() -> Path:
+    import fers_core
+
+    return Path(fers_core.__file__).parent / "skills" / "fers" / "SKILL.md"
+
+
+def cmd_skill(args: argparse.Namespace) -> int:
+    """Print the skill file for coding agents, or install it into a project.
+
+    The skill is one page in the format coding agents read before a task: the
+    install step, the author-validate-solve-read loop, how to read results, and
+    when the hosted MCP server fits better. ``--install DIR`` writes it to
+    ``DIR/.claude/skills/fers/SKILL.md``, which is where Claude Code looks;
+    other agents can be pointed at ``--path``.
+    """
+    source = _skill_path()
+    if args.path:
+        print(source)
+        return EXIT_OK
+    if args.install:
+        target = Path(args.install) / ".claude" / "skills" / "fers" / "SKILL.md"
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(source.read_text(encoding="utf-8"), encoding="utf-8")
+        _emit(args.json, {"ok": True, "exit_code": EXIT_OK, "path": str(target)}, f"wrote {target}")
+        return EXIT_OK
+    print(source.read_text(encoding="utf-8"), end="")
+    return EXIT_OK
+
+
 def cmd_doctor(args: argparse.Namespace) -> int:
     """Report the installed versions and, with a key, whether the licence server accepts it."""
     report: dict[str, Any] = {
@@ -700,6 +729,12 @@ def build_parser() -> argparse.ArgumentParser:
     report.add_argument("--out", required=True, help="HTML file to write")
     _add_json(report)
     report.set_defaults(func=cmd_report)
+
+    skill = commands.add_parser("skill", help="the skill file for coding agents: print it or install it")
+    skill.add_argument("--install", metavar="DIR", help="write it to DIR/.claude/skills/fers/SKILL.md")
+    skill.add_argument("--path", action="store_true", help="print the file's path instead of its text")
+    _add_json(skill)
+    skill.set_defaults(func=cmd_skill)
 
     doctor = commands.add_parser(
         "doctor", help="versions, and whether a key is accepted by the licence server"

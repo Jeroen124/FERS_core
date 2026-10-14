@@ -16,6 +16,7 @@ fers schema --list                        # the schema's definitions; `fers sche
 fers sections get IPE200                  # catalogue properties in SI
 fers materials list
 fers examples list                        # the numbered examples; `show 001`, `run 001`
+fers skill --install .                    # the skill file for coding agents
 fers doctor                               # versions, and whether the key is accepted
 ```
 
@@ -31,8 +32,9 @@ engine on its own machine through this package, and nothing told it so. The
 hosted MCP server stays the route for clients without a shell; a terminal agent
 now solves locally in engine time, keeps results out of its context by reading
 a file selectively, and learns the object API from the numbered examples
-(`fers examples show 001`). `skills/fers/SKILL.md` is that working loop on one
-page, in the skill format coding agents read; it ships in the sdist.
+(`fers examples show 001`). The skill file is that working loop on one page, in
+the skill format coding agents read; it ships in the package, and
+`fers skill --install .` writes it to `.claude/skills/fers/SKILL.md`.
 
 `fers_core/examples/811_Command_Line_Workflow.py` runs the loop end to end, and
 `tests/functionality/test_cli.py` covers every command, the exit codes and the

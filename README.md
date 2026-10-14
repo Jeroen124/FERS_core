@@ -435,6 +435,7 @@ fers schema --list                       # the schema's definitions; `fers schem
 fers sections get IPE200                 # catalogue properties in SI; also `sections list --series HEB`
 fers materials list
 fers examples list                       # the numbered examples; `examples show 001`, `examples run 001`
+fers skill --install .                   # the skill file for coding agents, into .claude/skills
 fers doctor                              # versions, and whether the key is accepted
 ```
 
@@ -449,10 +450,12 @@ timeout), 4 solved with recorded failures.
 given; without a key the engine runs at Free-tier limits and makes no network
 call, as above.
 
-For an agent, `skills/fers/SKILL.md` in this repository is the working loop in
-one page: author with the objects, validate, solve to a file, read a selection
-(`ResultRequest`), check. Copy it into the agent's skills directory, or point
-the agent at it. Clients without a shell use the hosted MCP server at
-https://ferscloud.com/mcp instead; it is the same engine.
+For an agent, the skill file is the working loop in one page: author with the
+objects, validate, solve to a file, read a selection (`ResultRequest`), check.
+It ships in the package (`fers_core/skills/fers/SKILL.md`); `fers skill
+--install .` writes it to `.claude/skills/fers/SKILL.md`, where Claude Code
+looks, and `fers skill --path` names it for any other agent. Clients without a
+shell use the hosted MCP server at https://ferscloud.com/mcp instead; it is the
+same engine.
 
 `fers_core/examples/811_Command_Line_Workflow.py` runs the loop end to end.

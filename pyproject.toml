@@ -67,7 +67,7 @@ Issues = "https://github.com/Jeroen124/FERS_core/issues"
 include = ["fers_core*"]
 
 [tool.setuptools.package-data]
-fers_core = ["examples/*"]
+fers_core = ["examples/*", "skills/fers/*"]
 
 [tool.ruff]
 exclude = [
