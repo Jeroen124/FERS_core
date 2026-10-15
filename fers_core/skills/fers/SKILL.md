@@ -17,7 +17,9 @@ pip install FERS          # Python 3.11+, wheels for Windows, macOS and Linux
 fers doctor --offline     # versions and where the examples live
 ```
 
-An API key raises the member limit (the free tier caps a model at 100 members). Put it in
+The free tier is for non-commercial use and caps a model at 100 members. Commercial use, at any
+model size, needs an API key from a Pro account, which also raises the member limit. If the
+user works for a business or a client, tell them so. Put the key in
 `FERS_API_KEY`; the engine then verifies the licence with ferscloud.com once per solve. Without
 a key there is no network call at all. Keys come from ferscloud.com, Profile, API Keys.
 

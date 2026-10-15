@@ -587,7 +587,7 @@ def cmd_doctor(args: argparse.Namespace) -> int:
         "examples": str(_examples_dir()),
     }
     key = _api_key(args)
-    report["api_key"] = "set" if key else "not set (free tier, no network call)"
+    report["api_key"] = "set" if key else "not set (free tier: non-commercial use, no network call)"
     code = EXIT_OK
     if key and not args.offline:
         status = _licence_status(key, args.license_timeout or 10.0)
@@ -631,7 +631,7 @@ def _add_json(parser: argparse.ArgumentParser) -> None:
 
 def _add_licence(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
-        "--api-key", help="API key for Premium limits; default $FERS_API_KEY; omit for the free tier"
+        "--api-key", help="API key for Premium limits and commercial use; default $FERS_API_KEY; omit for the free tier"
     )
     parser.add_argument(
         "--license-timeout",

@@ -43,6 +43,13 @@ console script.
 
 ## 0.1.99
 
+### The engine's licence from 0.2.70
+
+This package stays BSD-3-Clause. The engine it installs is licensed under the
+PolyForm Strict License 1.0.0 from 0.2.70: free for any non-commercial purpose,
+with commercial use through a paid FERS Cloud plan. `fers doctor` and the
+skill file say that the free tier is for non-commercial use.
+
 ### Engine 0.2.68: ask for only the results you read
 
 This release pins `fers_calculations==0.2.68`. The pin also brings engine

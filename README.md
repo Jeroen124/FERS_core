@@ -378,7 +378,8 @@ to the HTML report. Both are off by default, which keeps the result small.
 ## Premium solves and timeouts
 
 Without an API key the solver runs at Free-tier limits (100 members) and makes
-**no network call at all**. Passing `api_key` raises those limits:
+**no network call at all**. The free tier is for non-commercial use; commercial
+use needs a Pro key at any model size. Passing `api_key` raises those limits:
 
 ```python
 model.run_analysis(api_key=KEY)
@@ -460,3 +461,13 @@ which solves on the user's machine); clients that cannot start a program use the
 hosted server at https://ferscloud.com/mcp, which returns a browser-solve link.
 
 `fers_core/examples/811_Command_Line_Workflow.py` runs the loop end to end.
+
+## Licence
+
+This package, `FERS`, is open source under the BSD 3-Clause License (`LICENSE`).
+
+The solver engine it installs, `fers_calculations`, is licensed separately. From
+0.2.70 it is under the PolyForm Strict License 1.0.0: free for any non-commercial
+purpose, such as study, teaching, research and hobby projects. Commercial use
+needs a paid [FERS Cloud plan](https://ferscloud.com/pricing), which includes the
+commercial licence.
