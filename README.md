@@ -454,8 +454,9 @@ For an agent, the skill file is the working loop in one page: author with the
 objects, validate, solve to a file, read a selection (`ResultRequest`), check.
 It ships in the package (`fers_core/skills/fers/SKILL.md`); `fers skill
 --install .` writes it to `.claude/skills/fers/SKILL.md`, where Claude Code
-looks, and `fers skill --path` names it for any other agent. Clients without a
-shell use the hosted MCP server at https://ferscloud.com/mcp instead; it is the
-same engine.
+looks, and `fers skill --path` names it for any other agent. MCP clients can
+run the same engine as a local MCP server instead (`npx -y @ferscloud/fers-mcp`,
+which solves on the user's machine); clients that cannot start a program use the
+hosted server at https://ferscloud.com/mcp, which returns a browser-solve link.
 
 `fers_core/examples/811_Command_Line_Workflow.py` runs the loop end to end.

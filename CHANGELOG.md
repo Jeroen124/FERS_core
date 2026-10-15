@@ -29,7 +29,8 @@ failures. `FERS_API_KEY` supplies the key when `--api-key` is not given.
 
 Why a command and not only the objects: an agent with a shell already had the
 engine on its own machine through this package, and nothing told it so. The
-hosted MCP server stays the route for clients without a shell; a terminal agent
+local MCP server (`@ferscloud/fers-mcp`) serves the same engine to MCP clients,
+and the hosted one, which no longer solves, to clients without a shell; a terminal agent
 now solves locally in engine time, keeps results out of its context by reading
 a file selectively, and learns the object API from the numbered examples
 (`fers examples show 001`). The skill file is that working loop on one page, in

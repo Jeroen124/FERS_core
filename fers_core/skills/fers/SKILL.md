@@ -57,6 +57,10 @@ Catalogues: `fers sections list --series IPE`, `fers sections get IPE200` (SI pr
 
 ## When not to use this
 
-A client without a shell (Claude Desktop or web connectors, ChatGPT, a phone) uses the hosted
-MCP server at https://ferscloud.com/api/mcp instead; it authors and solves on the server with
-37 tools and needs nothing installed. Same engine, same results.
+When the job is one a ready-made tool covers, such as checking one steel beam to EN 1993-1-1,
+the local FERS MCP server is quicker than writing code: `npx -y @ferscloud/fers-mcp` serves the
+same engine over MCP and solves on this machine (`check_beam` returns the utilization in one
+call). Desktop clients that can start a program (Claude Desktop, Cursor, VS Code, ChatGPT
+desktop) use it too. A client that cannot (Claude or ChatGPT in a browser, a phone) uses the
+hosted MCP server at https://ferscloud.com/api/mcp: it authors and validates models there and
+returns a link that solves the model in the user's browser. Same engine, same results.

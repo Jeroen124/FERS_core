@@ -560,7 +560,7 @@ def cmd_skill(args: argparse.Namespace) -> int:
 
     The skill is one page in the format coding agents read before a task: the
     install step, the author-validate-solve-read loop, how to read results, and
-    when the hosted MCP server fits better. ``--install DIR`` writes it to
+    when an MCP server fits better. ``--install DIR`` writes it to
     ``DIR/.claude/skills/fers/SKILL.md``, which is where Claude Code looks;
     other agents can be pointed at ``--path``.
     """
