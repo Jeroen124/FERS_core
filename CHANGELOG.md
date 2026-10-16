@@ -1,6 +1,68 @@
 # Changelog
 
+## 0.1.100
+
+### The `fers` command, and a skill for coding agents
+
+`pip install FERS` now also installs `fers`, a command line over the package and
+the engine for shells, scripts, CI jobs and coding agents:
+
+```bash
+fers validate model.json                  # the input schema, naming the field that fails
+fers solve model.json --out results.json  # the engine streams the results to the file
+fers check model.json                     # solve and print each unity check's utilization
+fers report results.json --out report.html
+fers schema --list                        # the schema's definitions; `fers schema Member` prints one
+fers sections get IPE200                  # catalogue properties in SI
+fers materials list
+fers examples list                        # the numbered examples; `show 001`, `run 001`
+fers skill --install .                    # the skill file for coding agents
+fers doctor                               # versions, and whether the key is accepted
+```
+
+`fers solve` hands the file to the engine unchanged and never parses the
+results: the engine writes them to `--out` and the command prints one line with
+the counts of load cases, combinations, recorded failures, non-converged result
+sets and messages, or a JSON object with `--json`. Exit codes: 0 done, 1 the
+engine refused or failed, 2 bad input, 3 licence, 4 solved with recorded
+failures. `FERS_API_KEY` supplies the key when `--api-key` is not given.
+
+Why a command and not only the objects: an agent with a shell already had the
+engine on its own machine through this package, and nothing told it so. The
+local MCP server (`@ferscloud/fers-mcp`) serves the same engine to MCP clients,
+and the hosted one, which no longer solves, to clients without a shell; a terminal agent
+now solves locally in engine time, keeps results out of its context by reading
+a file selectively, and learns the object API from the numbered examples
+(`fers examples show 001`). The skill file is that working loop on one page, in
+the skill format coding agents read; it ships in the package, and
+`fers skill --install .` writes it to `.claude/skills/fers/SKILL.md`.
+
+`fers_core/examples/811_Command_Line_Workflow.py` runs the loop end to end, and
+`tests/functionality/test_cli.py` covers every command, the exit codes and the
+console script.
+
 ## 0.1.99
+
+### Engine 0.2.71: a load case that does not converge no longer ends the run
+
+This release pins `fers_calculations==0.2.71`, which is 0.2.70's engine
+released to npm as well. A second-order load case that
+could not converge used to raise out of `calculate_to_file` and abort the whole
+analysis. It is now recorded in `ResultsBundle.load_case_failures`
+(`load_case_id`, `name`, `error`) and is missing from `loadcases`, while the
+combinations are still solved. Check it beside `solve_failures` before trusting
+per-case results. A second-order solve that stops on a rounding floor reports
+`converged: false` with the warning `second_order_residual_floor`, where it used
+to fail or claim convergence. `fers solve` counts both lists in its summary and
+exits 4 when either is non-empty. `fers_core/types/pydantic_models.py` is
+regenerated from the 0.2.71 schema.
+
+### The engine's licence from 0.2.70
+
+This package stays BSD-3-Clause. The engine it installs is licensed under the
+PolyForm Strict License 1.0.0 from 0.2.70: free for any non-commercial purpose,
+with commercial use through a paid FERS Cloud plan. `fers doctor` and the
+skill file say that the free tier is for non-commercial use.
 
 ### Engine 0.2.68: ask for only the results you read
 

@@ -188,6 +188,7 @@ def _legacy(text: str) -> dict:
         "report_html": pyd.report_html,
         "attribution": _dump(pyd.attribution),
         "solve_failures": [_dump(f) for f in pyd.solve_failures or []],
+        "load_case_failures": [_dump(f) for f in pyd.load_case_failures or []],
         "engine_version": pyd.engine_version,
         "seismic": _dump(pyd.seismic),
         "buckling_runs": None if pyd.buckling_runs is None else [_dump(b) for b in pyd.buckling_runs],
