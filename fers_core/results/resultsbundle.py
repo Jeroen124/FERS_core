@@ -29,7 +29,8 @@ def _to_plain(value: Any) -> Any:
 class ResultsBundle:
     """Everything one solve returned: ``loadcases`` and ``loadcombinations`` by
     name, each a :class:`SingleResults`, plus unity-check, eigenvalue and seismic
-    results and how the solve went (``solve_failures``, ``engine_version``). See
+    results and how the solve went (``solve_failures``, ``load_case_failures``,
+    ``engine_version``). See
     "Reading results" in the README."""
 
     loadcases: Dict[str, SingleResults] = field(default_factory=dict)
@@ -59,10 +60,12 @@ class ResultsBundle:
     #     if bundle.solve_failures:
     #         ...  # len(bundle.loadcombinations) is NOT what you asked for
     #
-    # Note the asymmetry with load *cases*, where the same event raises straight
-    # out of `calculate_to_file` and aborts the run. Collecting is the better
-    # behaviour of the two, but it means the recoverable half is the quiet one.
     solve_failures: List[Dict[str, Any]] = field(default_factory=list)
+    # The same for load cases (engine >= 0.2.70; before, a failed second-order
+    # load case raised out of `calculate_to_file` and aborted the run). They are
+    # MISSING from `loadcases`, and the combinations were still solved, cold-
+    # started where a failed case would have warm-started them.
+    load_case_failures: List[Dict[str, Any]] = field(default_factory=list)
     # Which engine produced these results. The input's `schema_version` says which
     # contract the caller wrote to; this says which engine answered -- the thing
     # you want in a bug report, and previously unreachable from the result object.
@@ -120,6 +123,7 @@ class ResultsBundle:
         instance.report_html = getattr(pyd_bundle, "report_html", None)
         instance.attribution = _to_plain(getattr(pyd_bundle, "attribution", None))
         instance.solve_failures = _to_plain(getattr(pyd_bundle, "solve_failures", []) or [])
+        instance.load_case_failures = _to_plain(getattr(pyd_bundle, "load_case_failures", []) or [])
         instance.engine_version = getattr(pyd_bundle, "engine_version", None)
         instance.seismic = _to_plain(getattr(pyd_bundle, "seismic", None))
         instance.buckling_runs = _to_plain(getattr(pyd_bundle, "buckling_runs", None))
@@ -145,6 +149,7 @@ class ResultsBundle:
         instance.report_html = raw.get("report_html")
         instance.attribution = raw.get("attribution")
         instance.solve_failures = list(raw.get("solve_failures") or [])
+        instance.load_case_failures = list(raw.get("load_case_failures") or [])
         instance.engine_version = raw.get("engine_version")
         instance.seismic = raw.get("seismic")
         instance.buckling_runs = raw.get("buckling_runs")
@@ -162,6 +167,7 @@ class ResultsBundle:
             "report_html": self.report_html,
             "attribution": jsonable(self.attribution),
             "solve_failures": jsonable(self.solve_failures),
+            "load_case_failures": jsonable(self.load_case_failures),
             "engine_version": self.engine_version,
             "seismic": jsonable(self.seismic),
             "buckling_runs": jsonable(self.buckling_runs),

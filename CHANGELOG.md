@@ -43,6 +43,19 @@ console script.
 
 ## 0.1.99
 
+### Engine 0.2.70: a load case that does not converge no longer ends the run
+
+This release pins `fers_calculations==0.2.70`. A second-order load case that
+could not converge used to raise out of `calculate_to_file` and abort the whole
+analysis. It is now recorded in `ResultsBundle.load_case_failures`
+(`load_case_id`, `name`, `error`) and is missing from `loadcases`, while the
+combinations are still solved. Check it beside `solve_failures` before trusting
+per-case results. A second-order solve that stops on a rounding floor reports
+`converged: false` with the warning `second_order_residual_floor`, where it used
+to fail or claim convergence. `fers solve` counts both lists in its summary and
+exits 4 when either is non-empty. `fers_core/types/pydantic_models.py` is
+regenerated from the 0.2.70 schema.
+
 ### The engine's licence from 0.2.70
 
 This package stays BSD-3-Clause. The engine it installs is licensed under the

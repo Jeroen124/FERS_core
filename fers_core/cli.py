@@ -631,7 +631,8 @@ def _add_json(parser: argparse.ArgumentParser) -> None:
 
 def _add_licence(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
-        "--api-key", help="API key for Premium limits and commercial use; default $FERS_API_KEY; omit for the free tier"
+        "--api-key",
+        help="API key for Premium limits and commercial use; default $FERS_API_KEY; omit for the free tier",
     )
     parser.add_argument(
         "--license-timeout",
