@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "FERS"
-version          = "0.1.100"
-description = "Finite Element Method library written in Rust with Python interface"
+version          = "0.2.0"
+description = "FERS structural analysis (FEM) in Python: beams, frames, trusses, plates, Eurocode 3 checks, CLI and AI-agent skill; solves locally"
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [
@@ -28,33 +28,43 @@ keywords = [
     "civil-engineering",
 ]
 classifiers = [
+    "Development Status :: 4 - Beta",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Programming Language :: Rust",
     "License :: OSI Approved :: BSD License",
     "Operating System :: OS Independent",
     "Intended Audience :: Science/Research",
+    "Intended Audience :: Developers",
     "Topic :: Scientific/Engineering",
     "Topic :: Scientific/Engineering :: Physics",
 ]
 dependencies = [
     "numpy>=2.1.0",
-    "matplotlib>=3.7.0",
     "ujson>=5.10.0",
-    "sectionproperties>=3.7.0",
-    "pyvista>=0.44.0",
-    "fers_calculations==0.2.71",
     "pydantic>=2.10.0",
-    "scipy>=1.14.0",
-    "ezdxf>=1.3.0",
+    "fers_calculations==0.2.71",
 ]
+
+# Everything else is an extra, so `pip install FERS` stays small enough for an
+# agent's sandbox: ~30 MB on Linux, against ~257 MB with the plotting stack (VTK
+# alone is 140 MB). `FERS[all]` is the set 0.1.x always installed.
+[project.optional-dependencies]
+plot = ["matplotlib>=3.7.0", "pyvista>=0.44.0"]
+sections = ["sectionproperties>=3.7.0", "scipy>=1.14.0"]
+dxf = ["ezdxf>=1.3.0"]
+all = ["FERS[plot,sections,dxf]"]
+
+[project.scripts]
+fers = "fers_core.cli:main"
 
 # PyPI renders these as the sidebar links. `pip install FERS` is the command
 # every doc gives, and until now its project page linked nowhere at all — no
 # homepage, no docs, no source. That is a dead end for a developer and for the
 # agents that read package pages before choosing a dependency.
-[project.scripts]
-fers = "fers_core.cli:main"
-
 [project.urls]
 Homepage = "https://ferscloud.com"
 Documentation = "https://ferscloud.com/docs/installation"
@@ -62,12 +72,13 @@ Documentation = "https://ferscloud.com/docs/installation"
 "Worked examples" = "https://ferscloud.com/docs/python-examples"
 Source = "https://github.com/Jeroen124/FERS_core"
 Issues = "https://github.com/Jeroen124/FERS_core/issues"
+Changelog = "https://github.com/Jeroen124/FERS_core/blob/main/CHANGELOG.md"
 
 [tool.setuptools.packages.find]
 include = ["fers_core*"]
 
 [tool.setuptools.package-data]
-fers_core = ["examples/*", "skills/fers/*"]
+fers_core = ["examples/*", "skills/fers/*", "members/mesh_table.json.gz", "py.typed"]
 
 [tool.ruff]
 exclude = [

@@ -1,5 +1,80 @@
 # Changelog
 
+## 0.2.0
+
+### Install changes: `pip install FERS` is lean; plotting is an extra
+
+`pip install FERS` now installs numpy, pydantic, ujson and the engine: 30 MB
+of wheels on Linux (CPython 3.12) instead of 257 MB. Plotting, section properties meshed
+from your own dimensions and DXF import moved to extras:
+
+```bash
+pip install "FERS[plot]"      # matplotlib, pyvista: plot_model, plot_results_3d, ...
+pip install "FERS[sections]"  # sectionproperties, scipy: Section.create_* with your own dimensions
+pip install "FERS[dxf]"       # ezdxf: sections from DXF drawings
+pip install "FERS[all]"       # everything 0.1.x installed
+```
+
+**If you plot, install `FERS[all]` (or `FERS[plot]`) when you upgrade.** Code
+that needs a missing extra raises an ImportError naming the extra to install.
+
+Catalogue sections need no extra. Every catalogue profile used to be meshed by
+sectionproperties on each `Section.from_name` / `resolve_section` call; the
+meshed properties now ship with the package (`fers_core/members/mesh_table.json.gz`,
+built by `scripts/build_mesh_table.py` with the pinned sectionproperties). All
+1,658 catalogue sections come out byte-identical to 0.1.100, the whole catalogue
+resolves in under a second instead of minutes, and a catalogue section now has
+the same values on every platform. `tests/members/test_mesh_table.py` fails when
+the table goes stale.
+
+Why: an AI agent's sandbox installs FERS on every fresh session, and the VTK
+stack it never used was 140 MB of it.
+
+### `fers` says when not to use the numbers
+
+| Exit | Meaning |
+|---|---|
+| 4 | solved, but do not use the numbers: a result set has errors (a mechanism is `singular_model`), did not converge, or failures were recorded |
+| 5 | `check`: nothing decided: a check is Indeterminate, left combinations unsolved, or the model has no checks |
+| 6 | `check`: a check fails (utilization above 1) |
+
+Exit 4 used to mean recorded failures only, so a mechanism that engine 0.2.71
+flags as `singular_model` exited 0, and `fers check` exited 0 whatever it found.
+`solve` now prints a "DO NOT USE these results" line with the engine's message,
+and with `--json` both commands add `verdict` and `reasons`.
+
+- `fers validate` validates the file as the engine reads it, not the SDK's
+  re-serialization of it, and lists the keys the schema does not know, with
+  their JSON paths: the engine ignores them, so a misspelt optional field kept
+  its default silently. `--strict` makes them an error.
+- `fers schema` without a name lists the definitions; the whole schema, hundreds
+  of kB, takes `--all` or `--out`. `fers sections list` without a filter names
+  the 17 series and their sizes; `--all` lists every section.
+- `fers examples list` lists every example. The 1xx unity-check examples were
+  hidden with the visual ones. Two numbers were taken twice: the out-of-plane
+  double cantilever is now 086 and the visual cantilever 102.
+- Captured output on Windows is cp1252: a character it cannot encode is now
+  escaped instead of crashing the command.
+
+### Fixes
+
+- The SDK stopped writing four keys the engine never read: `analysis.options.solver`,
+  `nodes[].classification` (still written when set, for the SDK's plots) and
+  `unit_settings.weightUnit` / `temperatureUnit`. Older files still load.
+- `create_load_combination(..., limit_state="ULS")`: a combination without a
+  limit state is outside the scope of every check scoped to one. `situation` and
+  `check` are now optional, and `LimitState` is exported from `fers_core`.
+- Examples 201 and 202 set `limit_state` on their combinations. Run from an
+  installed package, they wrote their JSON into a `FERS_cloud/public` folder
+  created three levels above site-packages and called the cloud with a placeholder
+  key. They write to the working directory now (`FERS_CLOUD_PUBLIC` points them
+  at the cloud's templates) and save to the cloud only with `FERS_API_KEY` set.
+- `Node.find_at_location` raised `TypeError` on any non-empty list.
+- `run_analysis` logs its progress line (logger `fers_core.fers.fers`) instead
+  of printing it.
+- The README opens with an example that prints numbers, and states the licences
+  correctly: the SDK is BSD-3-Clause, the engine PolyForm Strict.
+
 ## 0.1.100
 
 ### The `fers` command, and a skill for coding agents

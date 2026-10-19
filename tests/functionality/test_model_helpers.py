@@ -154,3 +154,13 @@ def test_a_pattern_keeps_the_originals_settings_and_solves():
     combined.run_analysis()
     reactions = combined.resultsbundle.loadcases["Wind"].reaction_nodes
     assert sum(r.nodal_forces.fx for r in reactions.values()) == pytest.approx(-1.0)
+
+
+def test_nodes_are_found_by_location():
+    # find_at_location called isinstance() with one argument, so it raised on any node.
+    a, b = Node(0, 0, 0), Node(4.0, 0, 0.0005)
+    assert Node.find_at_location([a, b], 4, 0, 0) == [b]
+    assert Node.find_at_location([a, b], 2, 0, 0) == []
+    assert Node.find_closest([a, b], 1, 0, 0) is a
+    with pytest.raises(TypeError):
+        Node.find_at_location([a, "not a node"], 0, 0, 0)

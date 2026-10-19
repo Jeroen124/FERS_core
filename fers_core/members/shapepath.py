@@ -1,10 +1,12 @@
+from .._optional import lazy, require
 from typing import List, Optional
-import matplotlib.pyplot as plt
 
 from ..members.shapecommand import ShapeCommand
 
 import numpy as np
 import math
+
+plt = lazy("matplotlib.pyplot", "plot")
 
 
 class ShapePath:
@@ -78,10 +80,7 @@ class ShapePath:
             name (str, optional): Name for the ShapePath. Defaults to the filename stem.
             layer (str, optional): If given, only entities on this layer are imported.
         """
-        try:
-            import ezdxf
-        except ImportError:
-            raise ImportError("ezdxf is required for DXF import. Install it with: pip install ezdxf")
+        ezdxf = require("ezdxf", "dxf")
 
         import os
 

@@ -1,38 +1,17 @@
+from .._optional import lazy
 from typing import Any, Dict, Optional
 from ..members.material import Material
 from ..members.shapepath import ShapePath
+from . import _mesh_table
 from .ec3_section import section_ec3
 
-try:
-    from sectionproperties.pre.library.steel_sections import (
-        i_section,
-        channel_section,
-        circular_hollow_section,
-        rectangular_hollow_section,
-        angle_section,
-        cee_section,
-        zed_section,
-    )
-    from sectionproperties.analysis.section import Section as SP_section
-except ImportError:  # pragma: no cover - optional dependency for section generators
-    i_section = None
-    channel_section = None
-    circular_hollow_section = None
-    rectangular_hollow_section = None
-    angle_section = None
-    cee_section = None
-    zed_section = None
-    SP_section = None
+plt = lazy("matplotlib.pyplot", "plot")
 
-import matplotlib.pyplot as plt
-
-
-def _require_sectionproperties() -> None:
-    if SP_section is None:
-        raise ImportError(
-            "sectionproperties is required for generated section geometry. "
-            "Install the FERS_core section-generation dependencies to use these helpers."
-        )
+# The section generators below mesh with sectionproperties, which brings scipy
+# and shapely with it. A catalogue geometry is read from _mesh_table instead, so
+# only a custom one loads it, from the "sections" extra.
+_sp_library = lazy("sectionproperties.pre.library.steel_sections", "sections")
+_sp_analysis = lazy("sectionproperties.analysis.section", "sections")
 
 
 class Section:
@@ -146,6 +125,36 @@ class Section:
     @classmethod
     def reset_counter(cls):
         cls._section_counter = 1
+
+    @staticmethod
+    def _meshed(shape: str, params: dict, shift: Optional[tuple], mesh_size: float) -> dict:
+        """Area, i_y, i_z, j and the advanced props of a sectionproperties profile.
+
+        `shape` names the sectionproperties steel_sections generator and `params`
+        its arguments; the geometry is moved by `shift` (x, y) before meshing.
+        """
+        k = _mesh_table.key(shape, params, shift, mesh_size)
+        hit = _mesh_table.lookup(k)
+        if hit is not None:
+            return hit
+        geometry = getattr(_sp_library, shape)(**params)
+        if shift is not None:
+            geometry = geometry.shift_section(x_offset=shift[0], y_offset=shift[1])
+        geometry.create_mesh(mesh_sizes=[mesh_size])
+        analysis_section = _sp_analysis.Section(geometry, time_info=False)
+        analysis_section.calculate_geometric_properties()
+        analysis_section.calculate_warping_properties()
+        adv = Section._extract_advanced_props(analysis_section)
+        props = {
+            "area": float(analysis_section.section_props.area),
+            "i_y": float(analysis_section.section_props.iyy_c),
+            "i_z": float(analysis_section.section_props.ixx_c),
+            "j": float(analysis_section.get_j()),
+            **adv,
+        }
+        if _mesh_table.recording is not None:
+            _mesh_table.recording[k] = props
+        return props
 
     @staticmethod
     def _extract_advanced_props(analysis_section) -> dict:
@@ -419,21 +428,17 @@ class Section:
         shape_commands = ShapePath.create_ipe_profile(h, b, t_f, t_w, r)
         shape_path = ShapePath(name=name, shape_commands=shape_commands)
 
-        # Use the sectionproperties module to compute section properties
-        ipe_geometry = i_section(d=h, b=b, t_f=t_f, t_w=t_w, r=r, n_r=16).shift_section(
-            x_offset=-b / 2, y_offset=-h / 2
+        meshed = Section._meshed(
+            "i_section",
+            {"d": h, "b": b, "t_f": t_f, "t_w": t_w, "r": r, "n_r": 16},
+            (-b / 2, -h / 2),
+            b / 1000,
         )
-        ipe_geometry.create_mesh(mesh_sizes=[b / 1000])
-        analysis_section = SP_section(ipe_geometry, time_info=False)
-        analysis_section.calculate_geometric_properties()
-        analysis_section.calculate_warping_properties()
-        adv = Section._extract_advanced_props(analysis_section)
 
-        _area = float(analysis_section.section_props.area)
         _ec3, _ = section_ec3(
             "i",
             material.yield_stress,
-            _area,
+            meshed["area"],
             fabrication="hot_rolled",
             h=h,
             b=b,
@@ -446,15 +451,11 @@ class Section:
         return Section(
             name=name,
             material=material,
-            i_y=float(analysis_section.section_props.iyy_c),
-            i_z=float(analysis_section.section_props.ixx_c),
-            j=float(analysis_section.get_j()),
-            area=_area,
             h=h,
             b=b,
             shape_path=shape_path,
             ec3=_ec3,
-            **adv,
+            **meshed,
         )
 
     @staticmethod
@@ -485,29 +486,20 @@ class Section:
         Returns:
             Section: A Section object representing the U profile.
         """
-        # 1) Build the drawable shape path from your own path generator
         shape_commands = ShapePath.create_u_profile(h=h, b=b, t_f=t_f, t_w=t_w, r=r)
         shape_path = ShapePath(name=name, shape_commands=shape_commands)
 
-        # 2) Build a matching sectionproperties geometry:
-        #    channel_section expects separate flange/web thickness, but this U uses uniform t
-        u_geometry = channel_section(d=h, b=b, t_f=t_f, t_w=t_w, r=r, n_r=16).shift_section(
-            x_offset=-b / 2.0,
-            y_offset=-h / 2.0,
+        meshed = Section._meshed(
+            "channel_section",
+            {"d": h, "b": b, "t_f": t_f, "t_w": t_w, "r": r, "n_r": 16},
+            (-b / 2.0, -h / 2.0),
+            b / 1000.0,
         )
 
-        # 3) Mesh and analyze (mesh size similar to your IPE; tweak as you like)
-        u_geometry.create_mesh(mesh_sizes=[b / 1000.0])
-        analysis_section = SP_section(u_geometry, time_info=False)
-        analysis_section.calculate_geometric_properties()
-        analysis_section.calculate_warping_properties()
-        adv = Section._extract_advanced_props(analysis_section)
-
-        _area = float(analysis_section.section_props.area)
         _ec3, _ = section_ec3(
             "channel",
             material.yield_stress,
-            _area,
+            meshed["area"],
             fabrication=fabrication,
             h=h,
             b=b,
@@ -520,15 +512,11 @@ class Section:
         return Section(
             name=name,
             material=material,
-            i_y=float(analysis_section.section_props.iyy_c),
-            i_z=float(analysis_section.section_props.ixx_c),
-            j=float(analysis_section.get_j()),
-            area=_area,
             h=h,
             b=b,
             shape_path=shape_path,
             ec3=_ec3,
-            **adv,
+            **meshed,
         )
 
     @staticmethod
@@ -562,23 +550,17 @@ class Section:
         except AttributeError:
             shape_path = None
 
-        # sectionproperties geometry
-        chs_geometry = circular_hollow_section(d=diameter, t=thickness, n=n).shift_section(
-            x_offset=-diameter / 2.0,
-            y_offset=-diameter / 2.0,
+        meshed = Section._meshed(
+            "circular_hollow_section",
+            {"d": diameter, "t": thickness, "n": n},
+            (-diameter / 2.0, -diameter / 2.0),
+            diameter / 1000.0,
         )
-        chs_geometry.create_mesh(mesh_sizes=[diameter / 1000.0])
 
-        analysis_section = SP_section(chs_geometry, time_info=False)
-        analysis_section.calculate_geometric_properties()
-        analysis_section.calculate_warping_properties()
-        adv = Section._extract_advanced_props(analysis_section)
-
-        _area = float(analysis_section.section_props.area)
         _ec3, _ = section_ec3(
             "chs",
             material.yield_stress,
-            _area,
+            meshed["area"],
             fabrication=fabrication,
             d=diameter,
             t=thickness,
@@ -588,15 +570,11 @@ class Section:
         return Section(
             name=name,
             material=material,
-            i_y=float(analysis_section.section_props.iyy_c),
-            i_z=float(analysis_section.section_props.ixx_c),
-            j=float(analysis_section.get_j()),
-            area=_area,
             h=float(diameter),
             b=float(diameter),
             shape_path=shape_path,
             ec3=_ec3,
-            **adv,
+            **meshed,
         )
 
     @staticmethod
@@ -642,23 +620,17 @@ class Section:
         if shape_commands is not None:
             shape_path = ShapePath(name=name, shape_commands=shape_commands)
 
-        # sectionproperties geometry (i_section is a generic I/H generator)
-        he_geometry = i_section(d=h, b=b, t_f=t_f, t_w=t_w, r=r, n_r=16).shift_section(
-            x_offset=-b / 2.0,
-            y_offset=-h / 2.0,
+        meshed = Section._meshed(
+            "i_section",
+            {"d": h, "b": b, "t_f": t_f, "t_w": t_w, "r": r, "n_r": 16},
+            (-b / 2.0, -h / 2.0),
+            b / 1000.0,
         )
-        he_geometry.create_mesh(mesh_sizes=[b / 1000.0])
 
-        analysis_section = SP_section(he_geometry, time_info=False)
-        analysis_section.calculate_geometric_properties()
-        analysis_section.calculate_warping_properties()
-        adv = Section._extract_advanced_props(analysis_section)
-
-        _area = float(analysis_section.section_props.area)
         _ec3, _ = section_ec3(
             "i",
             material.yield_stress,
-            _area,
+            meshed["area"],
             fabrication="hot_rolled",
             h=h,
             b=b,
@@ -671,15 +643,11 @@ class Section:
         return Section(
             name=name,
             material=material,
-            i_y=float(analysis_section.section_props.iyy_c),
-            i_z=float(analysis_section.section_props.ixx_c),
-            j=float(analysis_section.get_j()),
-            area=_area,
             h=h,
             b=b,
             shape_path=shape_path,
             ec3=_ec3,
-            **adv,
+            **meshed,
         )
 
     def plot(self, show_nodes: bool = True):
@@ -729,25 +697,17 @@ class Section:
         shape_commands = ShapePath.create_rhs_profile(h=h, b=b, t=t, r_out=r_out)
         shape_path = ShapePath(name=name, shape_commands=shape_commands)
 
-        rhs_geometry = rectangular_hollow_section(
-            d=h,
-            b=b,
-            t=t,
-            r_out=r_out,
-            n_r=16,
-        ).shift_section(x_offset=-b / 2.0, y_offset=-h / 2.0)
-        rhs_geometry.create_mesh(mesh_sizes=[max(b, h) / 1000.0])
+        meshed = Section._meshed(
+            "rectangular_hollow_section",
+            {"d": h, "b": b, "t": t, "r_out": r_out, "n_r": 16},
+            (-b / 2.0, -h / 2.0),
+            max(b, h) / 1000.0,
+        )
 
-        analysis_section = SP_section(rhs_geometry, time_info=False)
-        analysis_section.calculate_geometric_properties()
-        analysis_section.calculate_warping_properties()
-        adv = Section._extract_advanced_props(analysis_section)
-
-        _area = float(analysis_section.section_props.area)
         _ec3, _ = section_ec3(
             "rhs",
             material.yield_stress,
-            _area,
+            meshed["area"],
             fabrication=fabrication,
             h=h,
             b=b,
@@ -759,15 +719,11 @@ class Section:
         return Section(
             name=name,
             material=material,
-            i_y=float(analysis_section.section_props.iyy_c),
-            i_z=float(analysis_section.section_props.ixx_c),
-            j=float(analysis_section.get_j()),
-            area=_area,
             h=h,
             b=b,
             shape_path=shape_path,
             ec3=_ec3,
-            **adv,
+            **meshed,
         )
 
     @staticmethod
@@ -839,28 +795,17 @@ class Section:
         )
         shape_path = ShapePath(name=name, shape_commands=shape_commands)
 
-        # sectionproperties places the angle with bottom-left at origin;
-        # we shift to center on centroid.
-        angle_geometry = angle_section(
-            d=h,
-            b=b,
-            t=t,
-            r_r=r_root,
-            r_t=r_toe,
-            n_r=16,
+        meshed = Section._meshed(
+            "angle_section",
+            {"d": h, "b": b, "t": t, "r_r": r_root, "r_t": r_toe, "n_r": 16},
+            None,
+            max(h, b) / 1000.0,
         )
-        # Compute centroid first, then shift
-        angle_geometry.create_mesh(mesh_sizes=[max(h, b) / 1000.0])
-        analysis_section = SP_section(angle_geometry, time_info=False)
-        analysis_section.calculate_geometric_properties()
-        analysis_section.calculate_warping_properties()
-        adv = Section._extract_advanced_props(analysis_section)
 
-        _area = float(analysis_section.section_props.area)
         _ec3, _ = section_ec3(
             "angle",
             material.yield_stress,
-            _area,
+            meshed["area"],
             fabrication="hot_rolled",
             h=h,
             b=b,
@@ -872,15 +817,11 @@ class Section:
         return Section(
             name=name,
             material=material,
-            i_y=float(analysis_section.section_props.iyy_c),
-            i_z=float(analysis_section.section_props.ixx_c),
-            j=float(analysis_section.get_j()),
-            area=_area,
             h=h,
             b=b,
             shape_path=shape_path,
             ec3=_ec3,
-            **adv,
+            **meshed,
         )
 
     @staticmethod
@@ -915,26 +856,17 @@ class Section:
         )
         shape_path = ShapePath(name=name, shape_commands=shape_commands)
 
-        welded_geometry = i_section(
-            d=h,
-            b=b,
-            t_f=t_f,
-            t_w=t_w,
-            r=0.0,
-            n_r=1,
-        ).shift_section(x_offset=-b / 2.0, y_offset=-h / 2.0)
-        welded_geometry.create_mesh(mesh_sizes=[b / 1000.0])
+        meshed = Section._meshed(
+            "i_section",
+            {"d": h, "b": b, "t_f": t_f, "t_w": t_w, "r": 0.0, "n_r": 1},
+            (-b / 2.0, -h / 2.0),
+            b / 1000.0,
+        )
 
-        analysis_section = SP_section(welded_geometry, time_info=False)
-        analysis_section.calculate_geometric_properties()
-        analysis_section.calculate_warping_properties()
-        adv = Section._extract_advanced_props(analysis_section)
-
-        _area = float(analysis_section.section_props.area)
         _ec3, _ = section_ec3(
             "i",
             material.yield_stress,
-            _area,
+            meshed["area"],
             fabrication="welded",
             h=h,
             b=b,
@@ -946,15 +878,11 @@ class Section:
         return Section(
             name=name,
             material=material,
-            i_y=float(analysis_section.section_props.iyy_c),
-            i_z=float(analysis_section.section_props.ixx_c),
-            j=float(analysis_section.get_j()),
-            area=_area,
             h=h,
             b=b,
             shape_path=shape_path,
             ec3=_ec3,
-            **adv,
+            **meshed,
         )
 
     @staticmethod
@@ -992,26 +920,17 @@ class Section:
         )
         shape_path = ShapePath(name=name, shape_commands=shape_commands)
 
-        cfs_geometry = cee_section(
-            d=h,
-            b=b,
-            l=lip,
-            t=t,
-            r_out=r_out,
-            n_r=16,
-        ).shift_section(x_offset=-b / 2.0, y_offset=-h / 2.0)
-        cfs_geometry.create_mesh(mesh_sizes=[max(h, b) / 1000.0])
+        meshed = Section._meshed(
+            "cee_section",
+            {"d": h, "b": b, "l": lip, "t": t, "r_out": r_out, "n_r": 16},
+            (-b / 2.0, -h / 2.0),
+            max(h, b) / 1000.0,
+        )
 
-        analysis_section = SP_section(cfs_geometry, time_info=False)
-        analysis_section.calculate_geometric_properties()
-        analysis_section.calculate_warping_properties()
-        adv = Section._extract_advanced_props(analysis_section)
-
-        _area = float(analysis_section.section_props.area)
         _ec3, _ = section_ec3(
             "channel",
             material.yield_stress,
-            _area,
+            meshed["area"],
             fabrication="cold_formed",
             h=h,
             b=b,
@@ -1024,15 +943,11 @@ class Section:
         return Section(
             name=name,
             material=material,
-            i_y=float(analysis_section.section_props.iyy_c),
-            i_z=float(analysis_section.section_props.ixx_c),
-            j=float(analysis_section.get_j()),
-            area=_area,
             h=h,
             b=b,
             shape_path=shape_path,
             ec3=_ec3,
-            **adv,
+            **meshed,
         )
 
     @staticmethod
@@ -1073,33 +988,20 @@ class Section:
         )
         shape_path = ShapePath(name=name, shape_commands=shape_commands)
 
-        zed_geometry = zed_section(
-            d=h,
-            b_l=b_bot,
-            b_r=b_top,
-            l=lip,
-            t=t,
-            r_out=r_out,
-            n_r=16,
-        ).shift_section(x_offset=-max(b_top, b_bot) / 2.0, y_offset=-h / 2.0)
-        zed_geometry.create_mesh(mesh_sizes=[max(h, b_top, b_bot) / 1000.0])
-
-        analysis_section = SP_section(zed_geometry, time_info=False)
-        analysis_section.calculate_geometric_properties()
-        analysis_section.calculate_warping_properties()
-        adv = Section._extract_advanced_props(analysis_section)
+        meshed = Section._meshed(
+            "zed_section",
+            {"d": h, "b_l": b_bot, "b_r": b_top, "l": lip, "t": t, "r_out": r_out, "n_r": 16},
+            (-max(b_top, b_bot) / 2.0, -h / 2.0),
+            max(h, b_top, b_bot) / 1000.0,
+        )
 
         return Section(
             name=name,
             material=material,
-            i_y=float(analysis_section.section_props.iyy_c),
-            i_z=float(analysis_section.section_props.ixx_c),
-            j=float(analysis_section.get_j()),
-            area=float(analysis_section.section_props.area),
             h=h,
             b=max(b_top, b_bot),
             shape_path=shape_path,
-            **adv,
+            **meshed,
         )
 
     @staticmethod

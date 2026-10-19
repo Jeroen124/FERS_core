@@ -42,9 +42,33 @@ jobs:
 
       - run: pytest --maxfail=1 --disable-warnings -q
 
+  lean:
+    name: 🪶 Lean install
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with: { python-version: "3.12" }
+      # What an agent's sandbox gets from `pip install FERS`: no plotting,
+      # section-design or DXF extras. It must still import, solve and check,
+      # and must not have pulled an extra in through a hard dependency. Run
+      # from outside the checkout, so the installed wheel is what imports:
+      # from the repo root a wheel missing mesh_table.json.gz would still pass.
+      - run: |
+          pip install --upgrade pip
+          pip install . pytest
+          cd "$RUNNER_TEMP"
+          python -c "import importlib.util as u, sys; x = [m for m in ('matplotlib', 'pyvista', 'vtk', 'scipy', 'sectionproperties', 'ezdxf') if u.find_spec(m)]; sys.exit(f'extras installed: {x}' if x else 0)"
+          python -c "import fers_core, sys; sys.exit(0 if 'site-packages' in fers_core.__file__ else f'not the wheel: {fers_core.__file__}')"
+          fers version
+          python -m pytest -q -p no:cacheprovider --import-mode=importlib "$GITHUB_WORKSPACE/tests/functionality/test_lean_import.py" "$GITHUB_WORKSPACE/tests/members/test_mesh_table.py"
+          fers examples run 001 --dir "$RUNNER_TEMP/examples"
+          fers examples run 811 --dir "$RUNNER_TEMP/examples"
+
   deploy:
     name: 📦 Build & Publish to PyPI
-    needs: [lint, test]
+    needs: [lint, test, lean]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:

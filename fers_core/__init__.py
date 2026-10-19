@@ -12,6 +12,7 @@ from .members.bucklingrestraint import BucklingRestraint
 from .supports.nodalsupport import NodalSupport
 from .loads.loadcase import LoadCase
 from .loads.loadcombination import LoadCombination
+from .loads.enums import LimitState
 from .loads.nodalload import NodalLoad
 from .loads.nodalmoment import NodalMoment
 from .loads.distributedload import DistributedLoad
@@ -96,6 +97,7 @@ __all__ = [
     "ImperfectionCase",
     "LoadCase",
     "LoadCombination",
+    "LimitState",
     "Material",
     "OrthotropicPlateMaterial",
     "MaterialLibrary",

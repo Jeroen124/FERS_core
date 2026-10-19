@@ -1,35 +1,54 @@
-# FERS_core
+# FERS: structural analysis in Python
 
-**FERS_core** is an open-source Finite Element Method (FEM) library written in Rust with a Python interface. It provides the foundational tools and components necessary for performing FEM analysis. This core package is designed for users who need a reliable and efficient FEM solver.
-
-## Features
-
-- Basic Finite Element Method (FEM) solvers
-- Mesh generation and manipulation tools
-- Support for various types of finite elements
-- Easy-to-use Python interface for integration with existing workflows
-- Designed for high performance with Rust
-
-## Installation
-
-You can install `FERS_core` via pip:
+FERS: structural finite-element analysis (3D frames, trusses, plates, Eurocode 3
+checks) for engineers and AI agents. This is its Python SDK and the `fers`
+command. The solver is a compiled engine that runs on your machine, with no
+account and no network call: free for non-commercial use up to 100 members.
 
 ```bash
 pip install FERS
 ```
 
-The package also installs the `fers` command; see "From the terminal and from
-coding agents" below.
+```python
+from fers_core import check_beam
+
+# IPE200 in S235, simply supported over 6 m, 10 kN/m. SI units: m, N, Pa.
+# check_beam adds an EN 1993-1-1 member check on a ULS combination of 1.35 x the load.
+model = check_beam(6.0, "IPE200", udl=10_000.0)
+model.settings.analysis_options.include_member_deflected_shape = True
+model.run_analysis()
+
+beam = model.resultsbundle.loadcases["Q"].member_results["1"]
+x_frac, (_, dy, _) = beam.member_displacement_peak
+ec3 = model.unity_check_results()[0]
+print(f"M {beam.local_minimums.mz / 1e3:.1f} kNm, sag {dy * 1e3:.1f} mm at x/L {x_frac:.2f}")
+print(f"EC3 utilization {ec3['max_utilization']:.2f}")
+```
+
+```text
+M -45.0 kNm, sag -41.8 mm at x/L 0.50
+EC3 utilization 2.85
+```
+
+The sag is 41.3 mm of bending (5wL⁴/384EI) plus 0.4 mm of shear deformation,
+which the engine includes. The beam fails: the ULS moment of 60.75 kNm exceeds
+its bending resistance of 51.9 kNm, and with nothing restraining its compression
+flange, lateral-torsional buckling takes the utilization to 2.85.
+
+- **Agents and scripts:** `fers solve`, `fers check` and `fers validate` take a
+  model JSON file, print one line (or `--json`) and say in their exit code
+  whether the numbers can be used; see [From the terminal and from coding
+  agents](#from-the-terminal-and-from-coding-agents). `fers skill --install .`
+  gives a coding agent the FERS skill, and MCP clients can use the
+  [FERS MCP server](https://ferscloud.com/mcp).
+- **Extras:** plots (`pip install "FERS[plot]"`), section properties meshed from
+  your own dimensions (`"FERS[sections]"`) and DXF import (`"FERS[dxf]"`);
+  `"FERS[all]"` installs everything 0.1.x did. Catalogue sections (`IPE200`,
+  `HEB300`, `UB 457x191x67`, `W14X30`, ...) need no extra.
+- **Licence:** the SDK is BSD-3-Clause; the engine it installs is free for
+  non-commercial use ([Licence](#licence)).
 
 ## Solving a model
-
-```python
-from fers_core.builders import create_beam
-
-model = create_beam(5.0, "IPE180", udl=5000.0)    # 5 m span, 5 kN/m downward
-model.run_analysis()
-print(model.resultsbundle)
-```
 
 Building a model by hand, create the `FERS` object first, then its nodes,
 members and loads. Creating a `FERS` restarts the id counters, so a node made
@@ -428,24 +447,37 @@ Every large output goes to a file; stdout carries one line per command, or a
 JSON object with `--json`.
 
 ```bash
-fers validate model.json                 # the input schema, naming the field that fails
+fers validate model.json                 # the input schema: the failing field, and keys the engine ignores
 fers solve model.json --out results.json # the engine streams the results to the file
-fers check model.json                    # solve and print each unity check's utilization
+fers check model.json                    # solve, print each unity check's utilization and a verdict
 fers report results.json --out report.html
-fers schema --list                       # the schema's definitions; `fers schema Member` prints one
-fers sections get IPE200                 # catalogue properties in SI; also `sections list --series HEB`
+fers schema                              # the schema's definitions; `fers schema Member` prints one
+fers sections get IPE200                 # catalogue properties in SI; `sections list` names the series
 fers materials list
 fers examples list                       # the numbered examples; `examples show 001`, `examples run 001`
 fers skill --install .                   # the skill file for coding agents, into .claude/skills
 fers doctor                              # versions, and whether the key is accepted
 ```
 
-`fers solve` sends the file to the engine as it is and never parses the results:
-a model that writes hundreds of megabytes costs this process nothing. The
-summary line counts load cases, combinations, recorded failures, non-converged
-result sets and messages. Exit codes: 0 done, 1 the engine refused or failed,
-2 bad input, 3 licence (no key where one is needed, a rejected key, a licence
-timeout), 4 solved with recorded failures.
+`fers solve` sends the file to the engine as it is, and reads the results back
+only for its summary line: load cases, combinations, recorded failures,
+non-converged result sets and messages. A model that writes hundreds of
+megabytes costs this process nothing.
+
+The exit code says whether to use the numbers:
+
+| Code | Meaning |
+|---|---|
+| 0 | done; for `check`, every check passes |
+| 1 | the engine refused or failed the solve |
+| 2 | bad input: a missing file, invalid JSON, a model that fails the schema (with `validate --strict`, also a key the schema does not know) |
+| 3 | licence: no key where one is needed, a rejected key, a licence timeout |
+| 4 | solved, but **do not use the numbers**: a result set has errors (a mechanism is `singular_model`), did not converge, or failures were recorded. The output says why. |
+| 5 | `check`: nothing decided: a check is Indeterminate, left combinations unsolved, or the model has no checks |
+| 6 | `check`: a check fails (utilization above 1) |
+
+A `check` that meets several of these exits with the first of 4, 6, 5. With
+`--json`, `solve` and `check` add a `verdict` and its `reasons`.
 
 `FERS_API_KEY` supplies the key for Premium limits when `--api-key` is not
 given; without a key the engine runs at Free-tier limits and makes no network
@@ -458,7 +490,8 @@ It ships in the package (`fers_core/skills/fers/SKILL.md`); `fers skill
 looks, and `fers skill --path` names it for any other agent. MCP clients can
 run the same engine as a local MCP server instead (`npx -y @ferscloud/fers-mcp`,
 which solves on the user's machine); clients that cannot start a program use the
-hosted server at https://ferscloud.com/mcp, which returns a browser-solve link.
+hosted server at https://ferscloud.com/api/mcp, which returns a browser-solve
+link. Setup for each client: https://ferscloud.com/mcp.
 
 `fers_core/examples/811_Command_Line_Workflow.py` runs the loop end to end.
 

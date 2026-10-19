@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from .._optional import require
 from typing import Dict, Any, List, Optional, Tuple, TYPE_CHECKING
 
 from fers_core.results.nodes import NodeDisplacement, NodeForces, SectionForce
@@ -210,7 +211,8 @@ class MemberResult:
             List of ``(mesh, color, line_width)`` tuples.
         """
         import numpy as _np
-        import pyvista as _pv
+
+        _pv = require("pyvista", "plot")
 
         if self.member_displacements:
             # Load-exact deflected shape from the engine (member_displacements): the
@@ -275,7 +277,8 @@ class MemberResult:
             List of ``(mesh, color, line_width)`` tuples.
         """
         import numpy as _np
-        import pyvista as _pv
+
+        _pv = require("pyvista", "plot")
 
         # Prefer local forces when they have been populated
         _local_nonzero = any(
@@ -374,7 +377,7 @@ class MemberResult:
         Returns:
             The matplotlib Figure.
         """
-        import matplotlib.pyplot as _plt
+        _plt = require("matplotlib.pyplot", "plot")
 
         length = member.length()
 

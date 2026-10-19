@@ -1,3 +1,4 @@
+from .._optional import require
 import numpy as np
 
 
@@ -126,7 +127,7 @@ def extrude_along_path(section, path_points, num_samples=100):
     Returns:
         pv.PolyData: Extruded geometry as a PyVista object.
     """
-    import pyvista as pv
+    pv = require("pyvista", "plot")
 
     if not isinstance(path_points, np.ndarray) or path_points.shape[1] != 3:
         raise ValueError("path_points must be a Nx3 numpy array.")
