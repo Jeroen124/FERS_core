@@ -360,6 +360,7 @@ class FERS:
         validate: bool = True,
         api_key: Optional[str] = None,
         license_timeout: Optional[float] = None,
+        solve_token: Optional[str] = None,
     ):
         """
         Run the Rust-based FERS calculation without saving the input to a file.
@@ -386,6 +387,10 @@ class FERS:
                 together with ``api_key``, since without one no network call is
                 made. It bounds the handshake, **not** the solve — for a hard
                 ceiling on the whole call, run it in a killable subprocess.
+            solve_token: A short-lived Premium token from FERS Cloud, checked
+                offline (engine >= 0.2.72): Premium limits with no network call,
+                for a sandbox that cannot reach ferscloud.com. It takes
+                precedence over ``api_key``; a refused token raises RuntimeError.
 
         Raises:
             ValueError: If input schema validation or results validation fails.
@@ -408,6 +413,8 @@ class FERS:
             engine_kwargs["api_key"] = api_key
         if license_timeout is not None:
             engine_kwargs["license_timeout"] = license_timeout
+        if solve_token is not None:
+            engine_kwargs["solve_token"] = solve_token
 
         # Run the calculation
         try:
@@ -432,6 +439,7 @@ class FERS:
         validate: bool = True,
         api_key: Optional[str] = None,
         license_timeout: Optional[float] = None,
+        solve_token: Optional[str] = None,
     ) -> None:
         """
         Solve and stream the result JSON straight to ``output_path`` (engine >= 0.2.53).
@@ -450,6 +458,7 @@ class FERS:
             validate: As :meth:`run_analysis`.
             api_key: As :meth:`run_analysis`.
             license_timeout: As :meth:`run_analysis`.
+            solve_token: As :meth:`run_analysis`.
 
         Raises:
             ValueError: If input schema validation fails.
@@ -467,6 +476,8 @@ class FERS:
             engine_kwargs["api_key"] = api_key
         if license_timeout is not None:
             engine_kwargs["license_timeout"] = license_timeout
+        if solve_token is not None:
+            engine_kwargs["solve_token"] = solve_token
 
         try:
             logger.info("Running analysis, writing results to %s", output_path)

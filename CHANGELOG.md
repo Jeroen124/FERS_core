@@ -56,6 +56,18 @@ and with `--json` both commands add `verdict` and `reasons`.
 - Captured output on Windows is cp1252: a character it cannot encode is now
   escaped instead of crashing the command.
 
+### Engine 0.2.72, and offline Premium
+
+The engine pin moves to `fers_calculations==0.2.72`: the same results as
+0.2.71, from smaller wheels, now also for Linux on ARM (manylinux aarch64) and
+musl. Before it, pip on ARM Linux resolved FERS 0.1.2 without saying so.
+
+`run_analysis(solve_token=...)`, `run_analysis_to_file(solve_token=...)` and
+`fers solve|check --solve-token TOKEN` (or `FERS_SOLVE_TOKEN`) pass a
+short-lived Premium token from FERS Cloud, which the engine checks offline: a
+sandbox that cannot reach ferscloud.com solves at Premium limits. A token takes
+precedence over an API key; a refused one is a licence error (exit 3).
+
 ### The skill works in chat apps too
 
 The skill is now `SKILL.md` plus `reference/api.md`. `SKILL.md` picks the route:
@@ -70,6 +82,10 @@ runs every block as written.
 `fers skill --install DIR` copies the whole folder (it wrote only `SKILL.md`),
 `fers skill --zip FILE` writes the zip Claude.ai accepts as an uploaded skill,
 and each release on GitHub carries it as `fers-skill.zip`.
+
+This repository is also a Claude Code plugin marketplace:
+`/plugin install fers --marketplace Jeroen124/FERS_core` installs the skill and
+the local MCP server, `@ferscloud/fers-mcp` pinned to 2.1.0 (`plugins/fers/`).
 
 ### Fixes
 

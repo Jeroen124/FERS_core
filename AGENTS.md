@@ -35,6 +35,14 @@ ruff check . && ruff format --check .
   documented in `fers_core/cli.py` and tested in `tests/functionality/test_cli.py`.
 - Examples are `fers_core/examples/NNN_Name.py`, each number used once, so
   `fers examples run NNN` stays unambiguous.
+- `plugins/fers/` is the Claude plugin, listed by `.claude-plugin/marketplace.json`.
+  Its `skills/fers/` is a copy of `fers_core/skills/fers/` (an installer fetches
+  the plugin folder alone), its version follows `pyproject.toml`, and its MCP
+  server is pinned to an exact `@ferscloud/fers-mcp` version, as Anthropic's
+  directory requires. `tests/functionality/test_skill_reference.py` checks all
+  three; `claude plugin validate --strict` checks both manifests.
+- Every snippet in `fers_core/skills/fers/reference/api.md` must run as written:
+  the same test executes them.
 - Every release gets a CHANGELOG entry; a change a user will notice gets its own
   heading there.
 - This repository is public. Compare results with closed-form solutions only,

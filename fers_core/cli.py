@@ -21,9 +21,10 @@ Exit codes::
 
 A ``check`` that meets several of these exits with the first of 4, 6, 5.
 
-``FERS_API_KEY`` supplies the API key when ``--api-key`` is not given;
+``FERS_API_KEY`` supplies the API key when ``--api-key`` is not given, and
+``FERS_SOLVE_TOKEN`` the offline Premium token when ``--solve-token`` is not;
 ``FERS_LICENSE_TIMEOUT`` is read by the engine. Without a key the engine runs
-at free-tier limits and makes no network call.
+at free-tier limits and makes no network call; a token is checked offline.
 """
 
 from __future__ import annotations
@@ -111,6 +112,9 @@ def _api_key(args: argparse.Namespace) -> Optional[str]:
 
 def _engine_kwargs(args: argparse.Namespace) -> dict[str, Any]:
     kwargs: dict[str, Any] = {}
+    token = getattr(args, "solve_token", None) or os.environ.get("FERS_SOLVE_TOKEN")
+    if token:
+        kwargs["solve_token"] = token
     key = _api_key(args)
     if key:
         kwargs["api_key"] = key
@@ -793,6 +797,11 @@ def _add_licence(parser: argparse.ArgumentParser) -> None:
         type=float,
         metavar="SECONDS",
         help="bound on the licence handshake, not on the solve (engine default 30, or $FERS_LICENSE_TIMEOUT)",
+    )
+    parser.add_argument(
+        "--solve-token",
+        help="short-lived Premium token from FERS Cloud, checked offline with no network call; "
+        "default $FERS_SOLVE_TOKEN; takes precedence over a key",
     )
 
 

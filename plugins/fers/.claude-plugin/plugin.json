@@ -1,0 +1,22 @@
+{
+  "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
+  "name": "fers",
+  "version": "0.2.0",
+  "description": "FERS: structural finite-element analysis (3D frames, trusses, plates, Eurocode 3 checks) for engineers and AI agents. A skill and a local MCP server that solve on your machine.",
+  "author": {
+    "name": "Jeroen Hermsen",
+    "url": "https://ferscloud.com"
+  },
+  "homepage": "https://ferscloud.com/mcp",
+  "repository": "https://github.com/Jeroen124/FERS_core",
+  "license": "BSD-3-Clause",
+  "keywords": [
+    "structural-engineering",
+    "finite-element-analysis",
+    "fem",
+    "eurocode",
+    "steel",
+    "beam",
+    "frame"
+  ]
+}

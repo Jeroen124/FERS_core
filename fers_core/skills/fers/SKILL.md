@@ -48,7 +48,7 @@ a FERS Cloud Pro plan; if the user works for a business or a client, tell them s
 |---|---|
 | 0 | done; `check`: every check passes |
 | 2 | bad input; the message names the field |
-| 3 | licence: a key was refused, or the licence check timed out |
+| 3 | licence: a key or solve token was refused, or the licence check timed out |
 | 4 | solved, but **do not use the numbers**: solver errors (a mechanism is `singular_model`), not converged, or recorded failures. Fix the model; never report them. |
 | 5 | `check`: nothing decided (an Indeterminate check, unsolved combinations, no checks). Not a pass. |
 | 6 | `check`: a check fails (utilization above 1) |

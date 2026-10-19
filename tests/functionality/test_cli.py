@@ -229,6 +229,18 @@ def test_solve_refuses_to_bless_a_mechanism(tmp_path, capsys):
     assert summary["verdict"] == "untrustworthy" and "singular_model" in summary["error_codes"]
 
 
+def test_a_refused_solve_token_is_a_licence_error(beam_file, tmp_path, capsys, monkeypatch):
+    # A valid token needs FERS Cloud's private key; the engine's own tests sign
+    # with a test key. Here: a refusal reaches the caller as a licence failure.
+    monkeypatch.delenv("FERS_API_KEY", raising=False)
+    out = str(tmp_path / "r.json")
+    code, _, err = _run(capsys, ["solve", str(beam_file), "--out", out, "--solve-token", "not.a.token"])
+    assert code == cli.EXIT_LICENCE and "solve token" in err
+    monkeypatch.setenv("FERS_SOLVE_TOKEN", "not.a.token")
+    code, _, err = _run(capsys, ["check", str(beam_file)])
+    assert code == cli.EXIT_LICENCE and "solve token" in err
+
+
 def test_validate_names_keys_the_engine_would_ignore(beam_file, tmp_path, capsys):
     document = json.loads(beam_file.read_text(encoding="utf-8"))
     document["analysis"]["options"]["ordr"] = "LINEAR"

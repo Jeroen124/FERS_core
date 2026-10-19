@@ -40,7 +40,8 @@ flange, lateral-torsional buckling takes the utilization to 2.85.
   whether the numbers can be used; see [From the terminal and from coding
   agents](#from-the-terminal-and-from-coding-agents). `fers skill --install .`
   gives a coding agent the FERS skill, and MCP clients can use the
-  [FERS MCP server](https://ferscloud.com/mcp).
+  [FERS MCP server](https://ferscloud.com/mcp). In Claude Code, both come as one
+  plugin: `/plugin install fers --marketplace Jeroen124/FERS_core`.
 - **Extras:** plots (`pip install "FERS[plot]"`), section properties meshed from
   your own dimensions (`"FERS[sections]"`) and DXF import (`"FERS[dxf]"`);
   `"FERS[all]"` installs everything 0.1.x did. Catalogue sections (`IPE200`,
@@ -482,7 +483,10 @@ A `check` that meets several of these exits with the first of 4, 6, 5. With
 
 `FERS_API_KEY` supplies the key for Premium limits when `--api-key` is not
 given; without a key the engine runs at Free-tier limits and makes no network
-call, as above.
+call, as above. `--solve-token` (or `FERS_SOLVE_TOKEN`) takes a short-lived
+Premium token from FERS Cloud instead, which the engine checks offline: Premium
+limits on a machine that cannot reach ferscloud.com. In Python it is
+`run_analysis(solve_token=...)`.
 
 For an agent, the skill is the working loop on one page: which route to take
 (MCP tools, a shell or code sandbox, or a file for FERS Studio), validate,
