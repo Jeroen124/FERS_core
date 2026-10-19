@@ -1,3 +1,4 @@
+from .._optional import require
 from typing import Optional, Union, List, Tuple, TYPE_CHECKING
 import numpy as np
 
@@ -382,7 +383,7 @@ class Member:
         Returns:
             List of (mesh, color, line_width) tuples for rendering
         """
-        import pyvista as pv
+        pv = require("pyvista", "plot")
 
         meshes = []
 

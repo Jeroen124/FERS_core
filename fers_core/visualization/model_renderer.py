@@ -4,9 +4,11 @@ This module provides the ModelRenderer class for visualizing structural models
 using PyVista, including nodes, members, supports, and loads.
 """
 
+from .._optional import require
 from typing import TYPE_CHECKING, Optional, List, Callable
 import warnings
-import pyvista as pv
+
+pv = require("pyvista", "plot")
 
 if TYPE_CHECKING:
     from ..fers.fers import FERS

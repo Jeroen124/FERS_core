@@ -18,14 +18,14 @@ class UnitSettings:
         self.temperature_unit = temperature_unit
 
     def to_dict(self):
+        # weight_unit and temperature_unit stay SDK-side: the solver has no such
+        # settings, and `fers validate` reports a key it does not read.
         return {
             "system": self.system,
             "lengthUnit": self.length_unit,
             "forceUnit": self.force_unit,
             "densityUnit": self.density_unit,
-            "weightUnit": self.weight_unit,
             "pressureUnit": self.pressure_unit,
-            "temperatureUnit": self.temperature_unit,
         }
 
     @classmethod
