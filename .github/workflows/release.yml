@@ -85,3 +85,20 @@ jobs:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI }}
         run: twine upload dist/*
+
+      # One release per SDK version, carrying the skill as the zip Claude.ai takes
+      # as an upload. Tagged v*, beside the mcp-v* releases of the MCP server;
+      # links to the .mcpb filter on mcp-v, so neither shadows the other.
+      - name: GitHub release with the skill zip
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION=$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")
+          if gh release view "v$VERSION" > /dev/null 2>&1; then
+            echo "v$VERSION is already released."
+            exit 0
+          fi
+          pip install dist/*.whl
+          fers skill --zip fers-skill.zip
+          gh release create "v$VERSION" fers-skill.zip --title "FERS $VERSION" \
+            --notes "pip install FERS==$VERSION. For Claude.ai, upload fers-skill.zip as a skill (Settings, Capabilities). Changes: https://github.com/Jeroen124/FERS_core/blob/main/CHANGELOG.md"

@@ -455,7 +455,8 @@ fers schema                              # the schema's definitions; `fers schem
 fers sections get IPE200                 # catalogue properties in SI; `sections list` names the series
 fers materials list
 fers examples list                       # the numbered examples; `examples show 001`, `examples run 001`
-fers skill --install .                   # the skill file for coding agents, into .claude/skills
+fers skill --install .                   # the skill for coding agents, into .claude/skills
+fers skill --zip fers-skill.zip          # the same skill as a zip to upload to Claude.ai
 fers doctor                              # versions, and whether the key is accepted
 ```
 
@@ -483,11 +484,13 @@ A `check` that meets several of these exits with the first of 4, 6, 5. With
 given; without a key the engine runs at Free-tier limits and makes no network
 call, as above.
 
-For an agent, the skill file is the working loop in one page: author with the
-objects, validate, solve to a file, read a selection (`ResultRequest`), check.
-It ships in the package (`fers_core/skills/fers/SKILL.md`); `fers skill
---install .` writes it to `.claude/skills/fers/SKILL.md`, where Claude Code
-looks, and `fers skill --path` names it for any other agent. MCP clients can
+For an agent, the skill is the working loop on one page: which route to take
+(MCP tools, a shell or code sandbox, or a file for FERS Studio), validate,
+solve, check, and the conventions that change answers, with runnable models in
+`reference/api.md`. It ships in the package (`fers_core/skills/fers/`); `fers
+skill --install .` copies it to `.claude/skills/fers/`, where Claude Code looks,
+`fers skill --zip fers-skill.zip` packs it for upload to Claude.ai, and `fers
+skill --path` names `SKILL.md` for any other agent. MCP clients can
 run the same engine as a local MCP server instead (`npx -y @ferscloud/fers-mcp`,
 which solves on the user's machine); clients that cannot start a program use the
 hosted server at https://ferscloud.com/api/mcp, which returns a browser-solve

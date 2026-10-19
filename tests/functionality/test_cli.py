@@ -286,8 +286,20 @@ def test_skill_prints_and_installs_the_skill_file(tmp_path, capsys):
     assert code == cli.EXIT_OK and out.strip().endswith("SKILL.md")
     code, out, _ = _run(capsys, ["skill", "--install", str(tmp_path)])
     assert code == cli.EXIT_OK
-    installed = tmp_path / ".claude" / "skills" / "fers" / "SKILL.md"
-    assert installed.read_text(encoding="utf-8").startswith("---\nname: fers")
+    installed = tmp_path / ".claude" / "skills" / "fers"
+    assert (installed / "SKILL.md").read_text(encoding="utf-8").startswith("---\nname: fers")
+    assert (installed / "reference" / "api.md").is_file(), "SKILL.md points at reference/api.md"
+
+
+def test_skill_zips_the_folder_for_upload(tmp_path, capsys):
+    import zipfile
+
+    archive = tmp_path / "fers-skill.zip"
+    code, _, _ = _run(capsys, ["skill", "--zip", str(archive)])
+    assert code == cli.EXIT_OK
+    names = zipfile.ZipFile(archive).namelist()
+    assert "fers/SKILL.md" in names and "fers/reference/api.md" in names
+    assert all(name.startswith("fers/") for name in names)
 
 
 def test_doctor_offline_reports_versions(capsys, monkeypatch):

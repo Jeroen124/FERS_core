@@ -78,7 +78,7 @@ Changelog = "https://github.com/Jeroen124/FERS_core/blob/main/CHANGELOG.md"
 include = ["fers_core*"]
 
 [tool.setuptools.package-data]
-fers_core = ["examples/*", "skills/fers/*", "members/mesh_table.json.gz", "py.typed"]
+fers_core = ["examples/*", "skills/fers/*", "skills/fers/reference/*", "members/mesh_table.json.gz", "py.typed"]
 
 [tool.ruff]
 exclude = [

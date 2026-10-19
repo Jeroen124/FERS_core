@@ -686,23 +686,46 @@ def _skill_path() -> Path:
     return Path(fers_core.__file__).parent / "skills" / "fers" / "SKILL.md"
 
 
-def cmd_skill(args: argparse.Namespace) -> int:
-    """Print the skill file for coding agents, or install it into a project.
+def _skill_files() -> list[tuple[Path, str]]:
+    """Every file of the skill, with its path inside the skill folder."""
+    folder = _skill_path().parent
+    return [
+        (path, path.relative_to(folder).as_posix())
+        for path in sorted(folder.rglob("*"))
+        if path.is_file() and "__pycache__" not in path.parts
+    ]
 
-    The skill is one page in the format coding agents read before a task: the
-    install step, the author-validate-solve-read loop, how to read results, and
-    when an MCP server fits better. ``--install DIR`` writes it to
-    ``DIR/.claude/skills/fers/SKILL.md``, which is where Claude Code looks;
-    other agents can be pointed at ``--path``.
+
+def cmd_skill(args: argparse.Namespace) -> int:
+    """Print the skill for coding and chat agents, install it, or zip it for upload.
+
+    The skill is SKILL.md, the page agents read before a task (which route to
+    take, the loop, the exit codes, the conventions that change answers), plus
+    ``reference/`` read on demand. ``--install DIR`` copies the folder to
+    ``DIR/.claude/skills/fers``, where Claude Code looks; ``--zip FILE`` writes it
+    as the zip that Claude.ai accepts as an uploaded skill; ``--path`` names
+    SKILL.md for any other agent.
     """
+    import zipfile
+
     source = _skill_path()
     if args.path:
         print(source)
         return EXIT_OK
     if args.install:
-        target = Path(args.install) / ".claude" / "skills" / "fers" / "SKILL.md"
+        target = Path(args.install) / ".claude" / "skills" / "fers"
+        for path, name in _skill_files():
+            (target / name).parent.mkdir(parents=True, exist_ok=True)
+            (target / name).write_bytes(path.read_bytes())
+        _emit(args.json, {"ok": True, "exit_code": EXIT_OK, "path": str(target)}, f"wrote {target}")
+        return EXIT_OK
+    if args.zip:
+        target = Path(args.zip)
         target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(source.read_text(encoding="utf-8"), encoding="utf-8")
+        # The archive holds the skill's folder, as an upload expects: fers/SKILL.md.
+        with zipfile.ZipFile(target, "w", zipfile.ZIP_DEFLATED) as archive:
+            for path, name in _skill_files():
+                archive.write(path, f"fers/{name}")
         _emit(args.json, {"ok": True, "exit_code": EXIT_OK, "path": str(target)}, f"wrote {target}")
         return EXIT_OK
     print(source.read_text(encoding="utf-8"), end="")
@@ -873,9 +896,12 @@ def build_parser() -> argparse.ArgumentParser:
     _add_json(report)
     report.set_defaults(func=cmd_report)
 
-    skill = commands.add_parser("skill", help="the skill file for coding agents: print it or install it")
-    skill.add_argument("--install", metavar="DIR", help="write it to DIR/.claude/skills/fers/SKILL.md")
-    skill.add_argument("--path", action="store_true", help="print the file's path instead of its text")
+    skill = commands.add_parser(
+        "skill", help="the skill for coding and chat agents: print, install or zip it"
+    )
+    skill.add_argument("--install", metavar="DIR", help="copy it to DIR/.claude/skills/fers")
+    skill.add_argument("--zip", metavar="FILE", help="write it as a zip to upload, e.g. to Claude.ai")
+    skill.add_argument("--path", action="store_true", help="print SKILL.md's path instead of its text")
     _add_json(skill)
     skill.set_defaults(func=cmd_skill)
 

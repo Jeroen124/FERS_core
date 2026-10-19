@@ -56,6 +56,21 @@ and with `--json` both commands add `verdict` and `reasons`.
 - Captured output on Windows is cp1252: a character it cannot encode is now
   escaped instead of crashing the command.
 
+### The skill works in chat apps too
+
+The skill is now `SKILL.md` plus `reference/api.md`. `SKILL.md` picks the route:
+FERS MCP tools; Python in a terminal or a chat app's code sandbox
+(`pip install FERS`); or, with neither, a model JSON for FERS Studio. It carries
+the exit codes, the licence and the conventions that change answers: axes,
+degrees, supports, load directions, limit states, the analysis order and
+buckling lengths in sway frames. `reference/api.md` holds a beam check, a strut
+check and a hand-built portal frame; `tests/functionality/test_skill_reference.py`
+runs every block as written.
+
+`fers skill --install DIR` copies the whole folder (it wrote only `SKILL.md`),
+`fers skill --zip FILE` writes the zip Claude.ai accepts as an uploaded skill,
+and each release on GitHub carries it as `fers-skill.zip`.
+
 ### Fixes
 
 - The SDK stopped writing four keys the engine never read: `analysis.options.solver`,
