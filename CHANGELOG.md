@@ -56,11 +56,12 @@ and with `--json` both commands add `verdict` and `reasons`.
 - Captured output on Windows is cp1252: a character it cannot encode is now
   escaped instead of crashing the command.
 
-### Engine 0.2.72, and offline Premium
+### Engine 0.2.73, and offline Premium
 
-The engine pin moves to `fers_calculations==0.2.72`: the same results as
+The engine pin moves to `fers_calculations==0.2.73`: the same results as
 0.2.71, from smaller wheels, now also for Linux on ARM (manylinux aarch64) and
-musl. Before it, pip on ARM Linux resolved FERS 0.1.2 without saying so.
+musl. Before it, pip on ARM Linux resolved FERS 0.1.2 without saying so. 0.2.73
+also ties the solve tokens FERS Cloud's share links hand out to their own model.
 
 `run_analysis(solve_token=...)`, `run_analysis_to_file(solve_token=...)` and
 `fers solve|check --solve-token TOKEN` (or `FERS_SOLVE_TOKEN`) pass a

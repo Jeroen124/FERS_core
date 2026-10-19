@@ -53,16 +53,33 @@ SAMPLE = [
 ]
 
 
-def _assert_same(shipped, fresh, where):
+def _noise_floors(props: dict) -> dict:
+    """Absolute floors for quantities that are zero for a symmetric section.
+
+    The solver returns those as noise (an IPE200's y_s is 3.2e-8 m, a tube's i_w
+    is near nothing), and the noise differs between platforms, so a relative
+    tolerance cannot compare them. Each floor is a billionth of the section's
+    own scale.
+    """
+    inertia = abs(props["i_y"]) + abs(props["i_z"])
+    return {
+        **dict.fromkeys(("y_s", "z_s", "centroid_y", "centroid_z"), 1e-9),
+        "i_w": 1e-9 * inertia * abs(props["area"]),
+        "i_yz": 1e-9 * inertia,
+    }
+
+
+def _assert_same(shipped, fresh, where, floors):
     if isinstance(fresh, dict):
         assert isinstance(shipped, dict) and shipped.keys() == fresh.keys(), where
         for k in fresh:
-            _assert_same(shipped[k], fresh[k], f"{where}.{k}")
+            _assert_same(shipped[k], fresh[k], f"{where}.{k}", floors)
     elif fresh is None:
         assert shipped is None, where
     else:
-        # Last-digit differences between platforms' sparse solvers are fine.
-        assert math.isclose(shipped, fresh, rel_tol=1e-9, abs_tol=1e-18), (where, shipped, fresh)
+        # A stale table drifts by far more than platforms' sparse solvers differ.
+        floor = floors.get(where.rsplit(".", 1)[-1], 0.0)
+        assert math.isclose(shipped, fresh, rel_tol=1e-7, abs_tol=floor), (where, shipped, fresh)
 
 
 @pytest.mark.skipif(importlib.util.find_spec("sectionproperties") is None, reason="needs FERS[sections]")
@@ -76,4 +93,4 @@ def test_the_table_matches_a_fresh_mesh(name, monkeypatch):
     for key, props in fresh.items():
         shipped = _mesh_table.lookup(key)
         assert shipped is not None, f"{name}: {key} is not in the table"
-        _assert_same(shipped, props, name)
+        _assert_same(shipped, props, name, _noise_floors(props))
