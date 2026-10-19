@@ -274,18 +274,21 @@ model.create_load_combination(
     load_cases_factors={lc_G: 1.35, lc_S: 1.5},
     situation="ULS",
     check="ALL",
+    limit_state="ULS",
 )
 model.create_load_combination(
     name="ULS: 1.0G + 1.5Wu",
     load_cases_factors={lc_G: 1.0, lc_Wu: 1.5},
     situation="ULS",
     check="ALL",
+    limit_state="ULS",
 )
 model.create_load_combination(
     name="SLS: G + S",
     load_cases_factors={lc_G: 1.0, lc_S: 1.0},
     situation="SLS",
     check="ALL",
+    limit_state="SLS",
 )
 
 # =============================================================================
@@ -323,23 +326,25 @@ for k, rn in uls_lift.reaction_nodes.items():
 # =============================================================================
 # 8.  Save JSON
 # =============================================================================
-_here = os.path.dirname(os.path.abspath(__file__))
-_cloud_public = os.path.normpath(os.path.join(_here, "..", "..", "..", "FERS_cloud", "public"))
-json_path = os.path.join(_cloud_public, "202_Solar_Rail.json")
-os.makedirs(os.path.dirname(json_path), exist_ok=True)
+# FERS_cloud ships this model as a template: point FERS_CLOUD_PUBLIC at its
+# public/ folder to regenerate it. Otherwise the file lands where this runs.
+json_path = os.path.join(os.environ.get("FERS_CLOUD_PUBLIC", "."), "202_Solar_Rail.json")
 model.save_to_json(json_path, indent=4)
 print(f"\nJSON saved -> {json_path}")
 
 # =============================================================================
 # 9.  Save to FERS Cloud
 # =============================================================================
-API_KEY = "your-api-key-here"  # <- replace with your real API key
-
-try:
-    model.cloud_connect(api_key=API_KEY)
-    print("\nConnected to FERS Cloud")
-    saved = model.cloud_save(name="202_solar_rail")
-    print(f"Saved to cloud - ID: {saved.get('id')}")
-except Exception as e:
-    print(f"\nCloud save skipped: {e}")
-    print("Provide a valid API key to upload the model.")
+# Only with a key: FERS_API_KEY from https://ferscloud.com/settings/api-keys.
+API_KEY = os.environ.get("FERS_API_KEY")
+if API_KEY:
+    try:
+        model.cloud_connect(api_key=API_KEY)
+        print("\nConnected to FERS Cloud")
+        saved = model.cloud_save(name="202_solar_rail")
+        print(f"Saved to cloud - ID: {saved.get('id')}")
+    except Exception as e:
+        print(f"\nCloud save skipped: {e}")
+        print("Provide a valid API key to upload the model.")
+else:
+    print("\nSet FERS_API_KEY to also save the model to your FERS Cloud account.")

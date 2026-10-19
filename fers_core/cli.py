@@ -2,27 +2,34 @@
 
 A thin adapter over the SDK and the engine wheel for shells, scripts, CI jobs
 and coding agents. Every large output (solved results, schemas, reports) goes to
-a file; stdout carries one line per command, or a JSON object with ``--json``.
+a file; stdout carries one line per command, or a JSON object with ``--json``,
+plus a "DO NOT USE" line when a solve's results must not be used.
 
 Exit codes::
 
-    0  done
+    0  done; for ``check``, every check passes
     1  the engine refused or failed the solve
     2  bad input: a missing file, invalid JSON, a model that fails the schema
+       (with ``validate --strict``, also a key the schema does not know)
     3  licence: no key where one is needed, a rejected key, a licence timeout
-    4  solved, but with recorded failures (``solve_failures`` or
-       ``load_case_failures`` in the results)
+    4  solved, but do not use the numbers: a result set has errors (a
+       mechanism is ``singular_model``), did not converge, or the results
+       record ``solve_failures`` or ``load_case_failures``
+    5  ``check``: nothing decided: a check is Indeterminate, left combinations
+       unsolved, or the model has no checks
+    6  ``check``: a check fails (utilization above 1)
 
-``FERS_API_KEY`` supplies the API key when ``--api-key`` is not given;
+A ``check`` that meets several of these exits with the first of 4, 6, 5.
+
+``FERS_API_KEY`` supplies the API key when ``--api-key`` is not given, and
+``FERS_SOLVE_TOKEN`` the offline Premium token when ``--solve-token`` is not;
 ``FERS_LICENSE_TIMEOUT`` is read by the engine. Without a key the engine runs
-at free-tier limits and makes no network call.
+at free-tier limits and makes no network call; a token is checked offline.
 """
 
 from __future__ import annotations
 
 import argparse
-import contextlib
-import io
 import json
 import os
 import re
@@ -40,7 +47,9 @@ EXIT_OK = 0
 EXIT_ENGINE = 1
 EXIT_INPUT = 2
 EXIT_LICENCE = 3
-EXIT_PARTIAL = 4
+EXIT_UNTRUSTWORTHY = 4
+EXIT_UNDECIDED = 5
+EXIT_FAILS = 6
 
 # The engine raises RuntimeError for a solve failure and for a licence failure
 # alike; the message tells them apart.
@@ -54,7 +63,6 @@ _LICENCE_PATTERN = re.compile(
 # only the size is reported, which is what a ResultRequest is for.
 _SUMMARY_MAX_BYTES = 64 * 1024 * 1024
 
-_VISUAL_EXAMPLE = re.compile(r"^[19]\d{2}_")
 _EXAMPLE_FILE = re.compile(r"^\d{3}_.*\.py$")
 
 
@@ -104,6 +112,9 @@ def _api_key(args: argparse.Namespace) -> Optional[str]:
 
 def _engine_kwargs(args: argparse.Namespace) -> dict[str, Any]:
     kwargs: dict[str, Any] = {}
+    token = getattr(args, "solve_token", None) or os.environ.get("FERS_SOLVE_TOKEN")
+    if token:
+        kwargs["solve_token"] = token
     key = _api_key(args)
     if key:
         kwargs["api_key"] = key
@@ -127,6 +138,56 @@ def _field(obj: Any, name: str, default: Any = None) -> Any:
     return getattr(obj, name, default)
 
 
+def _assess(results: Any) -> dict[str, Any]:
+    """What a solve produced and whether to trust it, from a results dict or ResultsBundle."""
+    loadcases = _field(results, "loadcases") or {}
+    loadcombinations = _field(results, "loadcombinations") or {}
+    not_converged = 0
+    errors = 0
+    warnings = 0
+    error_codes: list[str] = []
+    first_error = None
+    for result_set in [*loadcases.values(), *loadcombinations.values()]:
+        diagnostics = _field(result_set, "solver_diagnostics") or {}
+        if _field(diagnostics, "converged") is False:
+            not_converged += 1
+        messages = _field(result_set, "errors_and_warnings") or {}
+        for message in _field(messages, "errors") or []:
+            errors += 1
+            code = message if isinstance(message, str) else _field(message, "code")
+            if code and code not in error_codes:
+                error_codes.append(code)
+            if first_error is None:
+                first_error = message if isinstance(message, str) else _field(message, "message")
+        warnings += len(_field(messages, "warnings") or [])
+    return {
+        "load_cases": len(loadcases),
+        "load_combinations": len(loadcombinations),
+        "solve_failures": len(_field(results, "solve_failures") or []),
+        "load_case_failures": len(_field(results, "load_case_failures") or []),
+        "not_converged": not_converged,
+        "errors": errors,
+        "warnings": warnings,
+        "error_codes": error_codes,
+        "first_error": first_error,
+        "unity_checks": len(_field(results, "unity_check_results") or []),
+    }
+
+
+def _untrustworthy(summary: dict[str, Any]) -> list[str]:
+    """Why the numbers of a solve must not be used; empty when they can be."""
+    reasons = []
+    if summary["errors"]:
+        codes = ", ".join(summary["error_codes"]) or "no code"
+        reasons.append(f"{summary['errors']} solver errors ({codes})")
+    if summary["not_converged"]:
+        reasons.append(f"{summary['not_converged']} result sets did not converge")
+    failures = summary["solve_failures"] + summary["load_case_failures"]
+    if failures:
+        reasons.append(f"{failures} recorded failures")
+    return reasons
+
+
 def _summarise_results_file(path: Path) -> dict[str, Any]:
     """Counts from a solved document: result sets, failures, convergence, messages."""
     size = path.stat().st_size
@@ -136,31 +197,7 @@ def _summarise_results_file(path: Path) -> dict[str, Any]:
         return summary
     with path.open("r", encoding="utf-8-sig") as fh:
         document = json.load(fh)
-    results = document.get("results") or {}
-    sets = list((results.get("loadcases") or {}).values())
-    sets += list((results.get("loadcombinations") or {}).values())
-    not_converged = 0
-    errors = 0
-    warnings = 0
-    for result_set in sets:
-        diagnostics = result_set.get("solver_diagnostics") or {}
-        if diagnostics.get("converged") is False:
-            not_converged += 1
-        messages = result_set.get("errors_and_warnings") or {}
-        errors += len(messages.get("errors") or [])
-        warnings += len(messages.get("warnings") or [])
-    summary.update(
-        {
-            "load_cases": len(results.get("loadcases") or {}),
-            "load_combinations": len(results.get("loadcombinations") or {}),
-            "solve_failures": len(results.get("solve_failures") or []),
-            "load_case_failures": len(results.get("load_case_failures") or []),
-            "not_converged": not_converged,
-            "errors": errors,
-            "warnings": warnings,
-            "unity_checks": len(results.get("unity_check_results") or []),
-        }
-    )
+    summary.update(_assess(document.get("results") or {}))
     return summary
 
 
@@ -184,7 +221,11 @@ def _summary_line(summary: dict[str, Any], seconds: float) -> str:
     if summary["unity_checks"]:
         parts.append(f"{summary['unity_checks']} unity checks")
     size = _fmt_bytes(summary["bytes"])
-    return f"solved: {', '.join(parts)} in {seconds:.1f} s -> {summary['path']} ({size})"
+    line = f"solved: {', '.join(parts)} in {seconds:.1f} s -> {summary['path']} ({size})"
+    if summary.get("verdict") == "untrustworthy":
+        detail = f": {summary['first_error']}" if summary.get("first_error") else ""
+        line += f"\nDO NOT USE these results{detail}"
+    return line
 
 
 def _sdk_version() -> str:
@@ -200,15 +241,12 @@ def _examples_dir() -> Path:
     return Path(fers_core.__file__).parent / "examples"
 
 
-def _list_examples(include_visual: bool) -> list[Path]:
-    files = sorted(p for p in _examples_dir().iterdir() if _EXAMPLE_FILE.match(p.name))
-    if include_visual:
-        return files
-    return [p for p in files if not _VISUAL_EXAMPLE.match(p.name)]
+def _list_examples() -> list[Path]:
+    return sorted(p for p in _examples_dir().iterdir() if _EXAMPLE_FILE.match(p.name))
 
 
 def _find_example(selector: str) -> Path:
-    candidates = [p for p in _list_examples(True) if p.name == selector or p.name.startswith(selector)]
+    candidates = [p for p in _list_examples() if p.name == selector or p.name.startswith(selector)]
     if len(candidates) == 1:
         return candidates[0]
     if not candidates:
@@ -247,49 +285,93 @@ def cmd_solve(args: argparse.Namespace) -> int:
     except (OSError, ValueError) as exc:
         return _fail(EXIT_ENGINE, f"solved, but the results file could not be read back: {exc}", args.json)
     summary["seconds"] = round(seconds, 3)
-    partial = bool(summary.get("solve_failures") or summary.get("load_case_failures"))
-    summary["ok"] = not partial
-    summary["exit_code"] = EXIT_PARTIAL if partial else EXIT_OK
+    # A file too large to read back is not judged here; its own messages are.
+    reasons = _untrustworthy(summary) if "load_cases" in summary else []
+    summary["verdict"] = "untrustworthy" if reasons else "ok"
+    summary["reasons"] = reasons
+    summary["ok"] = not reasons
+    summary["exit_code"] = EXIT_UNTRUSTWORTHY if reasons else EXIT_OK
     _emit(args.json, summary, _summary_line(summary, seconds))
     return summary["exit_code"]
+
+
+def _unknown_keys(raw: Any, known: Any, path: str = "$") -> list[str]:
+    """JSON paths of the keys in `raw` that validation dropped from `known`."""
+    found: list[str] = []
+    if isinstance(raw, dict) and isinstance(known, dict):
+        for key, value in raw.items():
+            where = f"{path}.{key}"
+            if key not in known:
+                found.append(where)
+            else:
+                found += _unknown_keys(value, known[key], where)
+    elif isinstance(raw, list) and isinstance(known, list):
+        for i, (item, kept) in enumerate(zip(raw, known)):
+            found += _unknown_keys(item, kept, f"{path}[{i}]")
+    return found
+
+
+def _error_path(loc: tuple) -> str:
+    return "$" + "".join(f"[{part}]" if isinstance(part, int) else f".{part}" for part in loc)
 
 
 def cmd_validate(args: argparse.Namespace) -> int:
     """Check a model file against the solver's input schema without solving.
 
-    This is the SDK's schema validation (``FERS.validate_schema``): field names,
-    enum values and nesting. References between objects are checked by the
-    engine at solve time.
+    The file itself is validated, as the engine will read it: field names, enum
+    values and nesting. A key the schema does not know is reported with its path:
+    the engine ignores it, so a misspelt optional field silently takes its default.
+    ``--strict`` makes those an error. References between objects are checked by
+    the engine at solve time.
     """
-    from fers_core import FERS
+    from pydantic import ValidationError
+
+    from fers_core.types.pydantic_models import FERS as InputSchema
 
     path = Path(args.model)
-    if not path.is_file():
-        return _fail(EXIT_INPUT, f"no such file: {path}", args.json)
     try:
-        model = FERS.from_json(str(path))
-        model.validate_schema()
-    except ValueError as exc:
+        raw = json.loads(_read_model_text(path))
+    except (OSError, ValueError) as exc:
         return _fail(EXIT_INPUT, str(exc), args.json)
-    except Exception as exc:
-        return _fail(EXIT_INPUT, f"could not read {path}: {exc}", args.json)
+    if not isinstance(raw, dict):
+        return _fail(EXIT_INPUT, f"{path} holds a JSON {type(raw).__name__}, not a model object", args.json)
+    document = {**raw, "results": None}
+    try:
+        parsed = InputSchema.model_validate(document)
+    except ValidationError as exc:
+        problems = [f"{_error_path(e['loc'])}: {e['msg']}" for e in exc.errors()]
+        if args.json:
+            print(json.dumps({"ok": False, "exit_code": EXIT_INPUT, "errors": problems}, indent=2))
+        else:
+            print(f"error: {path} does not match the input schema:", file=sys.stderr)
+            for problem in problems:
+                print(f"  {problem}", file=sys.stderr)
+        return EXIT_INPUT
+    known = parsed.model_dump(mode="json", by_alias=True, exclude_unset=True)
+    unknown = [p for p in _unknown_keys(document, known) if p != "$.results"]
+    model = raw.get("model") or {}
+    analysis = raw.get("analysis") or {}
     counts = {
-        "ok": True,
-        "exit_code": EXIT_OK,
-        "path": str(path),
-        "nodes": model.number_of_nodes(),
-        "members": len(model.get_all_members()),
-        "plates": len(model.get_all_plates()),
-        "load_cases": len(model.load_cases),
-        "load_combinations": len(model.load_combinations),
+        "nodes": len(model.get("nodes") or []),
+        "members": len(model.get("members") or []),
+        "plates": len(model.get("plate_elements") or []),
+        "load_cases": len(analysis.get("load_cases") or []),
+        "load_combinations": len(analysis.get("load_combinations") or []),
     }
-    _emit(
-        args.json,
-        counts,
+    code = EXIT_INPUT if unknown and args.strict else EXIT_OK
+    payload = {"ok": code == EXIT_OK, "exit_code": code, "path": str(path), **counts, "unknown_keys": unknown}
+    line = (
         f"valid: {counts['nodes']} nodes, {counts['members']} members, {counts['plates']} plates, "
-        f"{counts['load_cases']} load cases, {counts['load_combinations']} combinations",
+        f"{counts['load_cases']} load cases, {counts['load_combinations']} combinations"
     )
-    return EXIT_OK
+    if unknown:
+        shown = ", ".join(unknown[:10]) + (f" and {len(unknown) - 10} more" if len(unknown) > 10 else "")
+        verb = "refused" if args.strict else "ignored by the engine"
+        line += f"\n{len(unknown)} unknown keys, {verb}: {shown}"
+        if code != EXIT_OK:
+            line = line.replace("valid:", "invalid:", 1)
+    _emit(args.json, payload, line)
+    return code
 
 
 def _first_sentence(text: Optional[str]) -> str:
@@ -308,7 +390,8 @@ def cmd_schema(args: argparse.Namespace) -> int:
 
     schema = InputSchema.model_json_schema()
     definitions = schema.get("$defs") or {}
-    if args.list:
+    # The whole schema runs to hundreds of kB: printed only when asked for by name.
+    if args.list or not (args.root or args.all or args.out):
         rows = [("FERS", _first_sentence(schema.get("description")) or "the document root")]
         for name, definition in sorted(definitions.items()):
             rows.append((name, _first_sentence(definition.get("description"))))
@@ -318,6 +401,10 @@ def cmd_schema(args: argparse.Namespace) -> int:
             width = max(len(n) for n, _ in rows)
             for name, description in rows:
                 print(f"{name:<{width}}  {description}")
+            if not args.list:
+                print(
+                    "\n`fers schema <name>` prints one definition; `--all` or `--out FILE` the whole schema."
+                )
         return EXIT_OK
     if args.root and args.root != "FERS":
         if args.root not in definitions:
@@ -338,8 +425,18 @@ def cmd_schema(args: argparse.Namespace) -> int:
 def cmd_sections(args: argparse.Namespace) -> int:
     """List the section catalogues, or print one section's properties in SI units."""
     from fers_core import MaterialLibrary, list_sections, resolve_section
-    from fers_core.sections.steel_sections_en import section_catalogue
+    from fers_core.sections.steel_sections_en import section_catalogue, section_series
 
+    if args.sections_command == "list" and not (args.series or args.contains or args.all):
+        series = section_series()
+        if args.json:
+            print(json.dumps({"count": sum(series.values()), "series": series}, indent=2))
+        else:
+            print(f"{sum(series.values())} sections in {len(series)} series:")
+            for name, count in series.items():
+                print(f"  {name:<5} {count:>4}")
+            print("`--series NAME` lists one series, `--contains TEXT` searches, `--all` lists every name.")
+        return EXIT_OK
     if args.sections_command == "list":
         try:
             names = list_sections(args.series)
@@ -406,7 +503,7 @@ def cmd_examples(args: argparse.Namespace) -> int:
     because the examples write their model JSON next to where they run.
     """
     if args.examples_command == "list":
-        files = _list_examples(args.all)
+        files = _list_examples()
         if args.json:
             listing = {"directory": str(_examples_dir()), "examples": [p.name for p in files]}
             print(json.dumps(listing, indent=2))
@@ -447,11 +544,12 @@ def _unity_row(result: Any) -> dict[str, Any]:
 
 
 def cmd_check(args: argparse.Namespace) -> int:
-    """Solve a model file and print its unity-check results.
+    """Solve a model file and print its unity-check results and verdict.
 
     The model must carry unity-check definitions (``fers schema UnityCheckDefinition``
     or ``check_beam`` in the SDK). The solve runs in-process through the SDK, so
     this is for models whose results fit in memory; ``fers solve`` streams.
+    Exit 0 means every check passes; 4, 6 and 5 say why not (module docstring).
     """
     from fers_core import FERS
 
@@ -463,24 +561,30 @@ def cmd_check(args: argparse.Namespace) -> int:
     except Exception as exc:
         return _fail(EXIT_INPUT, f"could not read {path}: {exc}", args.json)
     try:
-        # run_analysis prints a progress line; stdout here is the command's output.
-        with contextlib.redirect_stdout(io.StringIO()):
-            model.run_analysis(**_engine_kwargs(args))
+        model.run_analysis(**_engine_kwargs(args))
     except ValueError as exc:
         return _fail(EXIT_INPUT, str(exc), args.json)
     except Exception as exc:
         return _fail(_classify_engine_error(exc), str(exc), args.json)
-    results = model.unity_check_results()
-    rows = [_unity_row(r) for r in results]
+    solve = _assess(model.resultsbundle)
+    rows = [_unity_row(r) for r in model.unity_check_results()]
     if args.out:
         model.save_to_json(args.out)
+    verdict, code, reasons = _check_verdict(solve, rows)
     if args.json:
-        payload = {"ok": True, "exit_code": EXIT_OK, "checks": rows, "output": args.out}
+        payload = {
+            "ok": code == EXIT_OK,
+            "exit_code": code,
+            "verdict": verdict,
+            "reasons": reasons,
+            "checks": rows,
+            "solve": solve,
+            "output": args.out,
+        }
         print(json.dumps(payload, indent=2, default=str))
-        return EXIT_OK
+        return code
     if not rows:
-        print("no unity checks in this model")
-        return EXIT_OK
+        print("no unity checks in this model: nothing was checked")
     for row in rows:
         utilization = row["utilization"]
         value = f"{utilization:.3f}" if isinstance(utilization, (int, float)) else "-"
@@ -492,7 +596,38 @@ def cmd_check(args: argparse.Namespace) -> int:
         print(line)
     if args.out:
         print(f"-> {args.out}")
-    return EXIT_OK
+    if verdict == "untrustworthy":
+        detail = f": {solve['first_error']}" if solve.get("first_error") else ""
+        print(f"DO NOT USE these results{detail}")
+    elif verdict != "pass":
+        print(f"{verdict}: {'; '.join(reasons)}")
+    return code
+
+
+def _check_verdict(solve: dict[str, Any], rows: list[dict[str, Any]]) -> tuple[str, int, list[str]]:
+    """pass, fail, undecided or untrustworthy, with its exit code and reasons."""
+    untrustworthy = _untrustworthy(solve)
+    if untrustworthy:
+        return "untrustworthy", EXIT_UNTRUSTWORTHY, untrustworthy
+    failing = []
+    for r in rows:
+        if isinstance(r["utilization"], (int, float)) and r["utilization"] > 1.0:
+            failing.append(f"{r['check']} utilization {r['utilization']:.3f}")
+        elif r["status"] == "Red":
+            failing.append(f"{r['check']} is Red")
+    if failing:
+        return "fail", EXIT_FAILS, failing
+    undecided = [f"{r['check']} is Indeterminate" for r in rows if r["status"] == "Indeterminate"]
+    undecided += [
+        f"{r['check']} left {r['unsolved_combinations']} combinations unsolved"
+        for r in rows
+        if r["unsolved_combinations"]
+    ]
+    if not rows:
+        undecided.append("the model has no unity checks")
+    if undecided:
+        return "undecided", EXIT_UNDECIDED, undecided
+    return "pass", EXIT_OK, []
 
 
 def cmd_report(args: argparse.Namespace) -> int:
@@ -555,23 +690,46 @@ def _skill_path() -> Path:
     return Path(fers_core.__file__).parent / "skills" / "fers" / "SKILL.md"
 
 
-def cmd_skill(args: argparse.Namespace) -> int:
-    """Print the skill file for coding agents, or install it into a project.
+def _skill_files() -> list[tuple[Path, str]]:
+    """Every file of the skill, with its path inside the skill folder."""
+    folder = _skill_path().parent
+    return [
+        (path, path.relative_to(folder).as_posix())
+        for path in sorted(folder.rglob("*"))
+        if path.is_file() and "__pycache__" not in path.parts
+    ]
 
-    The skill is one page in the format coding agents read before a task: the
-    install step, the author-validate-solve-read loop, how to read results, and
-    when an MCP server fits better. ``--install DIR`` writes it to
-    ``DIR/.claude/skills/fers/SKILL.md``, which is where Claude Code looks;
-    other agents can be pointed at ``--path``.
+
+def cmd_skill(args: argparse.Namespace) -> int:
+    """Print the skill for coding and chat agents, install it, or zip it for upload.
+
+    The skill is SKILL.md, the page agents read before a task (which route to
+    take, the loop, the exit codes, the conventions that change answers), plus
+    ``reference/`` read on demand. ``--install DIR`` copies the folder to
+    ``DIR/.claude/skills/fers``, where Claude Code looks; ``--zip FILE`` writes it
+    as the zip that Claude.ai accepts as an uploaded skill; ``--path`` names
+    SKILL.md for any other agent.
     """
+    import zipfile
+
     source = _skill_path()
     if args.path:
         print(source)
         return EXIT_OK
     if args.install:
-        target = Path(args.install) / ".claude" / "skills" / "fers" / "SKILL.md"
+        target = Path(args.install) / ".claude" / "skills" / "fers"
+        for path, name in _skill_files():
+            (target / name).parent.mkdir(parents=True, exist_ok=True)
+            (target / name).write_bytes(path.read_bytes())
+        _emit(args.json, {"ok": True, "exit_code": EXIT_OK, "path": str(target)}, f"wrote {target}")
+        return EXIT_OK
+    if args.zip:
+        target = Path(args.zip)
         target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(source.read_text(encoding="utf-8"), encoding="utf-8")
+        # The archive holds the skill's folder, as an upload expects: fers/SKILL.md.
+        with zipfile.ZipFile(target, "w", zipfile.ZIP_DEFLATED) as archive:
+            for path, name in _skill_files():
+                archive.write(path, f"fers/{name}")
         _emit(args.json, {"ok": True, "exit_code": EXIT_OK, "path": str(target)}, f"wrote {target}")
         return EXIT_OK
     print(source.read_text(encoding="utf-8"), end="")
@@ -640,13 +798,22 @@ def _add_licence(parser: argparse.ArgumentParser) -> None:
         metavar="SECONDS",
         help="bound on the licence handshake, not on the solve (engine default 30, or $FERS_LICENSE_TIMEOUT)",
     )
+    parser.add_argument(
+        "--solve-token",
+        help="short-lived Premium token from FERS Cloud, checked offline with no network call; "
+        "default $FERS_SOLVE_TOKEN; takes precedence over a key",
+    )
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="fers",
         description="FERS from the command line: solve, validate and inspect structural models.",
-        epilog="Exit codes: 0 done, 1 engine error, 2 bad input, 3 licence, 4 solved with recorded failures.",
+        epilog=(
+            "Exit codes: 0 done (check: every check passes), 1 engine error, 2 bad input, 3 licence, "
+            "4 solved but do not use the numbers (errors, not converged, recorded failures), "
+            "5 check undecided, 6 check fails."
+        ),
     )
     commands = parser.add_subparsers(dest="command", metavar="COMMAND")
     commands.required = True
@@ -660,26 +827,33 @@ def build_parser() -> argparse.ArgumentParser:
 
     validate = commands.add_parser("validate", help="check a model file against the input schema")
     validate.add_argument("model", help="model JSON file")
+    validate.add_argument(
+        "--strict", action="store_true", help="refuse keys the schema does not know (the engine ignores them)"
+    )
     _add_json(validate)
     validate.set_defaults(func=cmd_validate)
 
     schema = commands.add_parser("schema", help="print the input schema, one definition, or list them")
     schema.add_argument(
-        "root", nargs="?", help="a definition name, e.g. Analysis or Member (default: everything)"
+        "root", nargs="?", help="a definition name, e.g. Analysis or Member (default: list the definitions)"
     )
     schema.add_argument("--list", action="store_true", help="list the definitions with one line each")
-    schema.add_argument("--out", help="write the schema to a file instead of stdout")
+    schema.add_argument("--all", action="store_true", help="print the whole schema (hundreds of kB)")
+    schema.add_argument("--out", help="write the schema (the whole one without a name) to a file")
     _add_json(schema)
     schema.set_defaults(func=cmd_schema)
 
     sections = commands.add_parser("sections", help="section catalogues (EN, British Steel, AISC)")
     sections_commands = sections.add_subparsers(dest="sections_command", metavar="SUBCOMMAND")
     sections_commands.required = True
-    sections_list = sections_commands.add_parser("list", help="list section names")
+    sections_list = sections_commands.add_parser(
+        "list", help="the series and their sizes, or section names with a filter or --all"
+    )
     sections_list.add_argument(
         "--series", help="IPE, HEA, HEB, HEM, UPE, CHS, RHS, SHS, L, UB, UC, PFC, W, HP, HSS, HSSR, PIPE"
     )
     sections_list.add_argument("--contains", help="keep names containing this text")
+    sections_list.add_argument("--all", action="store_true", help="every section name")
     _add_json(sections_list)
     sections_get = sections_commands.add_parser("get", help="one section's properties in SI units")
     sections_get.add_argument(
@@ -706,7 +880,7 @@ def build_parser() -> argparse.ArgumentParser:
     examples_commands.required = True
     examples_list = examples_commands.add_parser("list", help="list the examples")
     examples_list.add_argument(
-        "--all", action="store_true", help="include the 1xx visual and 9xx experimental ones"
+        "--all", action="store_true", help="accepted for older scripts; every example is listed"
     )
     _add_json(examples_list)
     examples_show = examples_commands.add_parser("show", help="print an example's source")
@@ -731,9 +905,12 @@ def build_parser() -> argparse.ArgumentParser:
     _add_json(report)
     report.set_defaults(func=cmd_report)
 
-    skill = commands.add_parser("skill", help="the skill file for coding agents: print it or install it")
-    skill.add_argument("--install", metavar="DIR", help="write it to DIR/.claude/skills/fers/SKILL.md")
-    skill.add_argument("--path", action="store_true", help="print the file's path instead of its text")
+    skill = commands.add_parser(
+        "skill", help="the skill for coding and chat agents: print, install or zip it"
+    )
+    skill.add_argument("--install", metavar="DIR", help="copy it to DIR/.claude/skills/fers")
+    skill.add_argument("--zip", metavar="FILE", help="write it as a zip to upload, e.g. to Claude.ai")
+    skill.add_argument("--path", action="store_true", help="print SKILL.md's path instead of its text")
     _add_json(skill)
     skill.set_defaults(func=cmd_skill)
 
@@ -753,6 +930,11 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: Optional[list[str]] = None) -> int:
+    # Captured output on Windows is cp1252, and engine messages carry Greek
+    # letters (gamma_M1, chi_LT): escape what the stream cannot encode, never crash.
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(errors="backslashreplace")
     args = build_parser().parse_args(argv)
     if not hasattr(args, "json"):
         args.json = False

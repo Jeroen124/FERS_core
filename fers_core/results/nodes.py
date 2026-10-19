@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from .._optional import require
 from typing import Dict, Any, List, Mapping, Optional, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -89,7 +90,7 @@ class NodeDisplacement:
         Returns:
             List of (mesh, color) tuples for rendering.
         """
-        import pyvista as _pv
+        _pv = require("pyvista", "plot")
 
         displaced_pos = original_position + self.as_translation() * scale
         sphere = _pv.Sphere(
@@ -290,7 +291,8 @@ class ReactionNodeResult:
             List of (mesh, color) tuples for rendering.
         """
         import numpy as _np
-        import pyvista as _pv
+
+        _pv = require("pyvista", "plot")
 
         fv = _np.array(
             [self.nodal_forces.fx, self.nodal_forces.fy, self.nodal_forces.fz],

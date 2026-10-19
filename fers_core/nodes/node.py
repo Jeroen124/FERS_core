@@ -1,3 +1,4 @@
+from .._optional import require
 from typing import List, Optional, Tuple, TYPE_CHECKING
 from ..supports.nodalsupport import NodalSupport
 
@@ -27,14 +28,17 @@ class Node:
         self.nodal_support = nodal_support
 
     def to_dict(self):
-        return {
+        data = {
             "id": self.id,
-            "classification": self.classification,
             "X": self.X,
             "Y": self.Y,
             "Z": self.Z,
             "nodal_support": self.nodal_support.id if self.nodal_support else None,
         }
+        # The solver does not read it; written only when set, for the SDK's plots.
+        if self.classification:
+            data["classification"] = self.classification
+        return data
 
     @classmethod
     def from_dict(cls, data: dict, nodal_supports_by_id: dict[int, NodalSupport] | None = None) -> "Node":
@@ -70,7 +74,7 @@ class Node:
         :param tolerance: The tolerance within which coordinates are considered equal.
         :return: A list of Node instances at the given location.
         """
-        if not all(isinstance(node) for node in nodes):
+        if not all(isinstance(node, Node) for node in nodes):
             raise TypeError("All elements in 'nodes' must be instances of Node.")
 
         return [
@@ -143,7 +147,7 @@ class Node:
         Returns:
             List of (mesh, color) tuples for rendering
         """
-        import pyvista as pv
+        pv = require("pyvista", "plot")
 
         meshes = []
 

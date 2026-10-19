@@ -687,6 +687,19 @@ def resolve_section(name: str, material: Material) -> Section:
     raise ValueError(f"Unknown family '{family}' for section '{name}'.")
 
 
+def _series_tables() -> dict[str, dict]:
+    tables: dict[str, dict] = dict(_EN_TABLES)
+    for source in _TABULATED:
+        for family, (rows, _, _) in source.FAMILIES.items():
+            tables[family] = {**tables.get(family, {}), **rows}
+    return tables
+
+
+def section_series() -> dict[str, int]:
+    """Each series :func:`list_sections` accepts, with how many sections it holds."""
+    return {series: len(rows) for series, rows in _series_tables().items()}
+
+
 def list_sections(series: Optional[str] = None) -> list[str]:
     """
     Return all available section names, optionally filtered by series.
@@ -699,10 +712,7 @@ def list_sections(series: Optional[str] = None) -> list[str]:
         ``"PFC"``, ``"W"``, ``"HP"``, ``"HSS"`` (rectangular), ``"HSSR"``
         (round), ``"PIPE"``.  If *None*, all names are returned.
     """
-    tables: dict[str, dict] = dict(_EN_TABLES)
-    for source in _TABULATED:
-        for family, (rows, _, _) in source.FAMILIES.items():
-            tables[family] = {**tables.get(family, {}), **rows}
+    tables = _series_tables()
 
     if series is not None:
         key = series.strip().upper()
