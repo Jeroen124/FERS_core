@@ -3,7 +3,7 @@
 The Rust solver honours `nonlinear_method`, `pdelta_mode`, `pdelta_formulation`
 and `pdelta_suppress_axes` on the wire, but the Python AnalysisOptions could not
 express them. They are now optional constructor args, emitted only when set, and
-parsed back by from_dict(). `solver` is now emitted too.
+parsed back by from_dict(). `solver` is not emitted: the engine has no such option.
 """
 
 from fers_core.settings.anlysis_options import AnalysisOptions
@@ -22,8 +22,9 @@ def test_defaults_omit_pdelta_fields():
     assert "pdelta_mode" not in d
     assert "pdelta_formulation" not in d
     assert "pdelta_suppress_axes" not in d
-    # solver is now part of the emitted contract.
-    assert d["solver"] == "newton_raphson"
+    # The engine's AnalysisOptions has no `solver`; it ignored the key that 0.1.x wrote.
+    assert "solver" not in d
+    assert AnalysisOptions.from_dict({**d, "solver": "newton_raphson"}).to_dict() == d
 
 
 def test_emits_pdelta_fields_when_set():

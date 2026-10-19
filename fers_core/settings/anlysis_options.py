@@ -101,6 +101,7 @@ class AnalysisOptions:
         if id is None:
             AnalysisOptions._analysis_options_counter += 1
         self.solve_loadcases = solve_loadcases
+        # Accepted for older callers only: the engine has no solver option, so it is not written.
         self.solver = solver
         self.tolerance = tolerance
         self.max_iterations = max_iterations
@@ -139,7 +140,6 @@ class AnalysisOptions:
     def to_dict(self):
         data = {
             "solve_loadcases": self.solve_loadcases,
-            "solver": self.solver,
             "tolerance": self.tolerance,
             "max_iterations": self.max_iterations,
             "dimensionality": _wire(self.dimensionality),

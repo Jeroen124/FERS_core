@@ -12,10 +12,12 @@ pattern as :class:`ModelRenderer`: it looks up result objects (e.g.
 rendering to their own ``render_*`` methods.
 """
 
+from .._optional import require
 from typing import TYPE_CHECKING, Optional, List, Any
 import warnings
 import numpy as np
-import pyvista as pv
+
+pv = require("pyvista", "plot")
 
 if TYPE_CHECKING:
     from ..fers.fers import FERS
@@ -569,7 +571,7 @@ class ResultRenderer:
         Returns:
             matplotlib Figure with one subplot per member.
         """
-        import matplotlib.pyplot as _plt
+        _plt = require("matplotlib.pyplot", "plot")
 
         results = self._get_active_results()
         if results is None:

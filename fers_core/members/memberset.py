@@ -1,10 +1,12 @@
-import matplotlib.pyplot as plt
+from .._optional import lazy
 import numpy as np
 
 from ..members.member import Member
 from ..members.bucklingrestraint import BucklingRestraint
 from ..members.scissorhinge import ScissorHinge
 from typing import Optional
+
+plt = lazy("matplotlib.pyplot", "plot")
 
 
 class MemberSet:

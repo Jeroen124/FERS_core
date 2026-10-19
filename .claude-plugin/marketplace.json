@@ -1,0 +1,16 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "fers",
+  "description": "FERS structural analysis for Claude: a skill and a local MCP server for frames, trusses, plates and Eurocode 3 checks.",
+  "owner": {
+    "name": "Jeroen Hermsen",
+    "url": "https://ferscloud.com"
+  },
+  "plugins": [
+    {
+      "name": "fers",
+      "source": "./plugins/fers",
+      "description": "FERS: structural finite-element analysis (3D frames, trusses, plates, Eurocode 3 checks) for engineers and AI agents. A skill and a local MCP server that solve on your machine."
+    }
+  ]
+}

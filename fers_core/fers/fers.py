@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+from .._optional import lazy, require
 import copy
+import logging
 import re
 from typing import Any, Optional, Tuple, Union, TYPE_CHECKING
 import fers_calculations
@@ -12,7 +14,6 @@ if TYPE_CHECKING:
 import ujson
 
 import numpy as np
-import matplotlib.pyplot as plt
 
 from fers_core.fers.deformation_utils import (
     centerline_path_points,
@@ -64,6 +65,11 @@ from ..settings.eigen_analysis import (
 from pydantic import ValidationError as _PydValidationError
 
 from ..types.pydantic_models import FERS as FERSInputSchema
+
+plt = lazy("matplotlib.pyplot", "plot")
+
+# Progress goes to logging, not stdout: a script's or the CLI's stdout is its output.
+logger = logging.getLogger(__name__)
 
 # Engine >= 0.2.53 raises a distinct, catchable error when the licence handshake
 # stalls. Resolved once, tolerantly: an older wheel simply has nothing to catch,
@@ -263,8 +269,10 @@ class _AnalysisView:
     def create_load_case(self, name):
         return self._f.create_load_case(name)
 
-    def create_load_combination(self, name, load_cases_factors, situation, check):
-        return self._f.create_load_combination(name, load_cases_factors, situation, check)
+    def create_load_combination(
+        self, name, load_cases_factors, situation=None, check="ALL", limit_state=None
+    ):
+        return self._f.create_load_combination(name, load_cases_factors, situation, check, limit_state)
 
     def create_imperfection_case(self, load_combinations):
         return self._f.create_imperfection_case(load_combinations)
@@ -336,7 +344,7 @@ class FERS:
         """
         # Run the calculation
         try:
-            print(f"Running analysis using {file_path}...")
+            logger.info("Running analysis using %s", file_path)
             result_string = fers_calculations.calculate_from_file(file_path)
         except Exception as e:
             raise RuntimeError(f"Failed to run calculation: {e}")
@@ -352,6 +360,7 @@ class FERS:
         validate: bool = True,
         api_key: Optional[str] = None,
         license_timeout: Optional[float] = None,
+        solve_token: Optional[str] = None,
     ):
         """
         Run the Rust-based FERS calculation without saving the input to a file.
@@ -378,6 +387,10 @@ class FERS:
                 together with ``api_key``, since without one no network call is
                 made. It bounds the handshake, **not** the solve — for a hard
                 ceiling on the whole call, run it in a killable subprocess.
+            solve_token: A short-lived Premium token from FERS Cloud, checked
+                offline (engine >= 0.2.72): Premium limits with no network call,
+                for a sandbox that cannot reach ferscloud.com. It takes
+                precedence over ``api_key``; a refused token raises RuntimeError.
 
         Raises:
             ValueError: If input schema validation or results validation fails.
@@ -400,10 +413,12 @@ class FERS:
             engine_kwargs["api_key"] = api_key
         if license_timeout is not None:
             engine_kwargs["license_timeout"] = license_timeout
+        if solve_token is not None:
+            engine_kwargs["solve_token"] = solve_token
 
         # Run the calculation
         try:
-            print("Running analysis with generated input JSON...")
+            logger.info("Running analysis with generated input JSON")
             result_string = fers_calculations.calculate_from_json(input_json, **engine_kwargs)
         except _ENGINE_TIMEOUT_ERROR:
             # Re-raise unchanged: the whole point of the typed error is that a
@@ -424,6 +439,7 @@ class FERS:
         validate: bool = True,
         api_key: Optional[str] = None,
         license_timeout: Optional[float] = None,
+        solve_token: Optional[str] = None,
     ) -> None:
         """
         Solve and stream the result JSON straight to ``output_path`` (engine >= 0.2.53).
@@ -442,6 +458,7 @@ class FERS:
             validate: As :meth:`run_analysis`.
             api_key: As :meth:`run_analysis`.
             license_timeout: As :meth:`run_analysis`.
+            solve_token: As :meth:`run_analysis`.
 
         Raises:
             ValueError: If input schema validation fails.
@@ -459,9 +476,11 @@ class FERS:
             engine_kwargs["api_key"] = api_key
         if license_timeout is not None:
             engine_kwargs["license_timeout"] = license_timeout
+        if solve_token is not None:
+            engine_kwargs["solve_token"] = solve_token
 
         try:
-            print(f"Running analysis, writing results to {output_path}...")
+            logger.info("Running analysis, writing results to %s", output_path)
             fers_calculations.calculate_to_file(input_json, output_path, **engine_kwargs)
         except _ENGINE_TIMEOUT_ERROR:
             raise
@@ -783,9 +802,21 @@ class FERS:
         self.add_load_case(load_case)
         return load_case
 
-    def create_load_combination(self, name, load_cases_factors, situation, check):
+    def create_load_combination(
+        self, name, load_cases_factors, situation=None, check="ALL", limit_state=None
+    ):
+        """Add a combination of load cases, each scaled by its factor.
+
+        ``limit_state`` ("ULS", "SLS", ... or a ``LimitState``) is what a unity check
+        scoped to a limit state selects on: a combination without one is in no
+        limit state's scope. ``situation`` is a free label the engine does not read.
+        """
         load_combination = LoadCombination(
-            name=name, load_cases_factors=load_cases_factors, situation=situation, check=check
+            name=name,
+            load_cases_factors=load_cases_factors,
+            situation=situation,
+            check=check,
+            limit_state=LoadCombination._parse_limit_state(limit_state),
         )
         self.add_load_combination(load_combination)
         return load_combination
@@ -1630,7 +1661,7 @@ class FERS:
         - show_support_base_for_fixed: If True, draw a flat square (plate) for
         all-fixed translational supports.
         """
-        import pyvista as pv
+        pv = require("pyvista", "plot")
 
         # Build plot
         plotter = pv.Plotter()
@@ -2004,7 +2035,8 @@ class FERS:
             fall back to a straight line between end moments when possible.
         """
         import numpy as np
-        import matplotlib.pyplot as plt
+
+        plt = require("matplotlib.pyplot", "plot")
 
         if self.resultsbundle is None:
             raise ValueError("No analysis results available. Run an analysis first.")
@@ -2626,7 +2658,7 @@ class FERS:
         # ---------------------------
         # Plotter + global scales
         # ---------------------------
-        import pyvista as pv
+        pv = require("pyvista", "plot")
 
         plotter = pv.Plotter()
         plotter.add_axes()
