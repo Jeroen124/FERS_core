@@ -22,8 +22,10 @@ them by hand: a large mismatch with a textbook formula means a modelling error.
 
 In a chat sandbox, never set `FERS_API_KEY`: the licence check needs ferscloud.com, which
 a sandbox usually cannot reach, so it would wait 30 s and fail. Without a key nothing
-leaves the sandbox. A model over 100 members needs a Pro key: have the user solve it in
-FERS Studio or on their own machine.
+leaves the sandbox. A model over 100 members needs Pro there: with the FERS connector,
+`get_usage` with `sandbox_token: true` gives a Pro account a 15-minute token to set as
+`FERS_SOLVE_TOKEN` (checked offline); otherwise have the user solve it in FERS Studio or
+on their own machine.
 
 ## Licence
 

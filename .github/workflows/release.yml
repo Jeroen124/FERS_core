@@ -87,8 +87,9 @@ jobs:
         run: twine upload dist/*
 
       # One release per SDK version, carrying the skill as the zip Claude.ai takes
-      # as an upload. Tagged v*, beside the mcp-v* releases of the MCP server;
-      # links to the .mcpb filter on mcp-v, so neither shadows the other.
+      # as an upload. Tagged v* and marked latest; the mcp-v* releases of the MCP
+      # server are not (their links filter on mcp-v), so
+      # releases/latest/download/fers-skill.zip always resolves.
       - name: GitHub release with the skill zip
         env:
           GH_TOKEN: ${{ github.token }}
@@ -100,5 +101,5 @@ jobs:
           fi
           pip install dist/*.whl
           fers skill --zip fers-skill.zip
-          gh release create "v$VERSION" fers-skill.zip --title "FERS $VERSION" \
+          gh release create "v$VERSION" fers-skill.zip --latest --title "FERS $VERSION" \
             --notes "pip install FERS==$VERSION. For Claude.ai, upload fers-skill.zip as a skill (Settings, Capabilities). Changes: https://github.com/Jeroen124/FERS_core/blob/main/CHANGELOG.md"
