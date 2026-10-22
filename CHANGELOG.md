@@ -1,5 +1,50 @@
 # Changelog
 
+## 0.2.1
+
+### Self-weight reaches your load combinations, or the model is refused
+
+`enable_self_weight` makes the solver load every member with its own weight, in
+the load case `self_weight_load_case_id` names. Without that id the solver puts
+the self-weight in a "Self-weight" case of its own, which a combination includes
+only by listing its id, and a combination built from your load cases never does.
+So every combination, and every unity check scoped to a limit state, was solved
+without self-weight, and nothing said so. On a 20 m portal frame the governing
+EC3 utilization read 0.680 where 0.745 is right.
+
+- `create_load_case("G", self_weight=True)` creates G and points both options at
+  it, so each combination that factors G factors the self-weight with it. Only
+  one case can take the self-weight.
+- `run_analysis`, `run_analysis_to_file` and `validate_schema()` refuse a model
+  whose load combinations all leave the self-weight out, with a `ValueError`
+  that says how to fix it. One combination that includes the case is enough, and
+  a factor of 0 counts: leaving it out of the others is then a choice.
+  `run_analysis(validate=False)` still solves such a model as it is.
+- The engine pin moves to `fers_calculations==0.2.74`, which warns on each such
+  combination, `self_weight_not_in_combinations`, whichever route the model took.
+
+**Upgrade note.** A model with self-weight on and load combinations, but no
+`self_weight_load_case_id`, is now refused where it used to solve every
+combination without self-weight. Create the permanent-load case with
+`create_load_case("G", self_weight=True)`, or set
+`settings.analysis_options.self_weight_load_case_id` to a case your combinations
+include. A model without combinations is not affected: its "Self-weight" case is
+still a result of its own.
+
+`fers`:
+
+- `fers validate` and `fers check` refuse such a model, with exit 2 and the same
+  message.
+- `fers solve` hands the file to the engine as it is. When the engine warns
+  `self_weight_not_in_combinations`, it exits 4 and prints the warning after
+  "DO NOT USE these results".
+- The summary line names the warning codes beside their count, for example
+  `2 warnings (self_weight_not_in_combinations)`.
+
+The rule is in the README's "A member's self-weight", the `AnalysisOptions` and
+`create_load_case` docstrings, the skill's conventions (the plugin's copy too),
+and example 092, which checks the combinations' reactions against a hand sum.
+
 ## 0.2.0
 
 ### Install changes: `pip install FERS` is lean; plotting is an extra

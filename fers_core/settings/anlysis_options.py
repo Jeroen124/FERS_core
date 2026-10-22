@@ -60,6 +60,15 @@ class AnalysisOptions:
     and puts those narratives in the HTML report as well. Both are off by
     default, which keeps the result small.
 
+    Self-weight: ``enable_self_weight=True`` makes the solver load every member
+    with its own weight, in the load case ``self_weight_load_case_id`` names. A
+    combination carries the self-weight only if it includes that case, so name
+    the permanent-load case, G: ``FERS.create_load_case("G", self_weight=True)``
+    sets both options. Without an id the solver creates a "Self-weight" case of
+    its own (the highest load-case id + 1), which combinations built from your
+    load cases do not include. ``run_analysis`` refuses a model whose
+    combinations all leave the self-weight out.
+
     Loading a document whose options name a value this version does not know,
     such as a newer solver's ``nonlinear_method``, keeps that value as a string,
     so saving the model again does not swap it for a default. Validation

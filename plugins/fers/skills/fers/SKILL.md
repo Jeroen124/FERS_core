@@ -71,6 +71,10 @@ empty and `solver_diagnostics.converged` true before you use its numbers.
 - A load's `direction` multiplies its magnitude: give a unit vector.
 - A combination needs `limit_state` ("ULS", "SLS"): a check scoped to a limit state
   selects only combinations that carry it.
+- Self-weight reaches a combination only through its load case: create the permanent
+  loads' case with `model.create_load_case("G", self_weight=True)` and factor G.
+  `enable_self_weight` alone puts the self-weight in a case no combination includes, and
+  `run_analysis`, `fers check` and `fers validate` refuse that model.
 - A model built by hand solves second-order (`AnalysisOrder.NONLINEAR`) unless you set
   `AnalysisOrder.LINEAR`; the builders (`create_beam`, `check_beam`, `check_strut`) set
   LINEAR. Compare with a first-order hand calculation only on a LINEAR solve.
