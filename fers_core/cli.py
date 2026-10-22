@@ -14,7 +14,8 @@ Exit codes::
     3  licence: no key where one is needed, a rejected key, a licence timeout
     4  solved, but do not use the numbers: a result set has errors (a
        mechanism is ``singular_model``), did not converge, or the results
-       record ``solve_failures`` or ``load_case_failures``
+       record ``solve_failures`` or ``load_case_failures``, or self-weight
+       reaches none of the load combinations (``self_weight_not_in_combinations``)
     5  ``check``: nothing decided: a check is Indeterminate, left combinations
        unsolved, or the model has no checks
     6  ``check``: a check fails (utilization above 1)
@@ -62,6 +63,10 @@ _LICENCE_PATTERN = re.compile(
 # Results files up to this size are read back for the summary line; above it
 # only the size is reported, which is what a ResultRequest is for.
 _SUMMARY_MAX_BYTES = 64 * 1024 * 1024
+
+# Warnings whose results leave out part of what was asked for: a solve that
+# carries one exits 4, as one with errors does.
+_UNTRUSTWORTHY_WARNINGS = {"self_weight_not_in_combinations"}
 
 _EXAMPLE_FILE = re.compile(r"^\d{3}_.*\.py$")
 
@@ -146,7 +151,9 @@ def _assess(results: Any) -> dict[str, Any]:
     errors = 0
     warnings = 0
     error_codes: list[str] = []
+    warning_codes: list[str] = []
     first_error = None
+    untrustworthy_warning = None
     for result_set in [*loadcases.values(), *loadcombinations.values()]:
         diagnostics = _field(result_set, "solver_diagnostics") or {}
         if _field(diagnostics, "converged") is False:
@@ -159,7 +166,13 @@ def _assess(results: Any) -> dict[str, Any]:
                 error_codes.append(code)
             if first_error is None:
                 first_error = message if isinstance(message, str) else _field(message, "message")
-        warnings += len(_field(messages, "warnings") or [])
+        for message in _field(messages, "warnings") or []:
+            warnings += 1
+            code = message if isinstance(message, str) else _field(message, "code")
+            if code and code not in warning_codes:
+                warning_codes.append(code)
+            if code in _UNTRUSTWORTHY_WARNINGS and untrustworthy_warning is None:
+                untrustworthy_warning = _field(message, "message")
     return {
         "load_cases": len(loadcases),
         "load_combinations": len(loadcombinations),
@@ -169,7 +182,9 @@ def _assess(results: Any) -> dict[str, Any]:
         "errors": errors,
         "warnings": warnings,
         "error_codes": error_codes,
+        "warning_codes": warning_codes,
         "first_error": first_error,
+        "untrustworthy_warning": untrustworthy_warning,
         "unity_checks": len(_field(results, "unity_check_results") or []),
     }
 
@@ -185,7 +200,16 @@ def _untrustworthy(summary: dict[str, Any]) -> list[str]:
     failures = summary["solve_failures"] + summary["load_case_failures"]
     if failures:
         reasons.append(f"{failures} recorded failures")
+    flagged = [code for code in summary["warning_codes"] if code in _UNTRUSTWORTHY_WARNINGS]
+    if flagged:
+        reasons.append(f"warning {', '.join(flagged)}")
     return reasons
+
+
+def _do_not_use_detail(summary: dict[str, Any]) -> str:
+    """What follows "DO NOT USE these results": the first error, or else the warning."""
+    message = summary.get("first_error") or summary.get("untrustworthy_warning")
+    return f": {message}" if message else ""
 
 
 def _summarise_results_file(path: Path) -> dict[str, Any]:
@@ -217,14 +241,14 @@ def _summary_line(summary: dict[str, Any], seconds: float) -> str:
     if summary["errors"]:
         parts.append(f"{summary['errors']} errors")
     if summary["warnings"]:
-        parts.append(f"{summary['warnings']} warnings")
+        codes = f" ({', '.join(summary['warning_codes'])})" if summary["warning_codes"] else ""
+        parts.append(f"{summary['warnings']} warnings{codes}")
     if summary["unity_checks"]:
         parts.append(f"{summary['unity_checks']} unity checks")
     size = _fmt_bytes(summary["bytes"])
     line = f"solved: {', '.join(parts)} in {seconds:.1f} s -> {summary['path']} ({size})"
     if summary.get("verdict") == "untrustworthy":
-        detail = f": {summary['first_error']}" if summary.get("first_error") else ""
-        line += f"\nDO NOT USE these results{detail}"
+        line += f"\nDO NOT USE these results{_do_not_use_detail(summary)}"
     return line
 
 
@@ -322,10 +346,12 @@ def cmd_validate(args: argparse.Namespace) -> int:
     values and nesting. A key the schema does not know is reported with its path:
     the engine ignores it, so a misspelt optional field silently takes its default.
     ``--strict`` makes those an error. References between objects are checked by
-    the engine at solve time.
+    the engine at solve time. A model whose self-weight reaches none of its load
+    combinations is refused, as ``run_analysis`` refuses it.
     """
     from pydantic import ValidationError
 
+    from fers_core.settings.self_weight import self_weight_outside_combinations
     from fers_core.types.pydantic_models import FERS as InputSchema
 
     path = Path(args.model)
@@ -347,6 +373,9 @@ def cmd_validate(args: argparse.Namespace) -> int:
             for problem in problems:
                 print(f"  {problem}", file=sys.stderr)
         return EXIT_INPUT
+    self_weight_problem = self_weight_outside_combinations(raw)
+    if self_weight_problem:
+        return _fail(EXIT_INPUT, f"{path}: {self_weight_problem}", args.json)
     known = parsed.model_dump(mode="json", by_alias=True, exclude_unset=True)
     unknown = [p for p in _unknown_keys(document, known) if p != "$.results"]
     model = raw.get("model") or {}
@@ -597,8 +626,7 @@ def cmd_check(args: argparse.Namespace) -> int:
     if args.out:
         print(f"-> {args.out}")
     if verdict == "untrustworthy":
-        detail = f": {solve['first_error']}" if solve.get("first_error") else ""
-        print(f"DO NOT USE these results{detail}")
+        print(f"DO NOT USE these results{_do_not_use_detail(solve)}")
     elif verdict != "pass":
         print(f"{verdict}: {'; '.join(reasons)}")
     return code

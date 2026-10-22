@@ -56,6 +56,7 @@ from ..members.shapepath import ShapePath
 from ..nodes.node import Node
 from ..nodes.nodalmass import NodalMass
 from ..supports.nodalsupport import NodalSupport
+from ..settings.self_weight import self_weight_outside_combinations
 from ..settings.settings import Settings
 from ..settings.eigen_analysis import (
     BucklingAnalysisSettings,
@@ -266,8 +267,8 @@ class _AnalysisView:
     def add_imperfection_case(self, imperfection_case):
         return self._f.add_imperfection_case(imperfection_case)
 
-    def create_load_case(self, name):
-        return self._f.create_load_case(name)
+    def create_load_case(self, name, self_weight=False):
+        return self._f.create_load_case(name, self_weight=self_weight)
 
     def create_load_combination(
         self, name, load_cases_factors, situation=None, check="ALL", limit_state=None
@@ -567,11 +568,15 @@ class FERS:
 
     def _validate_input_dict(self, data: dict[str, Any]) -> None:
         """Validate an assembled input dict against the generated ``FERS`` schema
-        (results are checked separately via ``ResultsBundleSchema``)."""
+        (results are checked separately via ``ResultsBundleSchema``), and refuse a
+        model whose self-weight reaches none of its load combinations."""
         try:
             FERSInputSchema(**{**data, "results": None})
         except _PydValidationError as e:
             raise ValueError(f"FERS model does not conform to the solver input schema:\n{e}") from e
+        problem = self_weight_outside_combinations(data)
+        if problem:
+            raise ValueError(problem)
 
     def settings_to_dict(self):
         """Convert settings to a dictionary representation with additional information."""
@@ -797,9 +802,26 @@ class FERS:
         fers._advance_id_counters()
         return fers
 
-    def create_load_case(self, name):
+    def create_load_case(self, name, self_weight=False):
+        """Add a load case and return it.
+
+        ``self_weight=True`` puts the members' self-weight into this case: it
+        switches ``analysis_options.enable_self_weight`` on and points
+        ``self_weight_load_case_id`` at the new case, so each combination that
+        factors the case factors the self-weight with it. Use it for the
+        permanent-load case, G. Only one case can take the self-weight.
+        """
+        options = self.settings.analysis_options
+        if self_weight and options.self_weight_load_case_id is not None:
+            raise ValueError(
+                f"load case {options.self_weight_load_case_id} already takes the self-weight "
+                "(analysis_options.self_weight_load_case_id); only one case can"
+            )
         load_case = LoadCase(name=name)
         self.add_load_case(load_case)
+        if self_weight:
+            options.enable_self_weight = True
+            options.self_weight_load_case_id = load_case.id
         return load_case
 
     def create_load_combination(
