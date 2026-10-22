@@ -229,6 +229,38 @@ def test_solve_refuses_to_bless_a_mechanism(tmp_path, capsys):
     assert summary["verdict"] == "untrustworthy" and "singular_model" in summary["error_codes"]
 
 
+def _self_weight_in_no_combination(path):
+    """Self-weight on, no case for it, and a combination of the beam's load alone."""
+    model = create_beam(5.0, "IPE180", udl=5000.0)
+    model.settings.analysis_options.enable_self_weight = True
+    model.create_load_combination("ULS", {model.load_cases[0]: 1.5}, limit_state="ULS")
+    model.save_to_json(str(path))
+
+
+def test_solve_flags_self_weight_that_reaches_no_combination(tmp_path, capsys):
+    # The engine solves the file as it is and warns on the combination; the
+    # numbers leave the self-weight out, so `fers solve` will not bless them.
+    path = tmp_path / "bare.json"
+    _self_weight_in_no_combination(path)
+    code, out, _ = _run(capsys, ["solve", str(path), "--out", str(tmp_path / "r.json")])
+    assert code == cli.EXIT_UNTRUSTWORTHY
+    assert "warnings (self_weight_not_in_combinations)" in out
+    assert "DO NOT USE these results: Self-weight is enabled" in out
+    code, out, _ = _run(capsys, ["solve", str(path), "--out", str(tmp_path / "r.json"), "--json"])
+    summary = json.loads(out)
+    assert summary["verdict"] == "untrustworthy"
+    assert summary["warning_codes"] == ["self_weight_not_in_combinations"]
+
+
+def test_validate_and_check_refuse_self_weight_that_reaches_no_combination(tmp_path, capsys):
+    path = tmp_path / "bare.json"
+    _self_weight_in_no_combination(path)
+    for command in ("validate", "check"):
+        code, _, err = _run(capsys, [command, str(path)])
+        assert code == cli.EXIT_INPUT, command
+        assert "no load combination includes" in err, command
+
+
 def test_a_refused_solve_token_is_a_licence_error(beam_file, tmp_path, capsys, monkeypatch):
     # A valid token needs FERS Cloud's private key; the engine's own tests sign
     # with a test key. Here: a refusal reaches the caller as a licence failure.

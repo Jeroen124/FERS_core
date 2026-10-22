@@ -317,9 +317,36 @@ corotational solve does not turn them with the structure.
 
 ## A member's self-weight
 
-The solver works out each member's self-weight, density·area·g, and its mass for
-modal and seismic analysis from the section. A member that carries more, such as
-cladding or a services run, can override both:
+The solver works out each member's self-weight, density·area·g, and puts it in
+the load case that `self_weight_load_case_id` names. A load combination carries
+the self-weight only if it includes that case, so give it your permanent-load
+case: `create_load_case("G", self_weight=True)` creates G and sets both options.
+
+```python
+from fers_core.builders import create_beam
+
+model = create_beam(6.0, "IPE300", udl=5_000.0, load_case_name="Q")   # 5 kN/m imposed load
+imposed = model.load_cases[0]
+dead = model.create_load_case("G", self_weight=True)                   # G takes the self-weight
+model.create_load_combination("ULS", {dead: 1.35, imposed: 1.5}, limit_state="ULS")
+model.run_analysis()
+
+uls = model.resultsbundle.loadcombinations["ULS"]
+print(round(sum(r.nodal_forces.fy for r in uls.reaction_nodes.values()), 1))   # 48357.4
+```
+
+The ULS reactions are 1.5 × 30 kN plus 1.35 × the beam's 2.49 kN. With
+`enable_self_weight` set and no `self_weight_load_case_id`, the solver puts the
+self-weight in a load case of its own, "Self-weight", which combinations built
+from your load cases do not include. `run_analysis` refuses such a model when it
+has combinations, rather than solve every one of them without self-weight, and
+the solver warns with `self_weight_not_in_combinations` on each combination. A
+model without combinations solves, and its "Self-weight" case is a result of its
+own, as below.
+
+The solver also works out each member's mass for modal and seismic analysis from
+the section. A member that carries more, such as cladding or a services run, can
+override both:
 
 ```python
 from fers_core.builders import create_beam

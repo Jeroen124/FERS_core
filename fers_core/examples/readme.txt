@@ -55,6 +55,8 @@ of the FERS structural-analysis library.  Examples are grouped by number range:
 085  Triple Cantilever in 3-D, Rotated −45° about Y
 
 091  Load Combinations – Cantilever
+092  Load Combinations – Self-weight in G: create_load_case("G",
+                         self_weight=True), reactions against a hand sum
 093  Load Combinations – Hooked Cantilever
 
 
