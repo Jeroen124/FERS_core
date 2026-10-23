@@ -2,7 +2,7 @@
   "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
   "name": "fers",
   "displayName": "FERS: structural finite-element analysis",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "FERS: structural finite-element analysis (3D frames, trusses, plates, Eurocode 3 checks) for engineers and AI agents. A skill and a local MCP server that solve on your machine.",
   "author": {
     "name": "Jeroen Hermsen",

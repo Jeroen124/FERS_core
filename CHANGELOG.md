@@ -1,5 +1,66 @@
 # Changelog
 
+## 0.2.2
+
+### Engine 0.2.75: a singular model returns its error instead of crashing
+
+The engine pin moves to `fers_calculations==0.2.75`. A model that is a
+mechanism, or has a part connected to no support, made the engine's sparse
+solver panic. Python caught the panic and returned the right error, but printed
+two panic traces on stderr; the WASM build that FERS Cloud and the local MCP
+server run crashed instead. 0.2.75 reaches the same outcome without a panic:
+
+- A second-order (`AnalysisOrder.NONLINEAR`) solve of a mechanism records the
+  load case in `load_case_failures`, or the combination in `solve_failures`,
+  with "Singular stiffness operator in the second-order tangent …", as before.
+  Nothing reaches stderr.
+- A modal or buckling analysis with a stiffness reference on a model with a
+  floating part raises "Singular stiffness operator in the first-order
+  predictor …".
+- A first-order solve still returns results flagged `singular_model`.
+
+The engine's report also stops printing a unit after a utilization ("… =
+0.7004 N·m"): a trace step's `unit` is the unit of its `demand` and `capacity`.
+
+### `fers` says why, names what governs, and counts in the singular
+
+- After "DO NOT USE these results", `fers solve` and `fers check` print the
+  reason when a load case or combination failed outright: the first
+  `load_case_failures` or `solve_failures` entry's `error`. They printed
+  nothing there, because such a failure has no result set to carry an error.
+- `fers check` names the governing member and combination,
+  `governing member 4 (Column, HEA300) in "ULS 1.35G+1.5S+EHF" (combination 2)`,
+  where it printed `governing 4 in combination 2`. With `--json` each check
+  gains `governing_entity_type`, `governing_entity_label` and
+  `governing_combination_name` beside the existing keys.
+- A count of one is singular: "1 load case", "1 unity check", "1 recorded
+  failure".
+
+**Upgrade note.** A script that parses the text output should read `--json`.
+Its existing keys are unchanged, except that `governing_entity` holds the id
+for a member set or a plate, where it held the raw entity, and member id 0 is
+read as 0.
+
+### Which frame a member result is in
+
+`start_node_forces`, `end_node_forces`, `maximums` and `minimums` are in the
+global frame; the `local_*` forces, `section_forces` and
+`internal_force_series` are member-local, with `mz` the strong-axis moment.
+The README's "Reading results", the `MemberResult` docstring and the skill now
+say so. Read through the global `mz`, a frame outside the XY plane shows no
+bending moment.
+
+### The Claude plugin runs fers-mcp 2.75.0
+
+`plugins/fers/.mcp.json` pins `@ferscloud/fers-mcp@2.75.0`, the local MCP
+server on engine 0.2.75. Its version now follows the engine it bundles:
+`<engine minor>.<engine patch>.<n>`.
+
+### The 0.1.100 notes are back under 0.1.100
+
+Its engine 0.2.71 and licence sections were filed under 0.1.99, which pins
+engine 0.2.68.
+
 ## 0.2.1
 
 ### Self-weight reaches your load combinations, or the model is refused
@@ -195,8 +256,6 @@ the skill format coding agents read; it ships in the package, and
 `tests/functionality/test_cli.py` covers every command, the exit codes and the
 console script.
 
-## 0.1.99
-
 ### Engine 0.2.71: a load case that does not converge no longer ends the run
 
 This release pins `fers_calculations==0.2.71`, which is 0.2.70's engine
@@ -217,6 +276,8 @@ This package stays BSD-3-Clause. The engine it installs is licensed under the
 PolyForm Strict License 1.0.0 from 0.2.70: free for any non-commercial purpose,
 with commercial use through a paid FERS Cloud plan. `fers doctor` and the
 skill file say that the free tier is for non-commercial use.
+
+## 0.1.99
 
 ### Engine 0.2.68: ask for only the results you read
 
