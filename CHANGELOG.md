@@ -43,7 +43,9 @@ still a result of its own.
 
 The rule is in the README's "A member's self-weight", the `AnalysisOptions` and
 `create_load_case` docstrings, the skill's conventions (the plugin's copy too),
-and example 092, which checks the combinations' reactions against a hand sum.
+the descriptions of both options in `fers_core/types/pydantic_models.py`
+(regenerated from the 0.2.74 schema), and example 092, which checks the
+combinations' reactions against a hand sum.
 
 ## 0.2.0
 

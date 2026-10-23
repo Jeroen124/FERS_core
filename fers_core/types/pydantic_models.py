@@ -1705,7 +1705,7 @@ class AnalysisOptions(BaseModel):
     )
     enable_self_weight: bool | None = Field(
         False,
-        description='When true, the engine generates self-weight (dead load) for every member\nfrom its material density and cross-sectional area, collected into a\nself-weight load case (see `self_weight_load_case_id`).  Cable members\ncarry their weight intrinsically in the catenary formulation and are\ntherefore excluded from the generated self-weight load.',
+        description='When true, the engine generates self-weight (dead load) for every member\nfrom its material density and cross-sectional area, collected into a\nself-weight load case (see `self_weight_load_case_id`).  Cable members\ncarry their weight intrinsically in the catenary formulation and are\ntherefore excluded from the generated self-weight load.\nA load combination carries self-weight only if it includes that load\ncase. When the model has combinations and none of them does, every\ncombination carries the warning `self_weight_not_in_combinations`.',
     )
     gravity_direction: Vector3 | None = Field(
         [0.0, -1.0, 0.0],
@@ -1766,7 +1766,7 @@ class AnalysisOptions(BaseModel):
     rigid_strategy: RigidStrategy
     self_weight_load_case_id: conint(ge=0) | None = Field(
         None,
-        description='Target load case id that generated self-weight loads are injected into.\nWhen set, the loads are added to that (typically empty "G") load case so\ncombinations can factor it (e.g. 1.35·G).  When `None` and self-weight is\nenabled, a new load case is created automatically.',
+        description='Target load case id that generated self-weight loads are injected into.\nWhen set, the loads are added to that (typically empty "G") load case so\ncombinations can factor it (e.g. 1.35·G).  When `None` and self-weight is\nenabled, a new "Self-weight" load case is created with the highest load\ncase id + 1, and no combination includes it unless it lists that id.',
     )
     solve_loadcases: bool
     tolerance: float = Field(
