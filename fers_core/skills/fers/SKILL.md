@@ -63,6 +63,11 @@ empty and `solver_diagnostics.converged` true before you use its numbers.
 - Units are SI throughout: m, N, Pa, kg. A load of 10 kN/m is `10_000.0`.
 - Global Y is up; gravity acts along -Y.
 - A section's `i_z` is its strong axis: Eurocode tables' I_y is FERS `i_z`.
+- A member result's `start_node_forces`, `end_node_forces`, `maximums` and `minimums` are
+  in the global frame; its `local_*` forces, `section_forces` and `internal_force_series`
+  are member-local, with `mz` the strong-axis moment. Read a frame's moments from the
+  local ones: outside the XY plane the global `mz` is not the bending moment (a frame in
+  the YZ plane reads 0 there).
 - `rotation_angle` on a member is in degrees. A column in a frame in the XY plane needs
   `rotation_angle=90` to bend about its strong axis in that plane; at 0 it bends about
   its weak axis.

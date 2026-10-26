@@ -55,7 +55,7 @@ def test_solve_streams_the_results_to_a_file_and_prints_one_line(beam_file, tmp_
     code, out, _ = _run(capsys, ["solve", str(beam_file), "--out", str(out_path)])
     assert code == cli.EXIT_OK
     assert out.count("\n") == 1
-    assert out.startswith("solved: 1 load cases, 0 combinations")
+    assert out.startswith("solved: 1 load case, 0 combinations")
     document = json.loads(out_path.read_text(encoding="utf-8"))
     assert document["results"]["loadcases"]
 
@@ -229,6 +229,69 @@ def test_solve_refuses_to_bless_a_mechanism(tmp_path, capsys):
     assert summary["verdict"] == "untrustworthy" and "singular_model" in summary["error_codes"]
 
 
+def _slider(path, order):
+    """A bar on two supports that leave X free, pushed along X: a mechanism."""
+    model = FERS()
+    steel = Material(name="S235", e_mod=210e9, g_mod=81e9, density=7850, yield_stress=235e6)
+    bar = Section(name="Bar", material=steel, i_y=1e-6, i_z=1e-5, j=1e-7, area=1e-3)
+    slider = NodalSupport(displacement_conditions={"X": "Free"})
+    a, b = Node(0, 0, 0, nodal_support=slider), Node(4, 0, 0, nodal_support=slider)
+    model.add_member_set(MemberSet(members=[Member(start_node=a, end_node=b, section=bar)]))
+    case = model.create_load_case(name="Push")
+    NodalLoad(node=b, load_case=case, magnitude=1000.0, direction=(1, 0, 0))
+    model.settings.analysis_options.order = order
+    model.save_to_json(str(path))
+
+
+def test_solve_says_why_a_second_order_solve_failed(tmp_path, capfd):
+    # The failed load case has no result set to carry its error: the reason is
+    # in load_case_failures. capfd, not capsys: a panic inside the engine writes
+    # to the process's stderr, which engines before 0.2.75 did here.
+    path = tmp_path / "slider.json"
+    _slider(path, AnalysisOrder.NONLINEAR)
+    code = cli.main(["solve", str(path), "--out", str(tmp_path / "r.json")])
+    out, err = capfd.readouterr()
+    assert code == cli.EXIT_UNTRUSTWORTHY
+    assert "1 recorded failure" in out
+    assert "DO NOT USE these results: LC 1 second-order error: Singular stiffness operator" in out
+    assert err == ""
+
+
+def test_the_reason_falls_back_to_a_recorded_failure():
+    failure = {"load_case_id": 1, "name": "Push", "error": "Singular stiffness operator"}
+    summary = cli._assess({"loadcases": {}, "load_case_failures": [failure]})
+    assert summary["first_error"] == "Singular stiffness operator"
+    assert cli._untrustworthy(summary) == ["1 recorded failure"]
+    assert cli._do_not_use_detail(summary) == ": Singular stiffness operator"
+
+
+def test_a_count_of_one_is_singular(tmp_path, capsys):
+    path = tmp_path / "check.json"
+    check_beam(6.0, "IPE300", material="S235", support="simply_supported", udl=10000.0).save_to_json(
+        str(path)
+    )
+    code, out, _ = _run(capsys, ["solve", str(path), "--out", str(tmp_path / "r.json")])
+    assert code == cli.EXIT_OK
+    assert out.startswith("solved: 1 load case, 1 combination, 1 unity check in ")
+
+
+def test_check_names_the_governing_member_and_combination(tmp_path, capsys):
+    path = tmp_path / "check.json"
+    check_beam(6.0, "IPE300", material="S235", support="simply_supported", udl=10000.0).save_to_json(
+        str(path)
+    )
+    code, out, _ = _run(capsys, ["check", str(path)])
+    assert code == cli.EXIT_OK
+    assert ", governing member " in out
+    assert '(Beam, IPE300) in "ULS" (combination ' in out
+    code, out, _ = _run(capsys, ["check", str(path), "--json"])
+    row = json.loads(out)["checks"][0]
+    assert row["governing_entity_type"] == "Member"
+    assert isinstance(row["governing_entity"], int)
+    assert row["governing_entity_label"] == "Beam, IPE300"
+    assert row["governing_combination_name"] == "ULS"
+
+
 def _self_weight_in_no_combination(path):
     """Self-weight on, no case for it, and a combination of the beam's load alone."""
     model = create_beam(5.0, "IPE180", udl=5000.0)
@@ -244,7 +307,7 @@ def test_solve_flags_self_weight_that_reaches_no_combination(tmp_path, capsys):
     _self_weight_in_no_combination(path)
     code, out, _ = _run(capsys, ["solve", str(path), "--out", str(tmp_path / "r.json")])
     assert code == cli.EXIT_UNTRUSTWORTHY
-    assert "warnings (self_weight_not_in_combinations)" in out
+    assert "1 warning (self_weight_not_in_combinations)" in out
     assert "DO NOT USE these results: Self-weight is enabled" in out
     code, out, _ = _run(capsys, ["solve", str(path), "--out", str(tmp_path / "r.json"), "--json"])
     summary = json.loads(out)

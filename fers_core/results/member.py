@@ -36,6 +36,10 @@ def _sample_to_tuple(sample: Any) -> Optional[Tuple[float, Tuple[float, float, f
 
 
 class MemberResult:
+    """`start_node_forces`, `end_node_forces`, `maximums` and `minimums` are in the
+    global frame; the `local_*` forces, `section_forces` and `internal_force_series`
+    are member-local, with `mz` the strong-axis moment."""
+
     def __init__(
         self,
         start_node_forces: Optional[NodeForces] = None,

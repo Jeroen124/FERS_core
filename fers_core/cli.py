@@ -97,6 +97,10 @@ def _fmt_bytes(n: int) -> str:
     return f"{n / (1024 * 1024):.1f} MB"
 
 
+def _count(n: int, noun: str) -> str:
+    return f"{n} {noun}" if n == 1 else f"{n} {noun}s"
+
+
 # ---------------------------------------------------------------------------
 # Shared helpers
 # ---------------------------------------------------------------------------
@@ -173,11 +177,19 @@ def _assess(results: Any) -> dict[str, Any]:
                 warning_codes.append(code)
             if code in _UNTRUSTWORTHY_WARNINGS and untrustworthy_warning is None:
                 untrustworthy_warning = _field(message, "message")
+    solve_failures = _field(results, "solve_failures") or []
+    load_case_failures = _field(results, "load_case_failures") or []
+    if first_error is None:
+        # A failed load case or combination has no result set to carry its error.
+        first_error = next(
+            (_field(f, "error") for f in [*load_case_failures, *solve_failures] if _field(f, "error")),
+            None,
+        )
     return {
         "load_cases": len(loadcases),
         "load_combinations": len(loadcombinations),
-        "solve_failures": len(_field(results, "solve_failures") or []),
-        "load_case_failures": len(_field(results, "load_case_failures") or []),
+        "solve_failures": len(solve_failures),
+        "load_case_failures": len(load_case_failures),
         "not_converged": not_converged,
         "errors": errors,
         "warnings": warnings,
@@ -194,12 +206,12 @@ def _untrustworthy(summary: dict[str, Any]) -> list[str]:
     reasons = []
     if summary["errors"]:
         codes = ", ".join(summary["error_codes"]) or "no code"
-        reasons.append(f"{summary['errors']} solver errors ({codes})")
+        reasons.append(f"{_count(summary['errors'], 'solver error')} ({codes})")
     if summary["not_converged"]:
-        reasons.append(f"{summary['not_converged']} result sets did not converge")
+        reasons.append(f"{_count(summary['not_converged'], 'result set')} did not converge")
     failures = summary["solve_failures"] + summary["load_case_failures"]
     if failures:
-        reasons.append(f"{failures} recorded failures")
+        reasons.append(_count(failures, "recorded failure"))
     flagged = [code for code in summary["warning_codes"] if code in _UNTRUSTWORTHY_WARNINGS]
     if flagged:
         reasons.append(f"warning {', '.join(flagged)}")
@@ -230,21 +242,21 @@ def _summary_line(summary: dict[str, Any], seconds: float) -> str:
         size = _fmt_bytes(summary["bytes"])
         return f"solved in {seconds:.1f} s -> {summary['path']} ({size}; {summary['note']})"
     parts = [
-        f"{summary['load_cases']} load cases",
-        f"{summary['load_combinations']} combinations",
+        _count(summary["load_cases"], "load case"),
+        _count(summary["load_combinations"], "combination"),
     ]
     failures = summary["solve_failures"] + summary["load_case_failures"]
     if failures:
-        parts.append(f"{failures} recorded failures")
+        parts.append(_count(failures, "recorded failure"))
     if summary["not_converged"]:
         parts.append(f"{summary['not_converged']} not converged")
     if summary["errors"]:
-        parts.append(f"{summary['errors']} errors")
+        parts.append(_count(summary["errors"], "error"))
     if summary["warnings"]:
         codes = f" ({', '.join(summary['warning_codes'])})" if summary["warning_codes"] else ""
-        parts.append(f"{summary['warnings']} warnings{codes}")
+        parts.append(f"{_count(summary['warnings'], 'warning')}{codes}")
     if summary["unity_checks"]:
-        parts.append(f"{summary['unity_checks']} unity checks")
+        parts.append(_count(summary["unity_checks"], "unity check"))
     size = _fmt_bytes(summary["bytes"])
     line = f"solved: {', '.join(parts)} in {seconds:.1f} s -> {summary['path']} ({size})"
     if summary.get("verdict") == "untrustworthy":
@@ -390,13 +402,14 @@ def cmd_validate(args: argparse.Namespace) -> int:
     code = EXIT_INPUT if unknown and args.strict else EXIT_OK
     payload = {"ok": code == EXIT_OK, "exit_code": code, "path": str(path), **counts, "unknown_keys": unknown}
     line = (
-        f"valid: {counts['nodes']} nodes, {counts['members']} members, {counts['plates']} plates, "
-        f"{counts['load_cases']} load cases, {counts['load_combinations']} combinations"
+        f"valid: {_count(counts['nodes'], 'node')}, {_count(counts['members'], 'member')}, "
+        f"{_count(counts['plates'], 'plate')}, {_count(counts['load_cases'], 'load case')}, "
+        f"{_count(counts['load_combinations'], 'combination')}"
     )
     if unknown:
         shown = ", ".join(unknown[:10]) + (f" and {len(unknown) - 10} more" if len(unknown) > 10 else "")
         verb = "refused" if args.strict else "ignored by the engine"
-        line += f"\n{len(unknown)} unknown keys, {verb}: {shown}"
+        line += f"\n{_count(len(unknown), 'unknown key')}, {verb}: {shown}"
         if code != EXIT_OK:
             line = line.replace("valid:", "invalid:", 1)
     _emit(args.json, payload, line)
@@ -553,23 +566,73 @@ def cmd_examples(args: argparse.Namespace) -> int:
     return EXIT_OK if completed.returncode == 0 else EXIT_ENGINE
 
 
-def _unity_row(result: Any) -> dict[str, Any]:
+_ENTITY_ID_KEYS = {
+    "Member": "member_id",
+    "MemberSet": "memberset_id",
+    "PlateElement": "plate_element_id",
+    "PlateSurface": "plate_surface_id",
+}
+
+
+def _entity_label(model: Any, kind: Optional[str], entity_id: Any) -> Optional[str]:
+    """How the model names a member or member set: "Column, HEA300"."""
+    if model is None or entity_id is None:
+        return None
+    if kind == "Member":
+        member = next((m for m in model.get_all_members() if m.id == entity_id), None)
+        if member is None:
+            return None
+        member_set = next((s for s in model.member_sets if any(m.id == entity_id for m in s.members)), None)
+        classification = member.classification or (member_set.classification if member_set else None)
+        names = [classification, getattr(member.section, "name", None)]
+        return ", ".join(n for n in names if n) or None
+    if kind == "MemberSet":
+        member_set = next((s for s in model.member_sets if s.id == entity_id), None)
+        return (member_set.classification or None) if member_set else None
+    return None
+
+
+def _unity_row(result: Any, model: Any = None) -> dict[str, Any]:
     governing = _field(result, "governing") or {}
     entity = _field(governing, "entity")
-    if isinstance(entity, dict):
-        entity = entity.get("id") or entity.get("member_id") or entity
-    elif entity is not None and not isinstance(entity, (str, int)):
-        entity = _field(entity, "id") or _field(entity, "member_id") or str(entity)
+    kind = _field(entity, "type")
+    kind = str(getattr(kind, "value", kind)) if kind is not None else None
+    entity_id = _field(entity, _ENTITY_ID_KEYS.get(kind, "id")) if entity is not None else None
+    combination_id = _field(governing, "governing_combination_id")
+    combination = None
+    if model is not None and combination_id is not None:
+        combination = model.get_load_combination_by_pk(combination_id)
     status = _field(result, "status")
     return {
         "check": _field(result, "check_id") or _field(result, "name"),
         "name": _field(result, "name"),
         "status": str(_field(status, "value") or status or ""),
         "utilization": _field(result, "max_utilization"),
-        "governing_entity": entity,
-        "governing_combination": _field(governing, "governing_combination_id"),
+        "governing_entity": entity_id,
+        "governing_entity_type": kind,
+        "governing_entity_label": _entity_label(model, kind, entity_id),
+        "governing_combination": combination_id,
+        "governing_combination_name": getattr(combination, "name", None),
         "unsolved_combinations": len(_field(result, "unsolved_combination_ids") or []),
     }
+
+
+def _governing_text(row: dict[str, Any]) -> str:
+    """'member 4 (Column, HEA300) in "ULS 1.35G+1.5S" (combination 2)'."""
+    kind = {
+        "Member": "member ",
+        "MemberSet": "member set ",
+        "PlateElement": "plate element ",
+        "PlateSurface": "plate surface ",
+    }
+    text = f"{kind.get(row['governing_entity_type'], '')}{row['governing_entity']}"
+    if row["governing_entity_label"]:
+        text += f" ({row['governing_entity_label']})"
+    combination = row["governing_combination"]
+    name = row["governing_combination_name"]
+    if name:
+        return f'{text} in "{name}" (combination {combination})'
+    return f"{text} in combination {combination}"
 
 
 def cmd_check(args: argparse.Namespace) -> int:
@@ -596,7 +659,7 @@ def cmd_check(args: argparse.Namespace) -> int:
     except Exception as exc:
         return _fail(_classify_engine_error(exc), str(exc), args.json)
     solve = _assess(model.resultsbundle)
-    rows = [_unity_row(r) for r in model.unity_check_results()]
+    rows = [_unity_row(r, model) for r in model.unity_check_results()]
     if args.out:
         model.save_to_json(args.out)
     verdict, code, reasons = _check_verdict(solve, rows)
@@ -619,9 +682,9 @@ def cmd_check(args: argparse.Namespace) -> int:
         value = f"{utilization:.3f}" if isinstance(utilization, (int, float)) else "-"
         line = f"{row['check']}: {row['status']}, utilization {value}"
         if row["governing_entity"] is not None:
-            line += f", governing {row['governing_entity']} in combination {row['governing_combination']}"
+            line += f", governing {_governing_text(row)}"
         if row["unsolved_combinations"]:
-            line += f", {row['unsolved_combinations']} combinations unsolved"
+            line += f", {_count(row['unsolved_combinations'], 'combination')} unsolved"
         print(line)
     if args.out:
         print(f"-> {args.out}")
@@ -647,7 +710,7 @@ def _check_verdict(solve: dict[str, Any], rows: list[dict[str, Any]]) -> tuple[s
         return "fail", EXIT_FAILS, failing
     undecided = [f"{r['check']} is Indeterminate" for r in rows if r["status"] == "Indeterminate"]
     undecided += [
-        f"{r['check']} left {r['unsolved_combinations']} combinations unsolved"
+        f"{r['check']} left {_count(r['unsolved_combinations'], 'combination')} unsolved"
         for r in rows
         if r["unsolved_combinations"]
     ]

@@ -72,6 +72,12 @@ beam.local_maximums.mz, beam.local_minimums.mz   # envelope along the member
 beam.local_start_forces.fy                       # end forces, member axes
 ```
 
+`start_node_forces`, `end_node_forces`, `maximums` and `minimums` are in the
+global frame; the `local_*` forces, `section_forces` and `internal_force_series`
+are in the member's own axes, with `mz` the strong-axis moment. Read a frame's
+moments from the local ones: outside the XY plane the global `mz` is not the
+bending moment, and in a frame in the YZ plane it reads 0.
+
 Since 0.1.98, `member_results` and `displacement_nodes` are read-only tables
 rather than dicts of objects. That is what keeps a large result small in
 memory. They read like dicts: `[]`, `get`, `in`, `len`, `.items()`, and
@@ -506,7 +512,12 @@ The exit code says whether to use the numbers:
 | 6 | `check`: a check fails (utilization above 1) |
 
 A `check` that meets several of these exits with the first of 4, 6, 5. With
-`--json`, `solve` and `check` add a `verdict` and its `reasons`.
+`--json`, `solve` and `check` add a `verdict` and its `reasons`. After "DO NOT
+USE these results" comes the reason: the solver's first error, or the error a
+load case or combination recorded when it failed outright. `fers check` names
+what governs each check, `governing member 4 (Column, HEA300) in "ULS 1"
+(combination 2)`, and `--json` carries the same as `governing_entity_label` and
+`governing_combination_name`.
 
 `FERS_API_KEY` supplies the key for Premium limits when `--api-key` is not
 given; without a key the engine runs at Free-tier limits and makes no network
