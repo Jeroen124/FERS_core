@@ -2,7 +2,7 @@
   "mcpServers": {
     "fers": {
       "command": "npx",
-      "args": ["-y", "@ferscloud/fers-mcp@2.1.0"]
+      "args": ["-y", "@ferscloud/fers-mcp@2.76.0"]
     }
   }
 }
