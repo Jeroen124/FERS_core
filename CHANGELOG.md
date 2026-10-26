@@ -2,13 +2,30 @@
 
 ## 0.2.2
 
-### Engine 0.2.75: a singular model returns its error instead of crashing
+### Engine 0.2.76: a second-order solve takes the whole load in one step
 
-The engine pin moves to `fers_calculations==0.2.75`. A model that is a
-mechanism, or has a part connected to no support, made the engine's sparse
-solver panic. Python caught the panic and returned the right error, but printed
-two panic traces on stderr; the WASM build that FERS Cloud and the local MCP
-server run crashed instead. 0.2.75 reaches the same outcome without a panic:
+The engine pin moves to `fers_calculations==0.2.76`. A second-order
+(`AnalysisOrder.NONLINEAR`) solve without a warm start began from the
+first-order answer, which already carries the whole load, and then applied that
+load again in 20 steps. It now tries the whole load in one step first and steps
+it only when that does not converge cleanly. An integrator's 1,070-member rack
+solves its 14 combinations in 1.2 s on one thread, where it took 10.7 s. Load
+cases take the one step too, so `solve_loadcases=True` is faster as well.
+
+The answers move towards equilibrium. Each of 0.2.75's steps could stop at up
+to 100 times the residual tolerance and still report `converged`, so a result
+can differ from 0.2.75's by up to about 0.1 % where 0.2.75 had stopped short.
+On the engine's 690-model test corpus no model changed between solved and
+refused. Moment–rotation connectors, curving hinge or support stiffness
+curves, cables and the rigid-MPC path keep their load steps.
+
+### Also from engine 0.2.75: a singular model returns its error instead of crashing
+
+A model that is a mechanism, or has a part connected to no support, made the
+engine's sparse solver panic. Python caught the panic and returned the right
+error, but printed two panic traces on stderr; the WASM build that FERS Cloud
+and the local MCP server run crashed instead. 0.2.75 reaches the same outcome
+without a panic:
 
 - A second-order (`AnalysisOrder.NONLINEAR`) solve of a mechanism records the
   load case in `load_case_failures`, or the combination in `solve_failures`,
@@ -50,10 +67,10 @@ The README's "Reading results", the `MemberResult` docstring and the skill now
 say so. Read through the global `mz`, a frame outside the XY plane shows no
 bending moment.
 
-### The Claude plugin runs fers-mcp 2.75.0
+### The Claude plugin runs fers-mcp 2.76.0
 
-`plugins/fers/.mcp.json` pins `@ferscloud/fers-mcp@2.75.0`, the local MCP
-server on engine 0.2.75. Its version now follows the engine it bundles:
+`plugins/fers/.mcp.json` pins `@ferscloud/fers-mcp@2.76.0`, the local MCP
+server on engine 0.2.76. Its version now follows the engine it bundles:
 `<engine minor>.<engine patch>.<n>`.
 
 ### The 0.1.100 notes are back under 0.1.100
