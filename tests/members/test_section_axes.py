@@ -45,7 +45,7 @@ def test_a_channel_carries_its_shear_centre_offset_on_local_z():
     """i_y = sp.iyy_c and i_z = sp.ixx_c pins FERS local z to the
     sectionproperties x direction, and a channel's offset lies along it."""
     sec = Section.create_u_section("C 80x50x3", S235, h=0.080, b=0.050, t_f=0.003, t_w=0.003, r=0.003)
-    assert abs(sec.y_s) < 1e-6, "the offset does not belong on local y"
+    assert sec.y_s == 0.0, "the offset does not belong on local y"
     assert sec.z_s == pytest.approx(-0.03226, abs=1e-4)
     # ...and local y really is the weak axis for this shape, which is what makes
     # the mapping above the right way round.
@@ -54,8 +54,8 @@ def test_a_channel_carries_its_shear_centre_offset_on_local_z():
 
 def test_a_doubly_symmetric_section_has_no_offset_either_way():
     sec = Section.create_ipe_section("IPE300", S235, h=0.300, b=0.150, t_f=0.0107, t_w=0.0071, r=0.015)
-    assert abs(sec.y_s) < 1e-6
-    assert abs(sec.z_s) < 1e-6
+    assert sec.y_s == 0.0
+    assert sec.z_s == 0.0
 
 
 def test_the_principal_angle_is_the_one_the_solver_compares_against():
