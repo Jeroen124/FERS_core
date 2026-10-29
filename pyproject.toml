@@ -46,7 +46,7 @@ dependencies = [
     "numpy>=2.1.0",
     "ujson>=5.10.0",
     "pydantic>=2.10.0",
-    "fers_calculations==0.2.76",
+    "fers_calculations==0.2.77",
 ]
 
 # Everything else is an extra, so `pip install FERS` stays small enough for an

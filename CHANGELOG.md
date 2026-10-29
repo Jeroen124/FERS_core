@@ -40,6 +40,19 @@ most 1.4e-7 of itself (the RHS 100x50x6), and the portal frame's utilization
 stays 0.74449. A model saved to JSON keeps the offsets it was saved with until
 its sections are built again, for example with `Section.from_name`.
 
+### Engine 0.2.77: EC3 reads a round-off shear or moment as zero
+
+The engine pin moves to `fers_calculations==0.2.77`. Its EC3 check reads a
+shear force or bending moment below 1e-9 of its gross resistance as exactly
+zero, so round-off from any source makes no trace row and no interaction term,
+the offsets in a model saved before 0.2.3 included. A real demand keeps its
+row, and an axial force is read as before. The engine's schema is unchanged.
+
+One verdict can change. A class 4 section with `a_eff` but no `wel_y_eff` that
+carried only round-off bending was refused as "check skipped", with a
+utilization of 0 and a Green status. It is now checked on its `a_eff`, as the
+same strut without a moment would be, and can come out Red.
+
 ## 0.2.2
 
 ### Engine 0.2.76: a second-order solve takes the whole load in one step
