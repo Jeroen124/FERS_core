@@ -1,5 +1,58 @@
 # Changelog
 
+## 0.2.3
+
+### Symmetric sections have exactly zero shear-centre offsets, and EC3 traces lose their noise rows
+
+A catalogue section takes its shear centre and centroid from a finite-element
+mesh, and a mesh is never quite symmetric. So a doubly symmetric section carried
+a shear-centre offset made of mesh error: 1.3e-8 m for an HEA300, 5.6e-8 m for
+an IPE400, 14 µm for an RHS 100x50x6. With shear-centre coupling on, the
+default, a planar frame then had out-of-plane moments of up to 1e-15 N·m, and
+the EC3 check gave them trace rows ("Bending y (6.2.5): 1.133e-15 N·m /
+227634.811 N·m") and carried them into the interaction sums: 16 noise rows on a
+four-member portal frame. No threshold separates mesh error from a real offset,
+so the generator that draws a section now decides which offsets are zero:
+
+- I- and H-sections (IPE, HEA, HEB, HEM, UB, UC, W, HP and
+  `create_welded_i_section`), rectangular and square hollow sections (RHS, SHS,
+  HSS) and circular hollow sections (CHS, round HSS, Pipe) report `y_s`, `z_s`,
+  `centroid_y` and `centroid_z` as exactly 0.
+- Channels (UPE, PFC and the lipped C of `create_cfs_c`) are symmetric about
+  local z only. They report exactly 0 for the two components that this
+  symmetry makes zero: `y_s`, and `centroid_z`, which holds the centroid's
+  local-y coordinate. `z_s`, the shear centre's real offset behind the web, and
+  `centroid_y` are unchanged.
+- `wagner_coeff` follows the new offsets.
+- Angles and Z sections are unchanged.
+
+The circular hollow sections' centroid was wrong, not only noisy: all 294 (CHS,
+round HSS, Pipe) had it at (−d/2, −d/2), because `Section.create_chs` shifts a
+geometry that is already centred. It is now 0. The solver does not read a
+centroid; the viewer uses it to place the drawn outline on the member.
+
+`fers_core/members/mesh_table.json.gz` is rebuilt, and only these offsets and
+`wagner_coeff` changed in it.
+
+**Upgrade note.** For a symmetric section, results change only at round-off
+level: the out-of-plane noise and its trace rows go, `wagner_coeff` moves by at
+most 1.4e-7 of itself (the RHS 100x50x6), and the portal frame's utilization
+stays 0.74449. A model saved to JSON keeps the offsets it was saved with until
+its sections are built again, for example with `Section.from_name`.
+
+### Engine 0.2.77: EC3 reads a round-off shear or moment as zero
+
+The engine pin moves to `fers_calculations==0.2.77`. Its EC3 check reads a
+shear force or bending moment below 1e-9 of its gross resistance as exactly
+zero, so round-off from any source makes no trace row and no interaction term,
+the offsets in a model saved before 0.2.3 included. A real demand keeps its
+row, and an axial force is read as before. The engine's schema is unchanged.
+
+One verdict can change. A class 4 section with `a_eff` but no `wel_y_eff` that
+carried only round-off bending was refused as "check skipped", with a
+utilization of 0 and a Green status. It is now checked on its `a_eff`, as the
+same strut without a moment would be, and can come out Red.
+
 ## 0.2.2
 
 ### Engine 0.2.76: a second-order solve takes the whole load in one step

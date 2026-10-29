@@ -13,6 +13,19 @@ plt = lazy("matplotlib.pyplot", "plot")
 _sp_library = lazy("sectionproperties.pre.library.steel_sections", "sections")
 _sp_analysis = lazy("sectionproperties.analysis.section", "sections")
 
+# Offsets that a generator's symmetry makes exactly zero. The mesh leaves them
+# anywhere up to 14 µm out, which no threshold can tell from a real offset, so
+# the generator decides. A channel or cee is symmetric about local z only, and the
+# kept centroid swap stores the centroid's local-y coordinate in centroid_z.
+_ALL_OFFSETS = ("y_s", "z_s", "centroid_y", "centroid_z")
+_SYMMETRY_ZEROS = {
+    "i_section": _ALL_OFFSETS,
+    "rectangular_hollow_section": _ALL_OFFSETS,
+    "circular_hollow_section": _ALL_OFFSETS,
+    "channel_section": ("y_s", "centroid_z"),
+    "cee_section": ("y_s", "centroid_z"),
+}
+
 
 class Section:
     _section_counter = 1
@@ -152,6 +165,12 @@ class Section:
             "j": float(analysis_section.get_j()),
             **adv,
         }
+        zeros = _SYMMETRY_ZEROS.get(shape)
+        if zeros:
+            props.update(dict.fromkeys(zeros, 0.0))
+            props["wagner_coeff"] = Section._wagner_coeff(
+                props["i_y"], props["i_z"], props["area"], props["y_s"], props["z_s"]
+            )
         if _mesh_table.recording is not None:
             _mesh_table.recording[k] = props
         return props
@@ -188,16 +207,11 @@ class Section:
         except (AttributeError, TypeError):
             props["y_s"] = None
             props["z_s"] = None
-        # Wagner coefficient: polar radius of gyration about shear center squared
-        # ip_s² = (Iy + Iz)/A + ys² + zs²
         try:
-            iy = float(sp.iyy_c)
-            iz = float(sp.ixx_c)
-            area = float(sp.area)
-            ys = props["y_s"] or 0.0
-            zs = props["z_s"] or 0.0
-            props["wagner_coeff"] = (iy + iz) / area + ys**2 + zs**2
-        except (AttributeError, TypeError, ZeroDivisionError):
+            props["wagner_coeff"] = Section._wagner_coeff(
+                sp.iyy_c, sp.ixx_c, sp.area, props["y_s"], props["z_s"]
+            )
+        except AttributeError:
             props["wagner_coeff"] = None
         try:
             as_tuple = analysis_section.get_as()
@@ -282,6 +296,14 @@ class Section:
         if props["i_yz"] is not None:
             props.update(Section._principal_props(analysis_section, props))
         return props
+
+    @staticmethod
+    def _wagner_coeff(i_y, i_z, area, y_s, z_s) -> Optional[float]:
+        """Polar radius of gyration about the shear centre, squared: (Iy + Iz)/A + ys² + zs²."""
+        try:
+            return (float(i_y) + float(i_z)) / float(area) + (y_s or 0.0) ** 2 + (z_s or 0.0) ** 2
+        except (TypeError, ZeroDivisionError):
+            return None
 
     @staticmethod
     def _principal_props(analysis_section, props: dict) -> dict:
