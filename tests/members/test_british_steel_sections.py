@@ -103,7 +103,7 @@ def test_ec3_buckling_curves_follow_the_shape():
 
 def test_channel_shear_centre_and_centroid():
     pfc = Section.from_name("PFC 300x100x46", S235)
-    assert abs(pfc.y_s) < 1e-6
+    assert pfc.y_s == 0.0
     assert abs(pfc.z_s) > 0.03
     # centroid_y carries the across-the-flange offset (see the note in section.py),
     # and the datasheet gives it as Cy, measured from the back of the web.

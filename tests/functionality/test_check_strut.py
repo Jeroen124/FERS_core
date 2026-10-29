@@ -51,9 +51,9 @@ def test_the_section_arrives_carrying_its_own_ec3_block():
     assert sec.ec3["buckling_curve_y"] == "C"
     assert sec.ec3["buckling_curve_z"] == "C"
     assert sec.ec3["a_eff"] == pytest.approx(473.9e-6, abs=1.0e-6)
-    # The shear-centre offset belongs on local z for a channel. y_s is mesh
-    # noise (~1e-8 m) against a 32 mm real offset, not a second component.
-    assert abs(sec.y_s) < 1e-6
+    # A channel's shear centre lies on its axis of symmetry, local z: z_s
+    # carries the 32 mm offset and y_s is exactly 0.
+    assert sec.y_s == 0.0
     assert sec.z_s == pytest.approx(-0.03226, abs=1e-4)
 
 
