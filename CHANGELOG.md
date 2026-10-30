@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.2.4
+
+### The Claude plugin runs fers-mcp 2.77.0, whose check_beam reports the deflection
+
+`plugins/fers/.mcp.json` pins `@ferscloud/fers-mcp@2.77.0`, the local MCP
+server on engine 0.2.77. Its `check_beam` now also returns the characteristic
+deflection: the peak under the unfactored load case, where along the span it
+occurs, and the span over the deflection. It states no limit and gives no
+verdict. Before, `check_beam` returned the EN 1993-1-1 resistance check only,
+so an agent worked the deflection out by hand.
+
+The plugin's version follows the SDK's, so the new pin is a release of its own.
+Nothing in the Python package changed.
+
 ## 0.2.3
 
 ### Symmetric sections have exactly zero shear-centre offsets, and EC3 traces lose their noise rows
