@@ -17,13 +17,13 @@ In Claude Code:
   how to read a verdict, and the conventions that change answers (axes, units,
   supports, load directions, limit states). `reference/api.md` holds Python
   models that run as written.
-- **The local FERS MCP server**, `@ferscloud/fers-mcp` version 2.76.0, pinned.
+- **The local FERS MCP server**, `@ferscloud/fers-mcp` version 2.77.0, pinned.
   It gives Claude tools such as `check_beam`, `create_frame`, `build_model` and
   `solve_model`.
 
 ## What it runs and sends
 
-- When the plugin loads, `npx` downloads `@ferscloud/fers-mcp@2.76.0` from npm
+- When the plugin loads, `npx` downloads `@ferscloud/fers-mcp@2.77.0` from npm
   (once, then cached) and starts it on your machine. It needs Node.js 18 or newer.
 - The server solves on your machine. Without an API key it sends nothing
   anywhere. With `FERS_API_KEY` set, it exchanges the key at ferscloud.com for a
