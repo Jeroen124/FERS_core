@@ -2,6 +2,24 @@
 
 ## 0.2.4
 
+### Engine 0.2.79: an Enterprise tier, and first-order solves of up to 1,000,000 members
+
+`fers_calculations` is pinned to 0.2.79, up from 0.2.77.
+
+- **0.2.78 adds Enterprise.** It is a licence tier above Pro that FERS Cloud
+  grants by agreement, and it allows 1,000,000 members per model. An Enterprise
+  key passed as `api_key` gets that limit. Engines before 0.2.78 read the same
+  key as Pro, at 10,000.
+- **0.2.79 makes a solve that size practical.** A first-order solve factorises
+  the stiffness matrix once, for every load case and combination. Recovering
+  results now grows with the model, not with its square. A solve with result
+  requests builds only the results they read. On 16 cores, a shuttle rack of
+  1,083,083 members with 15 load cases, 25 combinations and result requests
+  solves in 154 s, peaking at 26.7 GB. One of 108,688 members takes 3.7 s,
+  where it took 99 s.
+
+Second order is not yet measured at that size. Results are unchanged.
+
 ### `fers doctor` names the plan
 
 With a key, `fers doctor` prints the plan the licence server reports: free,

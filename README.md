@@ -432,7 +432,9 @@ to the HTML report. Both are off by default, which keeps the result small.
 
 Without an API key the solver runs at Free-tier limits (100 members) and makes
 **no network call at all**. The free tier is for non-commercial use; commercial
-use needs a Pro key at any model size. Passing `api_key` raises those limits:
+use needs a Pro key at any model size. Passing `api_key` raises those limits, to
+10,000 members with a Pro key and 1,000,000 with an Enterprise one (granted by
+agreement):
 
 ```python
 model.run_analysis(api_key=KEY)
