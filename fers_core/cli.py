@@ -767,11 +767,14 @@ def _licence_status(key: str, timeout: float) -> dict[str, Any]:
         return {"reachable": True, "accepted": False, "status": exc.code, "server": base}
     except (urllib.error.URLError, TimeoutError, OSError) as exc:
         return {"reachable": False, "accepted": False, "server": base, "error": str(exc)}
+    premium = bool(body.get("is_premium"))
     return {
         "reachable": True,
         "accepted": True,
         "server": base,
-        "premium": bool(body.get("is_premium")),
+        "premium": premium,
+        # Servers from before Enterprise send no plan.
+        "plan": body.get("plan") or ("premium" if premium else "free"),
     }
 
 
@@ -851,8 +854,7 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     for name, value in report.items():
         if name == "licence":
             if value["accepted"]:
-                tier = "premium" if value["premium"] else "free"
-                print(f"licence      accepted by {value['server']} ({tier})")
+                print(f"licence      accepted by {value['server']} ({value['plan']})")
             elif value["reachable"]:
                 print(f"licence      rejected by {value['server']} (HTTP {value['status']})")
             else:

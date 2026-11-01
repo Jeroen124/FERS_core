@@ -2,6 +2,12 @@
 
 ## 0.2.4
 
+### `fers doctor` names the plan
+
+With a key, `fers doctor` prints the plan the licence server reports: free,
+premium or enterprise. Against a server that does not report a plan yet, it
+reads `is_premium`, as before.
+
 ### The Claude plugin runs fers-mcp 2.77.0, whose check_beam reports the deflection
 
 `plugins/fers/.mcp.json` pins `@ferscloud/fers-mcp@2.77.0`, the local MCP
@@ -11,8 +17,7 @@ occurs, and the span over the deflection. It states no limit and gives no
 verdict. Before, `check_beam` returned the EN 1993-1-1 resistance check only,
 so an agent worked the deflection out by hand.
 
-The plugin's version follows the SDK's, so the new pin is a release of its own.
-Nothing in the Python package changed.
+The plugin's version follows the SDK's, so it goes out as 0.2.4.
 
 ## 0.2.3
 
