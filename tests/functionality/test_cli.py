@@ -418,6 +418,26 @@ def test_doctor_offline_reports_versions(capsys, monkeypatch):
     assert "licence" not in report
 
 
+@pytest.mark.parametrize(
+    "reply, plan",
+    [
+        ({"is_premium": True, "plan": "enterprise"}, "enterprise"),
+        ({"is_premium": True}, "premium"),
+        ({"is_premium": False}, "free"),
+    ],
+)
+def test_doctor_names_the_plan_or_falls_back_to_is_premium(reply, plan, capsys, monkeypatch):
+    import io
+    import urllib.request
+
+    body = json.dumps(reply).encode()
+    monkeypatch.setattr(urllib.request, "urlopen", lambda request, timeout: io.BytesIO(body))
+    monkeypatch.setenv("FERS_API_KEY", "test-key")
+    code, out, _ = _run(capsys, ["doctor"])
+    assert code == cli.EXIT_OK
+    assert f"({plan})" in out
+
+
 def test_module_runs_as_a_subprocess():
     completed = subprocess.run(
         [sys.executable, "-m", "fers_core.cli", "version"], capture_output=True, text=True, encoding="utf-8"
