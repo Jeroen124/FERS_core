@@ -4,6 +4,17 @@ FERS: structural finite-element analysis (3D frames, trusses, plates, Eurocode 3
 checks) for engineers and AI agents. This is its Python SDK and the `fers`
 command. The solver is a compiled engine that runs on your machine, with no
 account and no network call: free for non-commercial use up to 100 members.
+This SDK is open source (BSD-3-Clause) at
+[github.com/Jeroen124/FERS_core](https://github.com/Jeroen124/FERS_core); the
+engine's licence is under [Licence](#licence).
+
+It computes linear and second-order (P-Delta) static analysis, natural
+frequencies, elastic buckling load factors (α_cr), response-spectrum seismic
+analysis, and EN 1993-1-1 steel member checks, flexural and lateral-torsional
+buckling included. A model is JSON in and JSON out, written from Python, by the
+`fers` command, or by an AI agent through the
+[FERS MCP server](https://ferscloud.com/mcp), the Claude Code plugin or the
+agent skill.
 
 ```bash
 pip install FERS

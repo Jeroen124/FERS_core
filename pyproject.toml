@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "FERS"
-version          = "0.2.5"
-description = "FERS structural analysis (FEM) in Python: beams, frames, trusses, plates, Eurocode 3 checks, CLI and AI-agent skill; solves locally"
+version          = "0.2.6"
+description = "FERS structural analysis (FEM) in Python: 3D frames, trusses and plates; second-order P-Delta, modal and buckling; Eurocode 3 (EN 1993-1-1) member checks with lateral-torsional buckling; JSON CLI, MCP server and Claude skill for AI agents; solves locally"
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [
@@ -26,6 +26,16 @@ keywords = [
     "en1993",
     "steel-design",
     "civil-engineering",
+    "en-1993-1-1",
+    "lateral-torsional-buckling",
+    "p-delta",
+    "second-order-analysis",
+    "modal-analysis",
+    "buckling-analysis",
+    "plates",
+    "mcp-server",
+    "claude-skill",
+    "ai-agents",
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
