@@ -1,5 +1,36 @@
 # Changelog
 
+## 0.2.5
+
+### Engine 0.2.80: second order grows with the model, not its square
+
+`fers_calculations` is pinned to 0.2.80, up from 0.2.79. Results are
+byte-identical to 0.2.79's.
+
+- **Rigid links no longer scan the model.** A `RigidMember` found the
+  neighbour it borrows a section from, and its stiffest neighbour, by scanning
+  every member on every assembly, so second order grew with the square of the
+  model. On 16 cores, a shuttle rack of 217,463 members now solves in second
+  order in 173 s, where it took 1,916 s. One of 541,498 members takes 927 s and
+  peaks at 21.6 GB.
+- **Free memory caps how many second-order solves run at once.** Each load case
+  or combination solved in parallel holds its own copy of the model and its
+  factorisation, about 2.5 KB per degree of freedom. Each batch now takes only
+  as many as fit in four fifths of the free memory. `FERS_MAX_PARALLEL_SOLVES`
+  is still the ceiling, and `FERS_MEMORY_BUDGET_MB` sets the free-memory figure
+  by hand.
+
+Second order is not yet measured at 1,000,000 members.
+
+### The Claude plugin runs fers-mcp 2.79.0, which knows the Enterprise tier
+
+`plugins/fers/.mcp.json` pins `@ferscloud/fers-mcp@2.79.0`, up from 2.77.0: the
+local MCP server on engine 0.2.79. With an Enterprise key in `FERS_API_KEY`, it
+solves models of up to 1,000,000 members, and `get_usage` reports the
+Enterprise plan and that limit. 2.77.0 read the same key as Pro, at 10,000.
+
+The plugin's version follows the SDK's, so it goes out as 0.2.5.
+
 ## 0.2.4
 
 ### Engine 0.2.79: an Enterprise tier, and first-order solves of up to 1,000,000 members
