@@ -22,6 +22,15 @@ byte-identical to 0.2.79's.
 
 Second order is not yet measured at 1,000,000 members.
 
+### The Claude plugin runs fers-mcp 2.79.0, which knows the Enterprise tier
+
+`plugins/fers/.mcp.json` pins `@ferscloud/fers-mcp@2.79.0`, up from 2.77.0: the
+local MCP server on engine 0.2.79. With an Enterprise key in `FERS_API_KEY`, it
+solves models of up to 1,000,000 members, and `get_usage` reports the
+Enterprise plan and that limit. 2.77.0 read the same key as Pro, at 10,000.
+
+The plugin's version follows the SDK's, so it goes out as 0.2.5.
+
 ## 0.2.4
 
 ### Engine 0.2.79: an Enterprise tier, and first-order solves of up to 1,000,000 members
