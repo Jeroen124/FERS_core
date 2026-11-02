@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.2.6
+
+### The PyPI page says what FERS computes, and where its source is
+
+No code changes. AI agents choose a tool from search results, and the search
+they use indexes this package's PyPI release pages, one per version, not the
+GitHub repository. In our agent tests, agents passed FERS over because those
+pages did not say it does EN 1993-1-1 lateral-torsional buckling checks,
+P-Delta, modal or buckling analysis, or that the SDK's source is public.
+
+- The summary and the README's opening now name what FERS computes: second-order
+  (P-Delta), natural frequencies, elastic buckling load factors, response
+  spectrum, and EN 1993-1-1 member checks with flexural and lateral-torsional
+  buckling. They also name the routes in for agents (JSON CLI, MCP server,
+  Claude Code plugin, agent skill).
+- The opening links the GitHub repository and says the SDK is BSD-3-Clause.
+- More PyPI keywords: `en-1993-1-1`, `lateral-torsional-buckling`, `p-delta`,
+  `second-order-analysis`, `modal-analysis`, `buckling-analysis`, `plates`,
+  `mcp-server`, `claude-skill`, `ai-agents`.
+
 ## 0.2.5
 
 ### Engine 0.2.80: second order grows with the model, not its square
