@@ -118,6 +118,71 @@ def test_validate_accepts_a_model_and_names_the_failing_field(beam_file, broken_
     assert "analysis.options.order" in err
 
 
+def _with_options(beam_file, tmp_path, name, **options):
+    document = json.loads(beam_file.read_text(encoding="utf-8"))
+    document["analysis"]["options"].update(options)
+    path = tmp_path / name
+    path.write_text(json.dumps(document), encoding="utf-8")
+    return path
+
+
+def test_validate_passes_older_spellings_the_engine_reads(beam_file, tmp_path, capsys):
+    # FERS Cloud's own templates and older integrations write these.
+    path = _with_options(beam_file, tmp_path, "older.json", order="Linear", rigid_strategy="Rigid_Member")
+    code, out, _ = _run(capsys, ["validate", str(path)])
+    assert code == cli.EXIT_OK
+    assert out.startswith("valid: 9 nodes")
+    assert '$.analysis.options.order "Linear" (schema: "LINEAR")' in out
+    assert '$.analysis.options.rigid_strategy "Rigid_Member" (schema: "RigidMember")' in out
+    code, out, _ = _run(capsys, ["validate", str(path), "--strict", "--json"])
+    payload = json.loads(out)
+    assert code == cli.EXIT_OK and payload["unknown_keys"] == []
+    assert {"path": "$.analysis.options.order", "value": "Linear", "schema_value": "LINEAR"} in payload[
+        "older_spellings"
+    ]
+    code, out, _ = _run(capsys, ["validate", str(beam_file), "--json"])
+    assert json.loads(out)["older_spellings"] == []
+
+
+def test_validate_finds_older_spellings_inside_unions_and_lists(beam_file, tmp_path, capsys):
+    document = json.loads(beam_file.read_text(encoding="utf-8"))
+    document["model"]["nodal_supports"][0]["X"]["condition_type"] = "Positive-only"
+    document["analysis"]["seismic"] = {
+        "method": "mrsa",
+        "num_modes": 3,
+        "mass_formulation": "Lumped",
+        "mass_sources": [],
+        "spectrum_x": {
+            "EurocodeParametric": {"ag": 1.0, "ground_type": "B", "q": 1.5, "spectrum_type": "Type1"}
+        },
+        "directions": ["X"],
+        "modal_combination": "Cqc",
+        "damping": 0.05,
+        "directional_combination": "100_30",
+    }
+    path = tmp_path / "seismic.json"
+    path.write_text(json.dumps(document), encoding="utf-8")
+    code, out, _ = _run(capsys, ["validate", str(path), "--json"])
+    assert code == cli.EXIT_OK
+    found = {o["path"]: o["schema_value"] for o in json.loads(out)["older_spellings"]}
+    assert found == {
+        "$.model.nodal_supports[0].X.condition_type": "PositiveOnly",
+        "$.analysis.seismic.method": "MODAL_RESPONSE_SPECTRUM",
+        "$.analysis.seismic.mass_formulation": "LUMPED",
+        "$.analysis.seismic.spectrum_x.EurocodeParametric.spectrum_type": "TYPE1",
+        "$.analysis.seismic.modal_combination": "CQC",
+        "$.analysis.seismic.directional_combination": "PERCENT30",
+    }
+
+
+def test_validate_still_refuses_a_spelling_the_engine_refuses(beam_file, tmp_path, capsys):
+    path = _with_options(beam_file, tmp_path, "refused.json", order="Linear", rigid_strategy="RIGID_MEMBER")
+    code, _, err = _run(capsys, ["validate", str(path)])
+    assert code == cli.EXIT_INPUT
+    assert "$.analysis.options.rigid_strategy" in err
+    assert "$.analysis.options.order" not in err
+
+
 def test_schema_lists_definitions_and_prints_one(capsys):
     code, out, _ = _run(capsys, ["schema", "--list"])
     assert code == cli.EXIT_OK

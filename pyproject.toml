@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "FERS"
-version          = "0.2.6"
+version          = "0.2.7"
 description = "FERS structural analysis (FEM) in Python: 3D frames, trusses and plates; second-order P-Delta, modal and buckling; Eurocode 3 (EN 1993-1-1) member checks with lateral-torsional buckling; JSON CLI, MCP server and Claude skill for AI agents; solves locally"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -56,7 +56,7 @@ dependencies = [
     "numpy>=2.1.0",
     "ujson>=5.10.0",
     "pydantic>=2.10.0",
-    "fers_calculations==0.2.80",
+    "fers_calculations==0.2.82",
 ]
 
 # Everything else is an extra, so `pip install FERS` stays small enough for an
