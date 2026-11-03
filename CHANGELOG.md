@@ -1,5 +1,60 @@
 # Changelog
 
+## 0.2.7
+
+### Engine 0.2.82: a million-member model solves in second order
+
+`fers_calculations` is pinned to 0.2.82, up from 0.2.80. Results are
+byte-identical to 0.2.80's.
+
+- **Second order at 1,000,000 members.** On 16 cores and 64 GB, a shuttle rack
+  of 1,083,083 members with 15 load cases, 25 combinations and result requests
+  solves in second order in 56 minutes, one combination at a time, peaking at
+  15.1 GB. On 0.2.80 it would have needed an estimated 31 to 41 GB.
+- **A result set keeps only what its result requests read.** A load case or
+  combination keeps just those values from the moment it is stored, and a
+  Newton-Raphson iteration holds fewer copies of the stiffness matrix. At
+  54,873 members a second-order solve now peaks at 0.76 GB, where 0.2.80
+  peaked at 1.97 GB.
+- **The stability check after a second-order solve reuses the stiffness
+  matrix** the steps assembled, instead of building it again.
+- **`run_analysis_to_file` and `fers solve` write the result as it is
+  serialised,** without holding a copy of it. At a million members, use one of
+  them.
+- **More second-order solves run at once** in the same free memory: each is now
+  assumed to need 1.5 KB per degree of freedom, down from 2.5 KB.
+  `FERS_MAX_PARALLEL_SOLVES` and `FERS_MEMORY_BUDGET_MB` work as before.
+
+### `fers validate` passes the older enum spellings the engine still reads
+
+Several engine enums accept older spellings: `"Linear"` for `"LINEAR"`,
+`"Rigid_Member"` for `"RigidMember"`, `"Positive-only"` for `"PositiveOnly"`, and
+others. The engine's OpenAPI contract, and so the input schema `fers validate`
+checks against, lists only the canonical spelling. `fers validate` therefore
+refused files that `fers solve` solves. This included FERS Cloud's Simple Shed
+and Solar Rail templates, which the hosted MCP's `get_template` hands out, and
+rack models from older integrations.
+
+- **The older spellings now pass, with a note.** `fers validate` reads each one
+  as the engine does and lists where it found it and the schema's spelling, for
+  example `$.analysis.options.order "Linear" (schema: "LINEAR")`. With `--json`,
+  the list is `older_spellings`. The exit code stays 0, with or without
+  `--strict`, because the engine reads these values as meant.
+- **A spelling the engine refuses is still refused.** `"RIGID_MEMBER"` and
+  `"NonLinear"` are examples. The table is exact, not case-insensitive.
+- **The table covers 15 enums** and lives in
+  `fers_core/settings/engine_aliases.py`. A test asks the pinned engine for every
+  spelling it accepts, so an alias the engine adds or drops fails the suite when
+  the pin moves.
+
+### The Claude plugin runs fers-mcp 2.80.0
+
+`plugins/fers/.mcp.json` pins `@ferscloud/fers-mcp@2.80.0`, up from 2.79.0: the
+local MCP server on engine 0.2.80, whose second order grows with the model, not
+its square.
+
+The plugin's version follows the SDK's, so it goes out as 0.2.7.
+
 ## 0.2.6
 
 ### The PyPI page says what FERS computes, and where its source is
