@@ -47,6 +47,14 @@ rack models from older integrations.
   spelling it accepts, so an alias the engine adds or drops fails the suite when
   the pin moves.
 
+### The Claude plugin runs fers-mcp 2.80.0
+
+`plugins/fers/.mcp.json` pins `@ferscloud/fers-mcp@2.80.0`, up from 2.79.0: the
+local MCP server on engine 0.2.80, whose second order grows with the model, not
+its square.
+
+The plugin's version follows the SDK's, so it goes out as 0.2.7.
+
 ## 0.2.6
 
 ### The PyPI page says what FERS computes, and where its source is
