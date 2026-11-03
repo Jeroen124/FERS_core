@@ -2,6 +2,29 @@
 
 ## 0.2.7
 
+### Engine 0.2.82: a million-member model solves in second order
+
+`fers_calculations` is pinned to 0.2.82, up from 0.2.80. Results are
+byte-identical to 0.2.80's.
+
+- **Second order at 1,000,000 members.** On 16 cores and 64 GB, a shuttle rack
+  of 1,083,083 members with 15 load cases, 25 combinations and result requests
+  solves in second order in 56 minutes, one combination at a time, peaking at
+  15.1 GB. On 0.2.80 it would have needed an estimated 31 to 41 GB.
+- **A result set keeps only what its result requests read.** A load case or
+  combination keeps just those values from the moment it is stored, and a
+  Newton-Raphson iteration holds fewer copies of the stiffness matrix. At
+  54,873 members a second-order solve now peaks at 0.76 GB, where 0.2.80
+  peaked at 1.97 GB.
+- **The stability check after a second-order solve reuses the stiffness
+  matrix** the steps assembled, instead of building it again.
+- **`run_analysis_to_file` and `fers solve` write the result as it is
+  serialised,** without holding a copy of it. At a million members, use one of
+  them.
+- **More second-order solves run at once** in the same free memory: each is now
+  assumed to need 1.5 KB per degree of freedom, down from 2.5 KB.
+  `FERS_MAX_PARALLEL_SOLVES` and `FERS_MEMORY_BUDGET_MB` work as before.
+
 ### `fers validate` passes the older enum spellings the engine still reads
 
 Several engine enums accept older spellings: `"Linear"` for `"LINEAR"`,
