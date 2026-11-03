@@ -355,14 +355,19 @@ def cmd_validate(args: argparse.Namespace) -> int:
     """Check a model file against the solver's input schema without solving.
 
     The file itself is validated, as the engine will read it: field names, enum
-    values and nesting. A key the schema does not know is reported with its path:
+    values and nesting. An older enum spelling the engine still reads (``"Linear"``
+    for ``"LINEAR"``) passes, with a note naming the schema's spelling. A key the
+    schema does not know is reported with its path:
     the engine ignores it, so a misspelt optional field silently takes its default.
     ``--strict`` makes those an error. References between objects are checked by
     the engine at solve time. A model whose self-weight reaches none of its load
     combinations is refused, as ``run_analysis`` refuses it.
     """
+    import copy
+
     from pydantic import ValidationError
 
+    from fers_core.settings.engine_aliases import canonicalise_enum_spellings
     from fers_core.settings.self_weight import self_weight_outside_combinations
     from fers_core.types.pydantic_models import FERS as InputSchema
 
@@ -373,9 +378,16 @@ def cmd_validate(args: argparse.Namespace) -> int:
         return _fail(EXIT_INPUT, str(exc), args.json)
     if not isinstance(raw, dict):
         return _fail(EXIT_INPUT, f"{path} holds a JSON {type(raw).__name__}, not a model object", args.json)
-    document = {**raw, "results": None}
+    document = copy.deepcopy({**raw, "results": None})
+    older: list[dict[str, Any]] = []
     try:
-        parsed = InputSchema.model_validate(document)
+        try:
+            parsed = InputSchema.model_validate(document)
+        except ValidationError as first:
+            older = canonicalise_enum_spellings(document, first.errors())
+            if not older:
+                raise
+            parsed = InputSchema.model_validate(document)
     except ValidationError as exc:
         problems = [f"{_error_path(e['loc'])}: {e['msg']}" for e in exc.errors()]
         if args.json:
@@ -400,12 +412,29 @@ def cmd_validate(args: argparse.Namespace) -> int:
         "load_combinations": len(analysis.get("load_combinations") or []),
     }
     code = EXIT_INPUT if unknown and args.strict else EXIT_OK
-    payload = {"ok": code == EXIT_OK, "exit_code": code, "path": str(path), **counts, "unknown_keys": unknown}
+    older_spellings = [
+        {"path": _error_path(o["loc"]), "value": o["found"], "schema_value": o["canonical"]} for o in older
+    ]
+    payload = {
+        "ok": code == EXIT_OK,
+        "exit_code": code,
+        "path": str(path),
+        **counts,
+        "unknown_keys": unknown,
+        "older_spellings": older_spellings,
+    }
     line = (
         f"valid: {_count(counts['nodes'], 'node')}, {_count(counts['members'], 'member')}, "
         f"{_count(counts['plates'], 'plate')}, {_count(counts['load_cases'], 'load case')}, "
         f"{_count(counts['load_combinations'], 'combination')}"
     )
+    if older_spellings:
+        shown = ", ".join(
+            f'{o["path"]} "{o["value"]}" (schema: "{o["schema_value"]}")' for o in older_spellings[:10]
+        )
+        if len(older_spellings) > 10:
+            shown += f" and {len(older_spellings) - 10} more"
+        line += f"\n{_count(len(older_spellings), 'older spelling')} the engine still reads: {shown}"
     if unknown:
         shown = ", ".join(unknown[:10]) + (f" and {len(unknown) - 10} more" if len(unknown) > 10 else "")
         verb = "refused" if args.strict else "ignored by the engine"
