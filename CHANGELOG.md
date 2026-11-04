@@ -1,5 +1,36 @@
 # Changelog
 
+## 0.2.8
+
+### Engine 0.2.83: §6.3.3 for biaxial bending with lateral-torsional buckling
+
+`fers_calculations` is pinned to 0.2.83, up from 0.2.82. The schema did not
+change. Only EN 1993-1-1 unity checks move, in the cases below.
+
+- **§6.3.3 runs with N_Ed = 0** for a member bent about both axes, with
+  lateral-torsional buckling evaluated and no compression. Before, it got the
+  LTB row, which reads the major-axis moment alone, and §6.2.1, which leaves out
+  χ_LT, so nothing combined χ_LT with the minor-axis moment. A 4 m IPE 300 under
+  M_y = 60 kN·m and M_z = 5 kN·m went from 0.654 to 0.824. A member in tension
+  gets the same check, and its tension is not counted. **Utilizations of such
+  members can rise.**
+- **Annex A at N_Ed = 0** takes C_my at its limit of 1.
+- **A round-off axial force is zero,** as a round-off shear or moment has been
+  since 0.2.77.
+- **A class 4 section needs W_eff about each axis it bends about.** With a real
+  minor-axis moment and no `ec3.wel_z_eff`, the check is skipped and names the
+  missing property. Before, it used the gross modulus, which overstates
+  M_c,Rd.
+
+### The Claude plugin runs fers-mcp 2.82.0
+
+`plugins/fers/.mcp.json` pins `@ferscloud/fers-mcp@2.82.0`, up from 2.80.0: the
+local MCP server on engine 0.2.82, whose second order at a million members
+needs much less memory, and whose `validate_model` accepts exactly the enum
+spellings the engine reads.
+
+The plugin's version follows the SDK's, so it goes out as 0.2.8.
+
 ## 0.2.7
 
 ### Engine 0.2.82: a million-member model solves in second order
