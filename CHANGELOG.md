@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.2.9
+
+### The skill says how to reproduce a textbook result
+
+The skill's note on shear deformation now covers forces as well as deflections
+and names the switch. A continuous beam's support moment comes out about 1 %
+below the three-moment value with a catalogue section, because its shear area
+makes the member Timoshenko. Setting
+`analysis_options.include_shear_deformation = False` gives the textbook value
+exactly. Before, an agent that saw the 1 % gap could guess the cause but not
+check it. No code or engine change; the engine pin stays at 0.2.83.
+
 ## 0.2.8
 
 ### Engine 0.2.83: §6.3.3 for biaxial bending with lateral-torsional buckling
