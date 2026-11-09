@@ -83,8 +83,11 @@ empty and `solver_diagnostics.converged` true before you use its numbers.
 - A model built by hand solves second-order (`AnalysisOrder.NONLINEAR`) unless you set
   `AnalysisOrder.LINEAR`; the builders (`create_beam`, `check_beam`, `check_strut`) set
   LINEAR. Compare with a first-order hand calculation only on a LINEAR solve.
-- Shear deformation is included: a deflection comes out a little above 5wL⁴/384EI, more
-  for a short or deep member.
+- Shear deformation is included for any section with a shear area, every catalogue
+  section among them: a deflection comes out a little above 5wL⁴/384EI, and a
+  continuous beam's support moment about 1 % below the three-moment value, more for a
+  short or deep member. Textbook formulas leave it out; to compare with one, set
+  `model.settings.analysis_options.include_shear_deformation = False`.
 - An EC3 check takes each member set's length as its buckling length (factor 1.0, both
   ends held). A sway frame's columns need `effective_length_factor_y`/`_z` on their
   member set, or the column check is unconservative.
