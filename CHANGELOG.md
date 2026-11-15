@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.2.10
+
+### Engine 0.2.84: a slack tie or strut standing on a support keeps its weight in the reactions
+
+`fers_calculations` is pinned to 0.2.84, up from 0.2.83. The schema did not
+change. Only support reactions move, and only in a model where a tension-only
+or compression-only member goes slack.
+
+A slack tie or strut carries no force, but its own weight, or a line load on
+it, still acts at its two ends. The half at a supported end was missing from
+that support's reaction, so the reactions summed to less than the load: by
+half the weight of every slack member standing on a support. Member forces,
+displacements and unity checks were right and have not moved.
+
+- **The reactions now sum to the load.** A 4 m column on a fixed base, with a
+  5 m tension-only brace from a second support to its head, weighs 1771.2 N.
+  With a push on the head that takes the brace slack, the supports carried
+  1655.7 N. Now they carry 1771.2 N, and the brace's support carries half the
+  brace, 115.5 N. **Reactions of such models rise.**
+- **That column no longer comes back as `singular_model`.** Where the missing
+  share passed 1 % of the load, the engine's statics check refused a sound
+  result as a mechanism.
+- **A larger frame was short without a word.** A steel hall with tension-only
+  X-bracing from its pinned bases was 1182.2 N short in its permanent load
+  case, 0.40 % of it: four slack wall diagonals at half their weight each.
+
+The plugin's version follows the SDK's, so it goes out as 0.2.10. Its MCP
+server pin is unchanged.
+
 ## 0.2.9
 
 ### The skill says how to reproduce a textbook result
