@@ -1,5 +1,39 @@
 # Changelog
 
+## 0.2.11
+
+### Engine 0.2.85: a cable under its own weight solves clean, and a load along its span is refused
+
+`fers_calculations` is pinned to 0.2.85, up from 0.2.84. The schema did not
+change. Only models with a `Cable` member are affected.
+
+The figures below are from a 4 m column on a fixed base with a cable from a
+second support 3 m away to its head (unstretched 5.01 m), 3734.6 N in all.
+
+- **A cable under its own weight no longer comes back as `singular_model`.** A
+  cable carries its weight in the catenary. The engine's statics check did not
+  count that weight as load, while the reactions carried it, so every load
+  case and combination in which a cable weighed was refused as a mechanism.
+  The supports carried 3734.6 N of 3734.6 N and the case was refused. Now it
+  solves clean, with the same numbers.
+- **A load along a cable's span is refused, by name.** A distributed load on a
+  cable, a member point load or point moment inside its span, and a surface
+  load whose strip lands on one now fail validation, with the load, the load
+  case and the member in the message. Before, the load went to the cable's two
+  end nodes: the cable's force and sag ignored it, and the share at a
+  supported end was in no reaction, 250 N of a 500 N line load. A point load
+  at a cable's end is a load on that node, as before. **A model with a load on
+  a cable's span no longer solves.** Apply the load to nodes.
+- **A model with a cable reaches equilibrium where it could stop short.** With
+  its weight and a 5 kN push the column stopped 2.1 N from equilibrium,
+  flagged `converged: false` with `second_order_residual_floor`, and a
+  combination of the two stopped 364 N out. Both now converge. **Results of
+  cable models move** by what they were out. The second-order solve of a
+  cable model takes about 30 % longer on a frame of a thousand members.
+
+The plugin's version follows the SDK's, so it goes out as 0.2.11. Its MCP
+server pin is unchanged.
+
 ## 0.2.10
 
 ### Engine 0.2.84: a slack tie or strut standing on a support keeps its weight in the reactions
