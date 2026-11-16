@@ -22,9 +22,10 @@ The two error classes, and why the distinction matters
 ------------------------------------------------------
   ``FersTimeoutError``  -- transient. The licence server did not answer in time.
                            Nothing was solved. Retry.
-  ``RuntimeError``      -- definitive. Bad key, non-premium account, unreachable
-                           host, or a model the solver rejected. Retrying will
-                           fail identically, so skip and record it.
+  ``RuntimeError``      -- definitive. Bad key, unreachable host, or a model
+                           the solver rejected. Retrying will fail identically,
+                           so skip and record it. (A Free account's key is not
+                           an error: it solves at Free limits with a warning.)
 
   Catching only ``Exception`` collapses these two and turns a retryable blip
   into a lost row (or an infinite retry loop on a permanently bad model).
