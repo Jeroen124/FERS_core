@@ -451,6 +451,9 @@ agreement):
 model.run_analysis(api_key=KEY)
 ```
 
+A key of a Free account solves at Free-tier limits, with a `UserWarning` that
+says so.
+
 A key means each solve first verifies the licence with ferscloud.com, so that
 handshake is bounded. If the licence server does not answer within
 `license_timeout` seconds (default 30) the call raises `FersTimeoutError`
@@ -464,7 +467,7 @@ try:
 except fers_calculations.FersTimeoutError:
     ...   # transient stall — retry or skip this model
 except RuntimeError:
-    ...   # definitive — bad key, non-premium account, or a rejected model
+    ...   # definitive — bad key or a rejected model
 ```
 
 Keeping those two arms apart is the point: retrying a `RuntimeError` fails
