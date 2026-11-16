@@ -58,7 +58,7 @@ Load combinations (EN 1990 STR, Eq. 6.10)
 Cloud
 -----
   Saves the solved model to FERS Cloud as "202_solar_rail".
-  Replace API_KEY with your own key from https://ferscloud.com/settings/api-keys.
+  Replace API_KEY with your own key from https://ferscloud.com/profile.
 """
 
 import math
@@ -335,7 +335,7 @@ print(f"\nJSON saved -> {json_path}")
 # =============================================================================
 # 9.  Save to FERS Cloud
 # =============================================================================
-# Only with a key: FERS_API_KEY from https://ferscloud.com/settings/api-keys.
+# Only with a key: FERS_API_KEY from https://ferscloud.com/profile.
 API_KEY = os.environ.get("FERS_API_KEY")
 if API_KEY:
     try:
