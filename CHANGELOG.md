@@ -1,5 +1,51 @@
 # Changelog
 
+## 0.2.13
+
+### Engine 0.2.87: the default second-order method carries a member's own bow
+
+`fers_calculations` is pinned to 0.2.87, up from 0.2.86. A model that names no
+`nonlinear_method` and has no member hinges is solved corotationally. That
+element turned with its chord but stayed straight between its ends, so a member
+modelled as one element had no P-δ at all. It now bows.
+
+- **Coarse second-order models move, toward the converged answer.** A 6 m
+  HEB200 cantilever column as one element, 500 kN + 10 kN sideways
+  (N/N_cr = 0.61): tip sway 120.2 mm before, 151.5 mm now, 153.0 mm closed
+  form. A portal with one element per member and 900 kN per column swayed
+  67.2 mm, now 75.3 mm (79.4 mm with 16 elements): 0.2.86 was 15 %
+  unconservative there. Split into 16 elements, the two engines agree within
+  0.5 %.
+- **A member whose ends are held apart now shows its membrane force.**
+- `P_DELTA` and first-order results do not change, nor do members with a member
+  hinge or a scissor release.
+- A mechanism still reports `singular_model`.
+
+### Engine 0.2.87: a Free account's API key solves at Free
+
+`api_key` with a Free account's key raised "Your account does not have a
+premium license" before solving anything, with a link that was a 404. It now
+solves at Free-tier limits (non-commercial use, up to 100 members) with a
+`UserWarning` on stderr that links the pricing page, so `fers solve --json`
+keeps clean JSON on stdout. A stall, an unreachable server or a rejected key
+still raises as before. The README and example 203 say so.
+
+### Engine 0.2.87: two more fixes
+
+- **A member with end offsets reports the right forces in a corotational
+  solve.** The force recovery counted each offset's arm twice; the
+  displacements were right.
+- **A cable's deflected-shape stations follow its end nodes**, on the chord
+  between them, where every station used to be zero.
+
+### Examples 201 and 202: the API key link
+
+They sent you to `ferscloud.com/settings/api-keys`, which does not exist. API
+keys are on your profile page, `ferscloud.com/profile`.
+
+The plugin's version follows the SDK's, so it goes out as 0.2.13. Its MCP
+server pin is unchanged.
+
 ## 0.2.12
 
 ### Engine 0.2.86: a large-displacement result is no longer called unstable while it is stable
