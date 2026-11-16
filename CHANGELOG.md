@@ -1,5 +1,44 @@
 # Changelog
 
+## 0.2.12
+
+### Engine 0.2.86: a large-displacement result is no longer called unstable while it is stable
+
+`fers_calculations` is pinned to 0.2.86, up from 0.2.85. The schema did not
+change, and no displacement, force or reaction moves. What changes is the
+error `second_order_instability` on a second-order result solved with the
+corotational method. That is the method of a model that names none and has no
+member hinges.
+
+The engine attached the error after testing a stiffness built on the
+undeformed shape. A member that has rotated has shortened along its old axis,
+and the test read that shortening as compression.
+
+The figures below are from a 3 m fixed-free column, 250 x 250 mm,
+E = 32.836 GPa, with a 5 mm bow and 10 kN sideways on its tip. Its buckling
+load is pi^2 EI / 4L^2 = 2930 kN.
+
+- **Below the buckling load the error is gone.** It came from 0.8 of the
+  buckling load, where the tip sways 61.1 mm (beam-column closed form
+  61.6 mm).
+- **Above the buckling load the buckled shape comes back without an error.**
+  At 4000 kN the tip ends 2.2558 m sideways and 1.5537 m down. The elastica
+  gives 2.2584 m and 1.5470 m. The displacements are large and they are right.
+  The engine does not say that the load is above the buckling load; a buckling
+  analysis does.
+- **An unstable state keeps the error.** A perfectly straight column with
+  nothing to push it sideways stays straight above its buckling load, and is
+  flagged. A `P_DELTA` result above the buckling load is flagged as before.
+- **Such a solve is faster.** A false verdict made the engine solve a second
+  time in full steps: 246 iterations for 87 on the column at 0.8.
+- **Three saved example models change**, in
+  `fers_core/examples/json_input_solver`. `085_triple_cantilever_3D_rotated_45Y`
+  and `911_double_cantilever` lose the error. `084_triple_cantilever_3D`
+  failed in that second solve and now gives a result.
+
+The plugin's version follows the SDK's, so it goes out as 0.2.12. Its MCP
+server pin is unchanged.
+
 ## 0.2.11
 
 ### Engine 0.2.85: a cable under its own weight solves clean, and a load along its span is refused
