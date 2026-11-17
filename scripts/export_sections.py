@@ -127,8 +127,9 @@ def _payload(catalogue: str, sections: dict) -> dict:
             "_note": (
                 "Geometry, elastic/plastic section moduli (wel/wpl), the product of "
                 "inertia and principal-axis angle where the section has one, and the "
-                "EN 1993-1-1 `ec3` block (section class, buckling curves, and a_eff "
-                "for a class 4 section) derived by fers_core.members.ec3_section. "
+                "EN 1993-1-1 `ec3` block (section class, buckling curves, a_eff for a "
+                "class 4 section, and the §6.2.6(3) shear areas a_v_y/a_v_z where the "
+                "clause has a formula) derived by fers_core.members.ec3_section. "
                 "Where the section has a product of inertia (an angle), wel/wpl and "
                 "a_sy/a_sz are about its principal axes, as the solver reads them, and "
                 "`geometric` holds the leg-axis values."
@@ -142,7 +143,8 @@ def _payload(catalogue: str, sections: dict) -> dict:
         "_note": (
             "area, i_y/i_z, j, i_w and wel/wpl are the tabulated values; i_z is the major axis. "
             "Shear areas, shear centre, centroid, the `ec3` block and a hollow section's i_w "
-            "are computed from the tabulated dimensions."
+            "are computed from the tabulated dimensions; the `ec3` block's §6.2.6(3) shear "
+            "areas a_v_y/a_v_z use the tabulated area."
         ),
         "sections": sections,
     }

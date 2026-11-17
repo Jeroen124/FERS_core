@@ -76,9 +76,12 @@ class Section:
         z_s (float, optional): Shear centre offset from the centroid along local z (m).
         wagner_coeff (float, optional): Wagner coefficient for lateral-torsional buckling.
         a_sy (float, optional): Shear area (m^2) for the shear force along z, the one
-            that goes with bending about y: the Timoshenko area and EC3's A_v for V_z.
+            that goes with bending about y: the Timoshenko area the element uses for
+            shear deformation. EC3 §6.2.6 uses it too unless `ec3` carries `a_v_z`.
         a_sz (float, optional): Shear area (m^2) for the shear force along y, the one
-            that goes with bending about z (the web of a library I-section).
+            that goes with bending about z (the web of a library I-section). EC3 §6.2.6
+            uses `ec3["a_v_y"]` instead where the section has it: the parametric
+            factories write the EN 1993-1-1 §6.2.6(3) values there.
         wel_y, wel_z, wpl_y, wpl_z (float, optional): Elastic and plastic section moduli
             about y and z (m^3).
         principal_axis_angle (float, optional): Angle (degrees) from local y to the
