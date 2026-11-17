@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.15
+
+### Engine 0.2.89: the calculation trace prints at least four significant figures
+
+`fers_calculations` is pinned to 0.2.89, up from 0.2.88. The trace's numbers
+(each check's `substituted` line and the unity-check report) printed four
+decimals between 10⁻³ and 10⁶, so an area in m² came out with two figures: an
+IPE 400's shear area in the §6.2.6 line read `0.0043`, and a hand check from it
+gave 0.0747 against the solver's 0.0752. It now reads `0.004272`. Values do not
+change, only how they are printed.
+
 ## 0.2.14
 
 ### Engine 0.2.88: the EC3 shear check uses EN 1993-1-1's A_v
