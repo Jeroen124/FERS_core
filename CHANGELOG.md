@@ -1,5 +1,46 @@
 # Changelog
 
+## 0.2.14
+
+### Engine 0.2.88: the EC3 shear check uses EN 1993-1-1's A_v
+
+`fers_calculations` is pinned to 0.2.88, up from 0.2.87. The §6.2.6 shear check
+divided by `a_sz` and `a_sy`, the Timoshenko shear areas the element uses for
+shear deformation. EN 1993-1-1 §6.2.6(3) gives its own A_v per section type,
+and for the sections it covers that area is the larger one. The parametric and
+catalogue sections now carry it in `Section.ec3` as `a_v_y` (shear along the
+depth) and `a_v_z`, and the engine checks shear and the §6.2.8 reduction
+against it.
+
+| Section | Stiffness area | §6.2.6(3) A_v |
+|---|---|---|
+| IPE 300, along the web | 2,076 mm² | 2,569 mm² (a) |
+| HEB 300, along the web | 3,226 mm² | 4,747 mm² (a) |
+| UB 457×191×67, along the web | 3,716 mm² | 4,207 mm² (a) |
+| RHS 200×100×8, along the depth | 2,867 mm² | 3,029 mm² (f) |
+| CHS 168.3×5 | 1,283 mm² | 1,630 mm² (g) |
+
+- **Shear utilizations go down**, by the ratio of the two areas: a 6 m IPE 300
+  under 13.5 kN/m design load from 0.144 to 0.116. They were on the safe side,
+  but not the code's numbers, and a hand check found the difference.
+- Where the clause has no formula, nothing changes: angles, cold-formed open
+  sections, and a rolled I or channel across its flanges stay on the stiffness
+  areas. η is 1.0, the clause's conservative value.
+- British Steel and AISC sections compute A_v on their published area.
+- The trace's shear row prints the A_v it used.
+- A section built with `Section(...)` directly gets none unless you put them
+  in `ec3`; `code_shear_areas()` in `fers_core.members.ec3_section` gives them
+  from the dimensions.
+
+### Engine 0.2.88: a truss, tie or strut with an end offset is attached by a rigid arm
+
+A beam's end offset was a rigid arm on every solve path; a truss, tie or
+strut had it only in the corotational solve. Its first-order and P-Delta
+stiffness ignored the arm, so a node's rotation did not move the work point,
+and its end forces reached the nodes without the arm's moment. A tie 0.3 m
+below its node at a column head: head sway 0.184 mm before, 0.336 mm now, as
+a model with the arm built as a stiff beam gives.
+
 ## 0.2.13
 
 ### Engine 0.2.87: the default second-order method carries a member's own bow

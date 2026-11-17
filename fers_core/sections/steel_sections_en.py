@@ -15,6 +15,7 @@ from __future__ import annotations
 import re
 from typing import Optional
 
+from ..members.ec3_section import code_shear_areas
 from ..members.section import Section
 from ..members.material import Material
 from . import aisc, british_steel
@@ -557,11 +558,32 @@ def _build_tabulated(source, family: str, name: str, material: Material) -> Sect
     return factory(name=name, material=material, h=d["h"], b=d["b"], t_w=d["t_w"], t_f=d["t_f"], r=d["r"])
 
 
+def _published_shear_areas(source, family: str, name: str, area: float) -> dict:
+    """§6.2.6(3) shear areas on the published area, which replaces the meshed one."""
+    d = source.dimensions(name)
+    kind = source.kind_of(name) if source is aisc else "I"
+    if kind == "RECT":
+        return code_shear_areas("rhs", "cold_formed", area, h=d["h"], b=d["b"], t=d["t"])
+    if kind == "ROUND":
+        return code_shear_areas("chs", "cold_formed", area)
+    return code_shear_areas(
+        "channel" if family == "PFC" else "i",
+        "hot_rolled",
+        area,
+        h=d["h"],
+        b=d["b"],
+        t_f=d["t_f"],
+        t_w=d["t_w"],
+        r=d["r"],
+    )
+
+
 def _apply_published(section: Section, p: dict) -> Section:
     """Replace the meshed values with the tabulated ones; the mesh keeps the rest.
 
     Shear areas, shear centre, centroid, shape path and the EC3 block come from the
-    geometry, which the tables do not give. So does the warping constant of a
+    geometry, which the tables do not give (the §6.2.6(3) shear areas are redone on
+    the published area by the caller). So does the warping constant of a
     hollow section, which AISC does not tabulate.
     """
     section.area = p["A"]
@@ -612,8 +634,11 @@ def resolve_section(name: str, material: Material) -> Section:
 
     source = params.get("source")
     if source is not None:
-        section = _build_tabulated(source, family, name, material)
-        return _apply_published(section, source.published_si(name))
+        section = _apply_published(
+            _build_tabulated(source, family, name, material), source.published_si(name)
+        )
+        section.ec3 = {**(section.ec3 or {}), **_published_shear_areas(source, family, name, section.area)}
+        return section
 
     if family in ("IPE",):
         return Section.create_ipe_section(
