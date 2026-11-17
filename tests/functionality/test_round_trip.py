@@ -170,6 +170,8 @@ def kitchen_sink(buckling: str = "references", results: str = "filter") -> FERS:
             "wel_y_eff": 1.4e-4,
             "wel_z_eff": 1.9e-5,
             "z_j": 0.003,
+            "a_v_y": 1.2e-3,
+            "a_v_z": 1.5e-3,
         },
     )
 
