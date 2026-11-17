@@ -45,6 +45,7 @@ __all__ = [
     "angle_class",
     "buckling_curves",
     "ec3_params",
+    "code_shear_areas",
     "section_ec3",
 ]
 
@@ -591,6 +592,76 @@ def buckling_curves(
     return ("c", "c", "d")
 
 
+# EN 1993-1-1 §6.2.6(3) leaves η to EN 1993-1-5 and allows 1.0 as the
+# conservative value; 1.2 would hang on the steel grade and the National Annex.
+_ETA = 1.0
+
+
+def code_shear_areas(
+    kind: str,
+    fabrication: Fabrication,
+    a_gross: float,
+    *,
+    h: Optional[float] = None,
+    b: Optional[float] = None,
+    t: Optional[float] = None,
+    t_f: Optional[float] = None,
+    t_w: Optional[float] = None,
+    r: float = 0.0,
+) -> dict:
+    """EN 1993-1-1 §6.2.6(3) shear areas: ``{"a_v_y": ..., "a_v_z": ...}``.
+
+    ``a_v_y`` resists the shear along local y, the section's depth ``h``, and
+    ``a_v_z`` the shear along z. Only the cases the clause has a formula for are
+    returned; for the others the solver falls back to the stiffness (Timoshenko)
+    shear areas ``a_sz``/``a_sy``. The cases:
+
+    * (a) rolled I/H along the web: ``A - 2·b·t_f + (t_w + 2r)·t_f``, at least
+      ``η·h_w·t_w``. The clause has no rolled-section formula along the flanges.
+    * (b) rolled channel along the web: ``A - 2·b·t_f + (t_w + r)·t_f``.
+    * (d)/(e) welded I and box: ``η·Σh_w·t_w`` along the webs and
+      ``A - Σh_w·t_w`` along the flanges; a welded channel only along its flanges.
+    * (f) rolled RHS of uniform thickness: ``A·h/(b+h)`` and ``A·b/(b+h)``,
+      cold-formed ones included.
+    * (g) CHS: ``2A/π`` both ways.
+
+    Cold-formed open sections are EN 1993-1-3 and angles have no formula: none.
+    """
+    tf = t_f if t_f is not None else t
+    tw = t_w if t_w is not None else t
+    welded = fabrication == "welded"
+
+    if kind in ("chs", "tube"):
+        a_v = 2.0 * a_gross / math.pi
+        return {"a_v_y": a_v, "a_v_z": a_v}
+
+    if h is None or b is None or tf is None or tw is None:
+        return {}
+    h_w = h - 2.0 * tf
+
+    if kind in ("rhs", "shs", "hollow"):
+        if welded:
+            return {"a_v_y": _ETA * 2.0 * h_w * tw, "a_v_z": a_gross - 2.0 * h_w * tw}
+        return {"a_v_y": a_gross * h / (b + h), "a_v_z": a_gross * b / (b + h)}
+
+    if kind in ("i", "h", "ipe", "hea", "heb", "hem"):
+        if welded:
+            return {"a_v_y": _ETA * h_w * tw, "a_v_z": a_gross - h_w * tw}
+        if fabrication == "hot_rolled":
+            web = a_gross - 2.0 * b * tf + (tw + 2.0 * r) * tf
+            return {"a_v_y": max(web, _ETA * h_w * tw)}
+        return {}
+
+    if kind in ("channel", "u"):
+        if welded:
+            return {"a_v_z": a_gross - h_w * tw}
+        if fabrication == "hot_rolled":
+            return {"a_v_y": a_gross - 2.0 * b * tf + (tw + r) * tf}
+        return {}
+
+    return {}
+
+
 # ── the block the solver actually reads ─────────────────────────────────────
 
 
@@ -664,7 +735,8 @@ def section_ec3(
 
     So the buckling curves, which do not depend on the stress state, are always
     emitted; the class and `a_eff` only when the caller says how the member is
-    loaded. Pass ``classify_for="compression"`` for a strut or a brace.
+    loaded. Pass ``classify_for="compression"`` for a strut or a brace. The
+    §6.2.6(3) shear areas (`code_shear_areas`) do not depend on it either.
     """
     if classify_for not in (None, "compression"):
         raise ValueError(
@@ -673,20 +745,25 @@ def section_ec3(
         )
     classify = classify_for == "compression"
     curves = buckling_curves(kind, fabrication, f_y, h=h, b=b, t_f=t_f)
+    shear = code_shear_areas(kind, fabrication, a_gross, h=h, b=b, t=t, t_f=t_f, t_w=t_w, r=r)
+
+    def done(block: dict, eff: Optional[EffectiveSection]):
+        return {**block, **shear}, eff
+
     tf = t_f if t_f is not None else t
     tw = t_w if t_w is not None else t
 
     if kind in ("chs", "tube"):
         if d is None or t is None:
-            return ec3_params(None, curves, classify=classify), None
-        return (
+            return done(ec3_params(None, curves, classify=classify), None)
+        return done(
             ec3_params(None, curves, section_class=tube_class(d, t, f_y), classify=classify),
             None,
         )
 
     if kind in ("angle", "l"):
         if h is None or b is None or t is None:
-            return ec3_params(None, curves, classify=classify), None
+            return done(ec3_params(None, curves, classify=classify), None)
         cls = angle_class(h, b, t, f_y)
         eff = effective_section(angle_plates(h, b, t, r), a_gross, f_y)
         # Table 5.2 sheet 3 is the classification authority for an angle; the
@@ -694,10 +771,10 @@ def section_ec3(
         eff.section_class = cls
         if cls < 4:
             eff.a_eff = a_gross
-        return ec3_params(eff, curves, section_class=cls, classify=classify), eff
+        return done(ec3_params(eff, curves, section_class=cls, classify=classify), eff)
 
     if h is None or b is None or tf is None or tw is None:
-        return ec3_params(None, curves, classify=classify), None
+        return done(ec3_params(None, curves, classify=classify), None)
 
     if kind in ("channel", "u"):
         plates = channel_plates(h, b, tf, tw, r)
@@ -706,7 +783,7 @@ def section_ec3(
     elif kind in ("i", "h", "ipe", "hea", "heb", "hem"):
         plates = i_plates(h, b, tf, tw, r)
     else:
-        return ec3_params(None, curves, classify=classify), None
+        return done(ec3_params(None, curves, classify=classify), None)
 
     eff = effective_section(plates, a_gross, f_y)
-    return ec3_params(eff, curves, classify=classify), eff
+    return done(ec3_params(eff, curves, classify=classify), eff)
