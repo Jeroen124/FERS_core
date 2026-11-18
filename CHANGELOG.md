@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.2.17
+
+### Engine 0.2.91: C1 is back to the 0.2.89 rule
+
+`fers_calculations` is pinned to 0.2.91, up from 0.2.90. Engine 0.2.90 let the
+lateral-torsional buckling factor C1 take its M_max from the exact peaks
+between the stations too. That made the LTB check less conservative: a beam of
+three 6 m spans without lateral restraint at the inner supports went from 3.0
+to 1.54. A change in that direction should follow a check against a reference
+solution, so 0.2.91 restores C1 as it was. The exact demands (M_Ed, V_Ed, N_Ed)
+and envelopes from 0.2.90 stay.
+
 ## 0.2.16
 
 ### Engine 0.2.90: member extremes and check demands miss no peak
