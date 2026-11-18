@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.19
+
+### Engine 0.2.93: an explicit `ltb_length` keeps the eigenvalue C1
+
+`fers_calculations` is pinned to 0.2.93, up from 0.2.92. With an explicit
+`ltb_length` on a member set, 0.2.92 still used the quarter-point C1, so a
+length equal to the span gave a slightly different result from the default.
+C1 now comes from the eigenvalue solve over the member's diagram and is applied
+at the given length.
+
 ## 0.2.18
 
 ### Engine 0.2.92: the LTB check takes M_cr from an eigenvalue solve
