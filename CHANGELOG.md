@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.2.16
+
+### Engine 0.2.90: member extremes and check demands miss no peak
+
+`fers_calculations` is pinned to 0.2.90, up from 0.2.89. A member's results
+carry its internal forces at three stations (L/4, L/2, 3L/4), and the
+envelopes (`maximums`, `local_maximums` and their minimums) and every unity
+check's `Max`/`Min`/`MaxAbs`, the EN 1993-1-1 check among them, read only
+those and the ends. A peak between them was missed, on the low side: a 6 m
+simply supported beam with 10 kN/m on its first half peaks at 25.31 kN·m (at
+3L/8) and was reported as 22.50; an IPE 300 EC3 bending check on it read 0.152
+instead of 0.171. The engine now finds where each force peaks between load ends
+and uses those points too. `section_forces` and `internal_force_series` keep
+their stations.
+
+### Engine 0.2.90: the envelopes take the end as an internal force
+
+The end node force is in the reaction convention, and the envelopes used it
+raw: a simply supported beam's shear envelope read 30 kN one way and 15 kN the
+other, and a 10 kN tie read −10 to +10 kN. Both ends are now internal forces.
+
+### Engine 0.2.90: the unity report names the major axis
+
+The HTML report adds "(major axis)" or "(minor axis)" after a member's
+`Bending y/z` and `Shear y/z` rows, from the section's principal inertias.
+
 ## 0.2.15
 
 ### Engine 0.2.89: the calculation trace prints at least four significant figures
