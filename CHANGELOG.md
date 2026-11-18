@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.2.18
+
+### Engine 0.2.92: the LTB check takes M_cr from an eigenvalue solve
+
+`fers_calculations` is pinned to 0.2.92, up from 0.2.91. The EN 1993-1-1
+lateral-torsional buckling check took C1 from the quarter-point formula and
+checked every member, cantilevers included, as a fork-supported span. It now
+solves for M_cr over the LTB length with the member's exact moment diagram.
+
+- **Cantilevers were unconservative.** A 3 m IPE 300 cantilever under a UDL had
+  M_cr = 584 kN·m; with its root free to warp it is 407. Across IPE 300,
+  IPE 600 and HEB 300 cantilevers of 1.5–6 m the utilization was up to 20 % low.
+  A free end (no support, no restraint, no other member) is now a cantilever
+  tip and the other end a root free to warp; the check's message says so.
+- **Multi-span lengths were very conservative:** three 6 m spans with one 18 m
+  LTB length had C1 = 1.14, now 2.13.
+- An explicit `c1` in the check, or an explicit `ltb_length`, keeps the formula.
+
 ## 0.2.17
 
 ### Engine 0.2.91: C1 is back to the 0.2.89 rule
