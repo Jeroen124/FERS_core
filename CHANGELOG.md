@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.2.21
+
+### Engine 0.2.95: tension- and compression-only members in a second-order solve
+
+`fers_calculations` is pinned to 0.2.95, up from 0.2.94. Three fixes to the
+second-order active-set loop:
+
+- A tension-only member that re-engaged after a step had converged was
+  measured against a stale residual. It could report a force no node balanced,
+  with `converged: true`, or the solve could fail with "non-descent at αmin".
+- Members that steer each other, such as strips in a braced plane beside an
+  unbraced bay, no longer go round in circles: the set now pivots one member at
+  a time until it settles.
+- A frozen active set reports the equilibrium it converged to, and the
+  `active_set_frozen` warning describes the state reported.
+
 ## 0.2.20
 
 ### Engine 0.2.94: the member-deflection check sees self-weight and surface loads
