@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.2.20
+
+### Engine 0.2.94: the member-deflection check sees self-weight and surface loads
+
+`fers_calculations` is pinned to 0.2.94, up from 0.2.93. The member-deflection
+check rebuilds a member's sag from its span loads, and it did not see
+self-weight or surface loads spread onto members. A beam carrying only its own
+weight was checked at 80 % of its sag. Those loads now reach the check.
+
+The same check read E in the model's pressure unit against forces in its force
+unit. With `force_unit="kN"` and `pressure_unit="MPa"` (or `"Pa"`), the sag was
+off by a factor of 1000. N·m·Pa (the default), N·mm·MPa and kN·m·kPa were right.
+
 ## 0.2.19
 
 ### Engine 0.2.93: an explicit `ltb_length` keeps the eigenvalue C1
