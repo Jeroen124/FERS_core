@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.2.23
+
+### Engine 0.2.99; neutral wording in examples and descriptions
+
+`fers_calculations` is pinned to 0.2.99, up from 0.2.97. This includes 0.2.98,
+which adds a WASM export only; the Python package is unchanged by it. 0.2.99
+changes wording only: five field descriptions in the schema (and so in
+`fers_core.types`) now give neutral examples.
+
+Examples, docstrings and the README use the same neutral wording: example 055
+turns a frame in plan, example 131's base plates are column base plates, and
+the `result_requests` example names its members `Column_1`. No behaviour
+changes.
+
 ## 0.2.22
 
 ### Engine 0.2.97: tension-only members in first-order combinations; a frozen set is not converged
