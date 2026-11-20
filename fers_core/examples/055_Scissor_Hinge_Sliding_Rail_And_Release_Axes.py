@@ -1,6 +1,6 @@
 """
 055 — Scissor Hinge: a Sliding Rail, a Turned Frame, and Release Axes
-====================================================================
+=====================================================================
 A rail resting on posts may slide along them as well as turn. A ScissorHinge
 (engine 0.2.68) frees translations too, can be limited to some of the nodes the
 rail meets, and can name its own axes, as a frame turned in plan needs. A
