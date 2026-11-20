@@ -15,13 +15,13 @@ Example::
     from fers_core.result_requests import ResultRequest, nodes_of
     from fers_core.unity_checks import classification
 
-    uprights, beams = classification("Upright_1"), classification("beam")
+    columns, beams = classification("Column_1"), classification("beam")
     model.settings.analysis_options.result_requests = [
-        ResultRequest(ResultBlock.LOCAL_ENVELOPES, members=[uprights, classification("Bracing")],
+        ResultRequest(ResultBlock.LOCAL_ENVELOPES, members=[columns, classification("Bracing")],
                       limit_state="ULS", components=["fx", "my", "mz"]),
         ResultRequest(ResultBlock.LOCAL_END_FORCES, members=beams, limit_state="ULS",
                       end="start", components=["my", "fz"]),
-        ResultRequest(ResultBlock.NODE_DISPLACEMENTS, nodes=nodes_of(uprights, beams),
+        ResultRequest(ResultBlock.NODE_DISPLACEMENTS, nodes=nodes_of(columns, beams),
                       limit_state="SLS", components=["dx", "dy", "dz"]),
         ResultRequest(ResultBlock.REACTIONS, limit_state="ULS"),
     ]

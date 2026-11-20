@@ -256,7 +256,7 @@ print(f"{abs(mz):.1f} Nm")  # 62.4; a knife edge gives qL²/16 = 62.5, a rigid j
 - **The axes are global** unless the hinge names its own:
   `ScissorHinge(..., axes=ReleaseAxes.user(x=..., y=...))` takes the first axis
   along `x`, the second along `y` made perpendicular to it, and the third as
-  their cross product, as a rack turned in plan needs.
+  their cross product, as a frame turned in plan needs.
 - **Supports and nodal loads** at a released node act on the node, meaning the
   members outside the set. A node's reported displacement is theirs. The set's
   own motion there is in its members' `local_displacement_start_node` and
@@ -309,7 +309,7 @@ Without them, a model is written exactly as before.
 `fers_core/examples/054_Scissor_Hinge_Rail_On_Beam.py` compares the rigid
 connection, member hinges, the scissor hinge and a spring, and
 `fers_core/examples/055_Scissor_Hinge_Sliding_Rail_And_Release_Axes.py` slides
-the rail, limits the hinge to one post, and turns the rack in plan.
+the rail, limits the hinge to one post, and turns the frame in plan.
 
 ### Member hinges in global or user axes (engine 0.2.68)
 

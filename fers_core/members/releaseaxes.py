@@ -10,7 +10,7 @@ class ReleaseAxes:
     - ``ReleaseAxes.GLOBAL``: global X, Y and Z.
     - ``ReleaseAxes.user(x, y)``: a frame of your own, in global components. Its
       first axis runs along ``x``; its second along ``y``, made perpendicular to
-      ``x``; its third is their cross product. A rack turned in plan names its
+      ``x``; its third is their cross product. A frame turned in plan names its
       own directions this way::
 
           from math import cos, radians, sin

@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.2.23
+
+### Engine 0.2.99; neutral wording in examples and descriptions
+
+`fers_calculations` is pinned to 0.2.99, up from 0.2.97. This includes 0.2.98,
+which adds a WASM export only; the Python package is unchanged by it. 0.2.99
+changes wording only: five field descriptions in the schema (and so in
+`fers_core.types`) now give neutral examples.
+
+Examples, docstrings and the README use the same neutral wording: example 055
+turns a frame in plan, example 131's base plates are column base plates, and
+the `result_requests` example names its members `Column_1`. No behaviour
+changes.
+
 ## 0.2.22
 
 ### Engine 0.2.97: tension-only members in first-order combinations; a frozen set is not converged
@@ -361,7 +375,7 @@ The plugin's version follows the SDK's, so it goes out as 0.2.8.
 `fers_calculations` is pinned to 0.2.82, up from 0.2.80. Results are
 byte-identical to 0.2.80's.
 
-- **Second order at 1,000,000 members.** On 16 cores and 64 GB, a shuttle rack
+- **Second order at 1,000,000 members.** On 16 cores and 64 GB, a model
   of 1,083,083 members with 15 load cases, 25 combinations and result requests
   solves in second order in 56 minutes, one combination at a time, peaking at
   15.1 GB. On 0.2.80 it would have needed an estimated 31 to 41 GB.
@@ -387,7 +401,7 @@ others. The engine's OpenAPI contract, and so the input schema `fers validate`
 checks against, lists only the canonical spelling. `fers validate` therefore
 refused files that `fers solve` solves. This included FERS Cloud's Simple Shed
 and Solar Rail templates, which the hosted MCP's `get_template` hands out, and
-rack models from older integrations.
+models from older integrations.
 
 - **The older spellings now pass, with a note.** `fers validate` reads each one
   as the engine does and lists where it found it and the schema's spelling, for
@@ -439,7 +453,7 @@ byte-identical to 0.2.79's.
 - **Rigid links no longer scan the model.** A `RigidMember` found the
   neighbour it borrows a section from, and its stiffest neighbour, by scanning
   every member on every assembly, so second order grew with the square of the
-  model. On 16 cores, a shuttle rack of 217,463 members now solves in second
+  model. On 16 cores, a model of 217,463 members now solves in second
   order in 173 s, where it took 1,916 s. One of 541,498 members takes 927 s and
   peaks at 21.6 GB.
 - **Free memory caps how many second-order solves run at once.** Each load case
@@ -473,7 +487,7 @@ The plugin's version follows the SDK's, so it goes out as 0.2.5.
 - **0.2.79 makes a solve that size practical.** A first-order solve factorises
   the stiffness matrix once, for every load case and combination. Recovering
   results now grows with the model, not with its square. A solve with result
-  requests builds only the results they read. On 16 cores, a shuttle rack of
+  requests builds only the results they read. On 16 cores, a model of
   1,083,083 members with 15 load cases, 25 combinations and result requests
   solves in 154 s, peaking at 26.7 GB. One of 108,688 members takes 3.7 s,
   where it took 99 s.
@@ -558,7 +572,7 @@ The engine pin moves to `fers_calculations==0.2.76`. A second-order
 (`AnalysisOrder.NONLINEAR`) solve without a warm start began from the
 first-order answer, which already carries the whole load, and then applied that
 load again in 20 steps. It now tries the whole load in one step first and steps
-it only when that does not converge cleanly. An integrator's 1,070-member rack
+it only when that does not converge cleanly. An integrator's 1,070-member model
 solves its 14 combinations in 1.2 s on one thread, where it took 10.7 s. Load
 cases take the one step too, so `solve_loadcases=True` is faster as well.
 
@@ -863,19 +877,19 @@ from fers_core import ResultBlock, ResultRequest
 from fers_core.result_requests import nodes_of
 from fers_core.unity_checks import classification
 
-uprights, beams = classification("Upright_1"), classification("beam")
+columns, beams = classification("Column_1"), classification("beam")
 model.settings.analysis_options.result_requests = [
-    ResultRequest(ResultBlock.LOCAL_ENVELOPES, members=[uprights, classification("Bracing")],
+    ResultRequest(ResultBlock.LOCAL_ENVELOPES, members=[columns, classification("Bracing")],
                   limit_state="ULS", components=["fx", "my", "mz"]),
     ResultRequest(ResultBlock.LOCAL_END_FORCES, members=beams, limit_state="ULS",
                   end="start", components=["my", "fz"]),
-    ResultRequest(ResultBlock.NODE_DISPLACEMENTS, nodes=nodes_of(uprights, beams),
+    ResultRequest(ResultBlock.NODE_DISPLACEMENTS, nodes=nodes_of(columns, beams),
                   limit_state="SLS", components=["dx", "dy", "dz"]),
     ResultRequest(ResultBlock.REACTIONS, limit_state="ULS"),
 ]
 ```
 
-On an integrator's 4-bay shuttle rack (8546 members, 31 combinations), the
+On an integrator's model (8546 members, 31 combinations), the
 five-token filter writes 451.8 MB. With their selection the file is 40.7 MB, and
 every value in it equals the filter-only output exactly.
 
@@ -992,7 +1006,7 @@ its rotations about global or user axes.
   Saved as node ids and read back as the set's own nodes.
 - `ReleaseAxes` is new and exported: `ReleaseAxes.LOCAL`, `ReleaseAxes.GLOBAL`
   and `ReleaseAxes.user(x, y)`. `ScissorHinge(axes=...)` takes `GLOBAL` (the
-  default) or a user frame, as for a rack turned in plan.
+  default) or a user frame, as for a frame turned in plan.
 - `MemberHinge(rotation_axes=...)`: the axes its rotational releases, stiffness
   curves and moment–rotation diagrams name. `LOCAL` is the default and is what
   every existing model keeps; a hinge that sets another is written with
@@ -1000,7 +1014,7 @@ its rotations about global or user axes.
 - The README's scissor-hinge section covers all four, with a sliding rail that
   runs as written, and
   `fers_core/examples/055_Scissor_Hinge_Sliding_Rail_And_Release_Axes.py`
-  slides a rail, limits the hinge to one post, turns the rack in plan, and pins
+  slides a rail, limits the hinge to one post, turns the frame in plan, and pins
   a skew purlin about its girders' axis.
 
 ### Changed — a default nonlinear solve of a model with rigid members
@@ -1396,7 +1410,7 @@ Python caller cannot reach the fix at all without this.
 A soft axial spring in a member end release (`translational_release_vx`) made
 the second-order solve return **silently wrong** results — no error, no warning,
 no dropped load combination, normal solve time. It cost 8.3 % in a design unity
-check on the reporting integrator's rack, and it reached them through this SDK.
+check on the reporting integrator's model, and it reached them through this SDK.
 
 `K_g` is built from the member's axial force, and the engine computed that force
 by multiplying the **node-to-node** extension by the member's own `EA/L`. With a
@@ -2173,7 +2187,7 @@ Pins engine `fers_calculations==0.2.51`. If you use linear buckling on models
 with reaction-dependent base springs (`stiffness_curve` supports), **α_cr
 rises** — the eigenproblem now linearizes those springs at the reference
 reactions (the loaded state the static solve converges to) instead of at
-force = 0, which had entered nearly rigid rack base plates as nearly pinned.
+force = 0, which had entered nearly rigid column base plates as nearly pinned.
 Models without StiffnessCurve supports are unaffected. Also: exactly singular
 operators (unconstrained DOFs / mechanisms) now return a structured error
 instead of crashing the process. No schema change — no regenerated types.
@@ -2243,7 +2257,7 @@ changelog. Both changes move results toward the conservative side.
   members: with `solve_loadcases: true`, combination solves were seeded from a
   superposition of the nonlinear load-case displacements and could converge —
   reported as clean success — onto a spurious equilibrium branch (on a braced
-  rack model a tension-only diagonal carried 3.6× the correct force, a false
+  model a tension-only diagonal carried 3.6× the correct force, a false
   structural FAIL). Such models now cold-start each combination and
   agree with the `solve_loadcases: false` answer; results on affected
   tension-only braced models **change (become correct)**. New advisory
@@ -2255,7 +2269,7 @@ changelog. Both changes move results toward the conservative side.
   consumer that migrated from a hand-rolled wire (which typically wrote
   `"pdelta_mode": "IN_PLANE_ONLY"`) to fers_core builder objects on ≤ 0.1.69
   **silently switched to the engine default `FULL`** (all-direction P-Delta
-  amplification). The two modes diverge exactly on rack-style tension-only
+  amplification). The two modes diverge exactly on tension-only
   braced structures. For commercial-solver parity set it explicitly:
   `AnalysisOptions(pdelta_mode=PdeltaMode.IN_PLANE_ONLY)`. The same applies to
   `nonlinear_method` / `pdelta_formulation` (engine defaults `COROTATIONAL` /

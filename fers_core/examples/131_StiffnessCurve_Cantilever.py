@@ -22,7 +22,7 @@ from fers_core.settings.enums import AnalysisOrder
 #
 # A 5 m vertical cantilever (HEB 200) with a semi-rigid base connection whose
 # rotational stiffness increases with compressive axial load — modelling the
-# behaviour of warehouse racking base plates that engage more as the upright
+# behaviour of column base plates that engage more as the column
 # carries heavier loads.
 #
 #   Axial Load [kN]   Rotational Stiffness [kNm/rad]
@@ -239,7 +239,7 @@ print(
   (C) Analytical 1st-order:  δ = Fh²/k + Fh³/(3EI) using the interpolated k.
       No P-δ.  Matches (A) at zero axial load; diverges as axial load grows.
 
-  This demonstrates how racking base plates that stiffen under compression
+  This demonstrates how column base plates that stiffen under compression
   can reduce sway — an effect that a constant spring model cannot capture.
 """
 )

@@ -28,7 +28,7 @@ class ScissorHinge:
     slide along the beams frees that translation too.
 
     The axes are global X, Y and Z unless ``axes`` names a frame of your own
-    (:meth:`ReleaseAxes.user`), as for a rack turned in plan. Not
+    (:meth:`ReleaseAxes.user`), as for a frame turned in plan. Not
     ``ReleaseAxes.LOCAL``: the members of a set need not share one frame.
 
     Nothing is released where the set's members meet only each other, or only a

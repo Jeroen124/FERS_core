@@ -31,7 +31,7 @@ L, Q = 1.0, 1000.0
 TARGET = Q * L**2 / 16
 
 
-def rack(connection="scissor", hinge=None, beam_scale=1.0):
+def frame(connection="scissor", hinge=None, beam_scale=1.0):
     """The rail on the beam. `connection` is "scissor" (4 members, the rail set
     carries `hinge`), "rigid" (4 members, no release) or "link" (the old
     workaround: a 5th, short link member from the beam to a separate rail node,
@@ -106,7 +106,7 @@ def moment_over_m(model, rail_1):
 
 def test_round_trips_through_the_model():
     hinge = ScissorHinge(rotational_release_y=0.0, rotational_release_z=0.0)
-    model, _ = rack(hinge=hinge)
+    model, _ = frame(hinge=hinge)
     data = model.to_dict()
 
     assert data["schema_version"] == 3
@@ -128,7 +128,7 @@ def test_round_trips_through_the_model():
 
 
 def test_a_model_without_one_is_written_as_before():
-    model, _ = rack(connection="rigid")
+    model, _ = frame(connection="rigid")
     data = model.to_dict()
     assert "scissor_hinges" not in data["model"]
     assert data["schema_version"] == 1
@@ -138,14 +138,14 @@ def test_a_model_without_one_is_written_as_before():
 def test_conforms_to_the_generated_models():
     hinge = ScissorHinge(rotational_release_z=2.5e5)
     ScissorHingeSchema(**hinge.to_dict())
-    model, _ = rack(hinge=hinge)
+    model, _ = frame(hinge=hinge)
     model.validate_schema()
 
 
 def test_member_set_keeps_its_buckling_lengths_through_from_dict():
     # Written by to_dict since 0.1.9x but dropped on the way back in until 0.1.99,
     # so a model loaded from JSON lost its EC3 buckling lengths.
-    model, _ = rack(connection="rigid")
+    model, _ = frame(connection="rigid")
     rail = model.member_sets[0]
     rail.buckling_length_y, rail.ltb_length, rail.effective_length_factor_z = 2.0, 1.5, 0.7
     again = FERS.from_dict(json.loads(json.dumps(model.to_dict())))
@@ -154,13 +154,13 @@ def test_member_set_keeps_its_buckling_lengths_through_from_dict():
 
 
 def test_the_rail_carries_ql2_over_16():
-    model, rail_1 = rack(hinge=ScissorHinge(rotational_release_y=0.0, rotational_release_z=0.0))
+    model, rail_1 = frame(hinge=ScissorHinge(rotational_release_y=0.0, rotational_release_z=0.0))
     assert moment_over_m(model, rail_1) == pytest.approx(TARGET, rel=0.01)
 
-    stiff, rail_1 = rack(hinge=ScissorHinge(rotational_release_z=0.0), beam_scale=1e3)
+    stiff, rail_1 = frame(hinge=ScissorHinge(rotational_release_z=0.0), beam_scale=1e3)
     assert moment_over_m(stiff, rail_1) == pytest.approx(TARGET, rel=1e-4)
 
-    rigid, rail_1 = rack(connection="rigid")
+    rigid, rail_1 = frame(connection="rigid")
     assert moment_over_m(rigid, rail_1) > 1.5 * TARGET
 
 
@@ -168,20 +168,20 @@ def test_the_rail_carries_ql2_over_16():
 def test_agrees_with_the_link_it_replaces(k):
     """The workaround hangs the rail 1 mm above the beam on a link released at
     its rail end; the link's local y is global Z."""
-    scissor, rail_s = rack(hinge=ScissorHinge(rotational_release_z=k))
-    link, rail_l = rack(connection="link", hinge=MemberHinge(rotational_release_my=k))
+    scissor, rail_s = frame(hinge=ScissorHinge(rotational_release_z=k))
+    link, rail_l = frame(connection="link", hinge=MemberHinge(rotational_release_my=k))
     assert moment_over_m(scissor, rail_s) == pytest.approx(moment_over_m(link, rail_l), rel=0.005)
 
 
 def test_second_order_solves():
-    model, rail_1 = rack(hinge=ScissorHinge(rotational_release_z=0.0))
+    model, rail_1 = frame(hinge=ScissorHinge(rotational_release_z=0.0))
     model.settings.analysis_options.order = AnalysisOrder.NONLINEAR
     assert moment_over_m(model, rail_1) == pytest.approx(TARGET, rel=0.01)
 
 
 def test_the_solver_refuses_a_set_that_meets_nothing():
     """Every member in one set is the layout to avoid: nothing is outside it."""
-    model, _ = rack(connection="rigid")
+    model, _ = frame(connection="rigid")
     everything = MemberSet(
         members=[m for s in model.member_sets for m in s.members],
         scissor_hinge=ScissorHinge(rotational_release_z=0.0),

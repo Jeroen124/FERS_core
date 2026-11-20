@@ -1,9 +1,9 @@
 """
-055 — Scissor Hinge: a Sliding Rail, a Turned Rack, and Release Axes
-====================================================================
+055 — Scissor Hinge: a Sliding Rail, a Turned Frame, and Release Axes
+=====================================================================
 A rail resting on posts may slide along them as well as turn. A ScissorHinge
 (engine 0.2.68) frees translations too, can be limited to some of the nodes the
-rail meets, and can name its own axes, as a rack turned in plan needs. A
+rail meets, and can name its own axes, as a frame turned in plan needs. A
 MemberHinge can release its rotations about global or user axes as well.
 
 The model: a rail 1-2-3 along X over two posts (tops 2 and 3, fixed feet),
@@ -13,7 +13,7 @@ posts.
 Key features shown:
   • ScissorHinge(translational_release_x=0.0): the rail slides over the posts
   • MemberSet(..., scissor_hinge_nodes=[...]): hinged at one post only
-  • ScissorHinge(axes=ReleaseAxes.user(x, y)): the same rack turned in plan
+  • ScissorHinge(axes=ReleaseAxes.user(x, y)): the same frame turned in plan
   • MemberHinge(rotation_axes=ReleaseAxes.GLOBAL): a skew beam freed about Z
 """
 
@@ -45,7 +45,7 @@ def rail_over_posts(hinge=None, hinged_at=None, angle=0.0):
     model = FERS()
     model.settings.analysis_options.order = AnalysisOrder.LINEAR
     steel = Material(name="S355", e_mod=210e9, g_mod=81e9, density=7850.0, yield_stress=355e6)
-    # Alike about both axes: a vertical post's frame does not turn with the rack.
+    # Alike about both axes: a vertical post's frame does not turn with the structure.
     frame = Section(name="frame", material=steel, i_y=4e-6, i_z=4e-6, j=1e-7, area=2e-3)
 
     anchor = Node(*turn(angle, 0.0, 0.0, 0.0))
@@ -103,7 +103,7 @@ print(f"  so the anchor takes it all; rail force at the anchor {axial:.1f} N")
 posts, _ = rail_over_posts(ScissorHinge(translational_release_x=0.0), hinged_at=[0])
 print(f"Sliding over the first post only:    {posts[0]:8.1f} N  {posts[1]:8.1f} N")
 
-# The same rack turned 30 degrees in plan: its hinge names the rail's own axes.
+# The same frame turned 30 degrees in plan: its hinge names the rail's own axes.
 angle = radians(30)
 rails_axes = ReleaseAxes.user(x=turn(angle, 1.0, 0.0, 0.0), y=(0.0, 1.0, 0.0))
 posts, axial_turned = rail_over_posts(ScissorHinge(translational_release_x=0.0, axes=rails_axes), angle=angle)
