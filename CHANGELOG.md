@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.2.22
+
+### Engine 0.2.97: tension-only members in first-order combinations; a frozen set is not converged
+
+`fers_calculations` is pinned to 0.2.97, up from 0.2.95. This includes 0.2.96.
+
+- **0.2.96:** a first-order load combination now settles its tension- and
+  compression-only members both ways, as a load case always did. Before, a
+  combination that re-engaged a member could end with a tension-only member
+  in compression, or a slack one stretched. Both were in balance and had no
+  warning.
+- **0.2.97:** when a second-order solve cannot settle which tension- or
+  compression-only members are engaged and freezes the set, it now reports
+  `converged: false` beside the `active_set_frozen` warning. Before, it
+  reported `converged: true`.
+
 ## 0.2.21
 
 ### Engine 0.2.95: tension- and compression-only members in a second-order solve
