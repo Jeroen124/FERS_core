@@ -20,7 +20,7 @@ class AnalysisOptions:
 
         AnalysisOptions(pdelta_mode=PdeltaMode.IN_PLANE_ONLY)
 
-    The two modes diverge most on rack-style braced structures with
+    The two modes diverge most on braced structures with
     tension-only diagonals. NOTE: ``pdelta_mode`` (with ``nonlinear_method``,
     ``pdelta_formulation``, ``pdelta_suppress_axes``) is expressible here since
     fers_core 0.1.70 — wires built with ≤ 0.1.69 builder objects always ran

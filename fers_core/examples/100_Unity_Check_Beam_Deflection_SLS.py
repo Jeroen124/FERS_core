@@ -3,7 +3,7 @@ Example 100 - Beam mid-span deflection (chord-relative) for an SLS check.
 
 Demonstrates the `MemberDeflection` quantity (FERS >= 0.2.39): the beam's net sag
 relative to its own supports - the quantity SLS span/limit deflection checks are
-actually written against. On a real frame (beams sitting on flexible uprights)
+actually written against. On a real frame (beams sitting on flexible columns)
 this removes the support settlement that a global `Dy` would wrongly include; on
 the rigidly pinned beam below the two coincide, which the script prints to make
 the relationship explicit.
@@ -102,7 +102,7 @@ print(f"Chord-relative sag (engine MemberDeflection): {chord_relative:.6f} m")
 print(f"Utilisation vs span/250: {uc['max_utilization']:.3f}  (status {uc['status']})")
 
 # Cross-check against the GLOBAL mid-span Dy. With rigid pinned supports there is
-# no settlement, so global == chord-relative; on a frame with flexible uprights the
+# no settlement, so global == chord-relative; on a frame with flexible columns the
 # global value would be the larger by exactly that support settlement.
 combo_results = calculation.resultsbundle.loadcombinations["SLS-combo"]
 dy_mid_global = abs(combo_results.displacement_nodes["2"].dy)
