@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.2.25
+
+### Engine 0.2.102: a stiffness curve on a support condition that is not Spring is refused
+
+`fers_calculations` is pinned to 0.2.102, up from 0.2.101. The engine now
+refuses a `stiffness_curve` on any support condition but `Spring`, naming the
+support, the axis and the condition type. Up to 0.2.101 it accepted one and
+read it before the type: a `Fixed` DOF lost its reaction, a `Free` DOF became a
+spring, and a one-way DOF never released or pulled after release.
+
+`SupportCondition` already refused that combination, so a model built with
+`fers_core` solves exactly as before. What changes is a model written as JSON
+by hand or by another tool. The schema's shape is unchanged, so
+`fers_core.types` moves only its engine-version stamp.
+
 ## 0.2.24
 
 ### Engine 0.2.101, and the Claude plugin on fers-mcp 2.99.0
