@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.2.27
+
+### Engine 0.2.103: a second-order solve no longer stops on a stale tangent or while it is still converging
+
+`fers_calculations` is pinned to 0.2.103, up from 0.2.102. Two ways a
+second-order solve could stop short of equilibrium are closed:
+
+- A stop on a stiffness factorisation reused from an earlier iteration is
+  retried on a fresh one. A column stayed by a cable stopped 1.6 N short of a
+  5 kN push that way before 0.2.85, which then refactorised every iteration
+  of a model with a cable. That rule is gone; the retry covers it, and the
+  results of models with a cable move by up to 2e-5, towards equilibrium.
+- Rigid links on the `LinearMpc` strategy solve on the engine's dense path.
+  There the solve stopped as soon as the displacement settled, even while the
+  residual was still falling fast: a short column under a rigid cap stopped 5 %
+  out of equilibrium, flagged `second_order_residual_floor`. It now converges.
+
+The warning `second_order_residual_floor` now names which exit kept the step.
+The schema is unchanged, so `fers_core.types` moves only its engine-version
+stamp.
+
 ## 0.2.26
 
 ### The Claude plugin on fers-mcp 2.102.0
