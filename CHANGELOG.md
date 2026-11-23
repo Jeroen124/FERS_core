@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.2.24
+
+### Engine 0.2.101, and the Claude plugin on fers-mcp 2.99.0
+
+`fers_calculations` is pinned to 0.2.101, up from 0.2.99. Neither 0.2.100 nor
+0.2.101 changes the engine: 0.2.100 fixes how the npm package's model types are
+built, and 0.2.101 renames a benchmark binary that the wheel's SBOM lists. The
+schema is unchanged, so `fers_core.types` moves only its engine-version stamp.
+
+`plugins/fers/.mcp.json` pins `@ferscloud/fers-mcp@2.99.0`, up from 2.82.0: the
+local MCP server on engine 0.2.99, with the same neutral wording in its tool
+descriptions.
+
 ## 0.2.23
 
 ### Engine 0.2.99; neutral wording in examples and descriptions
