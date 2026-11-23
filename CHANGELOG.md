@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.2.26
+
+### The Claude plugin on fers-mcp 2.102.0
+
+`plugins/fers/.mcp.json` pins `@ferscloud/fers-mcp@2.102.0`, up from 2.99.0:
+the local MCP server on engine 0.2.102. It refuses a `stiffness_curve` on a
+support condition that is not `Spring`, as `fers_core` already did, and
+`set_support` now makes a warping curve a `Spring` like the other six DOFs
+instead of sending it beside a `Fixed` warping condition.
+
+The engine pin stays at 0.2.102, so `fers_core` itself is unchanged.
+
 ## 0.2.25
 
 ### Engine 0.2.102: a stiffness curve on a support condition that is not Spring is refused
