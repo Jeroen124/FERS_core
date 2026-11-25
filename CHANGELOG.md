@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+### The Claude plugin uses the hosted FERS connector
+
+`plugins/fers/.mcp.json` now points at the hosted server,
+`https://ferscloud.com/api/mcp`, instead of starting `@ferscloud/fers-mcp` with
+`npx`. Anthropic's directory takes an MCP server that runs on the user's
+computer only from a Verified organization, and refused the plugin for it. The
+connector signs in with a FERS account and returns a link that solves the model
+in the browser. The skill now says so, and solves with `pip install FERS` as
+well where it can run Python, for numbers in the chat. The local server is
+still one command away: `claude mcp add fers-local -- npx -y @ferscloud/fers-mcp`.
+
 ## 0.2.27
 
 ### Engine 0.2.103: a second-order solve no longer stops on a stale tangent or while it is still converging
