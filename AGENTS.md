@@ -38,8 +38,9 @@ ruff check . && ruff format --check .
 - `plugins/fers/` is the Claude plugin, listed by `.claude-plugin/marketplace.json`.
   Its `skills/fers/` is a copy of `fers_core/skills/fers/` (an installer fetches
   the plugin folder alone), its version follows `pyproject.toml`, and its MCP
-  server is pinned to an exact `@ferscloud/fers-mcp` version, as Anthropic's
-  directory requires. `tests/functionality/test_skill_reference.py` checks all
+  server is the hosted connector `https://ferscloud.com/api/mcp`: Anthropic's
+  directory takes a server that runs on the user's computer only from a
+  Verified organization. `tests/functionality/test_skill_reference.py` checks all
   three; `claude plugin validate --strict` checks both manifests.
 - Every snippet in `fers_core/skills/fers/reference/api.md` must run as written:
   the same test executes them.

@@ -3,7 +3,7 @@
   "name": "fers",
   "displayName": "FERS: structural finite-element analysis",
   "version": "0.2.27",
-  "description": "FERS: structural finite-element analysis (3D frames, trusses, plates, Eurocode 3 checks) for engineers and AI agents. A skill and a local MCP server that solve on your machine.",
+  "description": "FERS: structural finite-element analysis (3D frames, trusses, plates, Eurocode 3 checks) for engineers and AI agents. A skill and the hosted FERS connector: Claude builds and checks the model, which solves in your browser or, with pip install FERS, on your machine.",
   "author": {
     "name": "Jeroen Hermsen",
     "url": "https://ferscloud.com"

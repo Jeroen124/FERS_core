@@ -56,6 +56,7 @@ def test_the_plugin_is_versioned_with_the_sdk():
     plugin = json.loads((PLUGIN / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))
     project = tomllib.loads((REPO / "pyproject.toml").read_text(encoding="utf-8"))["project"]
     assert plugin["version"] == project["version"]
+    # The directory takes an MCP server that runs on the user's computer only from a
+    # Verified organization, so the plugin carries the hosted connector, not npx.
     mcp = json.loads((PLUGIN / ".mcp.json").read_text(encoding="utf-8"))
-    package = mcp["mcpServers"]["fers"]["args"][-1]
-    assert re.fullmatch(r"@ferscloud/fers-mcp@\d+\.\d+\.\d+", package), "the directory requires an exact pin"
+    assert mcp["mcpServers"] == {"fers": {"type": "http", "url": "https://ferscloud.com/api/mcp"}}

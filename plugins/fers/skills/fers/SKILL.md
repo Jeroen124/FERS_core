@@ -12,7 +12,10 @@ them by hand: a large mismatch with a textbook formula means a modelling error.
 ## Pick the route (first that applies)
 
 1. **FERS MCP tools are connected** (`check_beam`, `create_frame`, `build_model`,
-   `solve_model`, ...): use them. They validate, solve and summarise for you.
+   `solve_model`, ...): use them. They validate, solve and summarise for you. The hosted
+   connector (ferscloud.com) solves nothing itself: its `open_url` solves the model in the
+   user's browser, so give the user that link, and if you can also run Python (route 2),
+   solve there too for numbers in the chat.
 2. **You can run Python with internet access** (a terminal, Claude Code, Codex, a chat
    app's code sandbox): `pip install "FERS>=0.2"`, about 30 MB, then the Python API or the
    `fers` command below. Everything runs where you are; nothing is sent anywhere.

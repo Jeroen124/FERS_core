@@ -1,8 +1,8 @@
 {
   "mcpServers": {
     "fers": {
-      "command": "npx",
-      "args": ["-y", "@ferscloud/fers-mcp@2.102.0"]
+      "type": "http",
+      "url": "https://ferscloud.com/api/mcp"
     }
   }
 }
