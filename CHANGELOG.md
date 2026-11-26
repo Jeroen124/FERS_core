@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.2.29
+
+### Engine 0.2.105: a mode shape's rotations are in proportion with its translations
+
+`fers_calculations` is pinned to 0.2.105, up from 0.2.104. The engine scales
+each buckling and modal mode so its largest translation is 1, but it did so in
+metres, and the translations were then read in the model's length unit. In a
+model in mm or cm, a mode's rotations were therefore out of proportion with its
+translations by the length factor (1000 in mm, 100 in cm). From 0.2.105 the
+rotations and warping of `modes[].displacements`, in buckling, every
+`buckling_runs` entry and modal results, are scaled with the translations.
+Models in metres are unchanged, and so are every critical load factor and
+frequency. FERS's own plots draw load cases and combinations, not mode shapes,
+so they look the same; code that reads mode rotations from a mm or cm model
+now gets them multiplied by the metres per model unit (0.001 in mm, 0.01 in cm).
+`fers_core.types` takes the engine's new descriptions of the two
+`displacements` fields; no field changes.
+
 ## 0.2.28
 
 ### Engine 0.2.104: a solve can report how far it has come
