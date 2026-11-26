@@ -1,6 +1,15 @@
 # Changelog
 
-## Unreleased
+## 0.2.28
+
+### Engine 0.2.104: a solve can report how far it has come
+
+`fers_calculations` is pinned to 0.2.104, up from 0.2.103. The engine now
+counts a solve's steps (its load cases, load combinations and modal, buckling
+and seismic analyses) and can report each one as it finishes. FERS Studio
+shows this as a percentage while a calculation runs. A Python solve runs as
+before and its results are unchanged. The schema is unchanged, so
+`fers_core.types` moves only its engine-version stamp.
 
 ### The Claude plugin uses the hosted FERS connector
 
