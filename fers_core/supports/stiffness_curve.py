@@ -63,9 +63,7 @@ class StiffnessCurveConfig:
         self.signed = bool(signed)
         self._validate()
 
-    # ------------------------------------------------------------------
     # Validation
-    # ------------------------------------------------------------------
 
     def _validate(self) -> None:
         if len(self.points) < 2:
@@ -95,9 +93,7 @@ class StiffnessCurveConfig:
                 stacklevel=3,
             )
 
-    # ------------------------------------------------------------------
     # Serialization
-    # ------------------------------------------------------------------
 
     def to_dict(self) -> dict:
         """Serialize to a plain dict matching the Rust ``StiffnessCurveConfig`` JSON schema."""
@@ -118,7 +114,7 @@ class StiffnessCurveConfig:
 
         * **dict** (new format): ``{"depends_on": "Vz", "points": [[0, 1e5], ...],
           "signed": false}``
-        * **list** (legacy format): ``[[0, 1e5], ...]`` — wrapped with
+        * **list** (legacy format): ``[[0, 1e5], ...]`` - wrapped with
           ``ForceComponent.Vz`` as default ``depends_on``.
         * **None**: returns ``None``.
         """
@@ -132,9 +128,7 @@ class StiffnessCurveConfig:
         points = data["points"]
         return cls(depends_on=depends_on, points=points, signed=bool(data.get("signed", False)))
 
-    # ------------------------------------------------------------------
     # Display
-    # ------------------------------------------------------------------
 
     def __repr__(self) -> str:
         return f"StiffnessCurveConfig(depends_on={self.depends_on.value}, points=[{len(self.points)} pts])"

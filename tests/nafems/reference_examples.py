@@ -17,7 +17,7 @@ Key gotchas these templates encode
    ``Auto`` resolves to). As of engine 0.2.44 the Kirchhoff/DKT element is
    rewritten to the canonical Batoz-Bathe-Ho formulation and validated
    (constant-curvature patch test exact; SS square plate within 0.31% at
-   16x16), so it is no longer under-stiff — but the benchmarks stay on
+   16x16), so it is no longer under-stiff - but the benchmarks stay on
    Mindlin as the general-purpose default. Mindlin converges from the stiff
    side (coarse-mesh stiff, improving with refinement) toward thin-plate
    theory.
@@ -58,7 +58,7 @@ def steel(E=210e9, G=80.769e9, rho=7850.0):
     return Material(name="Steel", e_mod=E, g_mod=G, density=rho, yield_stress=235e6)
 
 
-# --- Template 1: cantilever beam natural frequency (Euler-Bernoulli) ----------
+# Template 1: cantilever beam natural frequency (Euler-Bernoulli)
 
 
 def cantilever_modal():
@@ -79,7 +79,7 @@ def cantilever_modal():
     print(f"[cantilever]  f1 FERS={freqs[0]:.4f} Hz  target={f1:.4f}  err={H.rel_err_pct(freqs[0], f1):.3f}%")
 
 
-# --- Template 2: in-plane simply-supported beam (planarized) ------------------
+# Template 2: in-plane simply-supported beam (planarized)
 
 
 def simply_supported_modal():
@@ -140,7 +140,7 @@ def simply_supported_modal():
     print(f"[simple-sup]  f1 FERS={freqs[0]:.4f} Hz  target={f1:.4f}  err={H.rel_err_pct(freqs[0], f1):.3f}%")
 
 
-# --- Template 3: simply-supported square plate, uniform pressure (Mindlin) ----
+# Template 3: simply-supported square plate, uniform pressure (Mindlin)
 
 
 def ss_square_plate(N=16):

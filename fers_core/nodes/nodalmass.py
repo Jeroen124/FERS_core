@@ -10,7 +10,7 @@ class NodalMass:
 
     ``mass`` is an isotropic translational mass added to the node's three
     translational DOFs; the optional rotary inertias are added to the three
-    rotational DOFs. **Units are SI regardless of the model's unit system —
+    rotational DOFs. **Units are SI regardless of the model's unit system -
     ``mass`` in kg, inertias in kg·m²** (the same convention as
     ``gravity_factor``), so a nodal mass reads consistently with the structural
     self-mass (``density·area``).

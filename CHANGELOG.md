@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.2.30
+## 0.2.32
 
 ### A plate with only some stiffness modifiers set now solves
 
@@ -13,7 +13,31 @@ bending only, say) is the normal use. `to_dict()` now leaves an unset factor
 out, on plates and plate surfaces alike, so the engine applies 1.0. A model
 read back with `from_dict` still has `None` for the factors it left out.
 Factors that are set, including 0.0, are written as before. The engine pin
-stays at 0.2.105.
+stays at 0.2.106.
+
+## 0.2.31
+
+A shorter README: what FERS computes, one checked example, how it is tested, and
+links. The longer sections moved to `docs/` (results, hinges, self-weight and
+seismic, keys and timeouts, the command line), with the example's utilization
+updated to the 2.87 the current engine gives. Banner comments are gone from the
+code, and the plotting methods share one result-set picker, which now refuses a
+load-case index of 0 instead of taking the last one.
+
+## 0.2.30
+
+### Engine 0.2.106: plate models are assembled sparse
+
+`fers_calculations` is pinned to 0.2.106, up from 0.2.105. A model with plates
+built its stiffness as one dense (7 × nodes)² matrix, and its reactions came
+from a second one. Past about 2,300 nodes that stopped the browser engine, and
+natively it took gigabytes: a 2,701-node membrane model with 9 load cases
+peaked at 10.6 GB and then failed. Plates now go straight into the sparse
+stiffness, and that model solves in 0.5 s and 0.34 GB. Results are unchanged
+up to round-off, with one exception: on a plate model, a `Spring` support (or
+a bedded one-way support in contact) now reports its reaction, −k·u. Before,
+it reported 0, and the reactions did not add up to the load.
+`fers_core.types` is unchanged apart from the engine version it names.
 
 ## 0.2.29
 

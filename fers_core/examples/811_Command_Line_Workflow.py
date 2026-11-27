@@ -8,15 +8,12 @@ from fers_core import FERS, ResultBlock, ResultRequest
 from fers_core.builders import create_beam
 
 
-# =============================================================================
 # Example: the command-line loop (author -> validate -> solve -> read a selection)
-# =============================================================================
 # `pip install FERS` installs the `fers` command. This script does what a shell
 # session or a coding agent does: build the model with the objects, save it,
 # let `fers` validate and solve it, and read only the results it needs.
 
 # Step 1: author the model and ask for only the results we will read
-# ------------------------------------------------------------------
 model = create_beam(5.0, "IPE180", udl=5000.0)  # 5 m simply supported span, 5 kN/m downward
 model.settings.analysis_options.result_requests = [
     ResultRequest(ResultBlock.REACTIONS),
@@ -30,7 +27,6 @@ model.save_to_json(model_path, indent=2)
 
 
 # Step 2: the `fers` command (or `python -m fers_core.cli` where it is not on the path)
-# -------------------------------------------------------------------------------------
 fers = [shutil.which("fers")] if shutil.which("fers") else [sys.executable, "-m", "fers_core.cli"]
 
 
@@ -51,7 +47,6 @@ print(f"recorded failures: {summary['solve_failures'] + summary['load_case_failu
 
 
 # Step 3: read the selection, not the file
-# ----------------------------------------
 solved_model = FERS.from_json(results_path)
 case = next(iter(solved_model.resultsbundle.loadcases.values()))
 reaction = case.reaction_nodes["1"].nodal_forces.fy

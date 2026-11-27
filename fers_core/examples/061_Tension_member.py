@@ -12,9 +12,7 @@ from fers_core import (
     SupportCondition,
 )
 
-# =============================================================================
 # Example and Validation: Cantilever With Root Rotational Spring (via MemberHinge)
-# =============================================================================
 # Model: node1 --[RIGID]--> node2 --[NORMAL + spring at start]--> node3
 # Support: full fixity at node1 (translations and rotations)
 # Load: 1 kN downward at the free end (node3)
@@ -23,10 +21,8 @@ from fers_core import (
 # spring at its fixed/root end. The rigid member transmits the support DOFs to
 # node2; the MemberHinge provides a rotational spring around local z at the
 # start of the flexible member.
-# =============================================================================
 
 # Step 1: Set up the model
-# ------------------------
 calculation_1 = FERS()
 calculation_1.settings.analysis_options.order = AnalysisOrder.LINEAR
 
@@ -70,7 +66,6 @@ calculation_1.add_member_set(member_set)
 # calculation_1.memberhinges.append(start_hinge)
 
 # Step 2: Apply the load
-# ----------------------
 load_case = calculation_1.create_load_case(name="Mid Load")
 
 # 1 kN in the middle of the two ropes
@@ -87,7 +82,6 @@ os.makedirs(os.path.dirname(file_path), exist_ok=True)
 calculation_1.save_to_json(file_path, indent=4)
 
 # Step 3: Run FERS calculation
-# ----------------------------
 print("Running the analysis...")
 calculation_1.run_analysis()
 results = calculation_1.resultsbundle.loadcases["Mid Load"]
@@ -98,7 +92,6 @@ reaction_node1_fx_fers = results.reaction_nodes["1"].nodal_forces.fx
 reaction_node3_fx_fers = results.reaction_nodes["3"].nodal_forces.fx
 
 # Step 4: Validate Against Analytical Solution
-# --------------------------------------------
 elastic_modulus = Steel_S235.e_mod
 cross_section_area = section.area
 member_length = 2.5  # meters (each tension member length)
@@ -154,9 +147,7 @@ if (
 else:
     print("Reaction at node 3 does NOT match the analytical expectation ❌")
 
-# =============================================================================
 # Notes for User
-# =============================================================================
 # - This example models two colinear tension-only members with a load at the middle node,
 #   which should place only one member in tension under a positive global X load.
 # - Ensure comments and units match your applied load direction and magnitude.

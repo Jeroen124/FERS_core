@@ -2,7 +2,6 @@ import os
 from fers_core import Node, Member, FERS, Material, Section, MemberSet, NodalSupport, NodalLoad, AnalysisOrder
 
 
-# =============================================================================
 # Triple cantilever: 3 beams connected in 3D space (base orientation)
 #
 # Node 0 at (0, 0, 0) - Fixed support
@@ -12,7 +11,6 @@ from fers_core import Node, Member, FERS, Material, Section, MemberSet, NodalSup
 #
 # Counterpart: 924_Triple_Cantilever_3D_Rotated_45Y.py (same structure,
 #              rotated -45° around the global Y axis)
-# =============================================================================
 
 calculation = FERS()
 
@@ -59,7 +57,7 @@ file_path = os.path.join("json_input_solver", "084_triple_cantilever_3D.json")
 os.makedirs(os.path.dirname(file_path), exist_ok=True)
 calculation.save_to_json(file_path, indent=4)
 
-# Run analysis (linear — consistent with the rotated counterpart 085)
+# Run analysis (linear - consistent with the rotated counterpart 085)
 print("Running analysis: 084 Triple Cantilever 3D (base orientation)")
 calculation.settings.analysis_options.order = AnalysisOrder.LINEAR
 calculation.run_analysis()

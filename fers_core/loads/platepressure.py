@@ -48,7 +48,7 @@ class PlatePressure:
         self.load_case.add_plate_pressure(self)
 
     def to_dict(self) -> Dict[str, Any]:
-        # Exactly one target — serialized as a tagged `target` object.
+        # Exactly one target - serialized as a tagged `target` object.
         if self.surface_id is not None:
             target = {"kind": "Surface", "surface_id": self.surface_id}
         elif self.plate_element_id is not None:

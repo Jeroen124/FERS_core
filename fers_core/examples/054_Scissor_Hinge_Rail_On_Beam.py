@@ -1,5 +1,5 @@
 """
-054 — Scissor Hinge: a Rail on a Beam
+054 - Scissor Hinge: a Rail on a Beam
 =====================================
 A rail runs continuously over a cross beam and rests on it: one beam along its
 length, free to turn on the beam. Put the rail's members in a member set of

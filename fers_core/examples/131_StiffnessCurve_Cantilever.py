@@ -16,18 +16,15 @@ from fers_core.settings.anlysis_options import AnalysisOptions
 from fers_core.settings.enums import AnalysisOrder
 
 
-# =============================================================================
-# Example 131: StiffnessCurve — Axial-Load Dependent Rotational Spring
-# =============================================================================
+# Example 131: StiffnessCurve - Axial-Load Dependent Rotational Spring
 #
 # A 5 m vertical cantilever (HEB 200) with a semi-rigid base connection whose
-# rotational stiffness increases with compressive axial load — modelling the
+# rotational stiffness increases with compressive axial load - modelling the
 # behaviour of column base plates that engage more as the column
 # carries heavier loads.
 #
 #   Axial Load [kN]   Rotational Stiffness [kNm/rad]
-#   ─────────────────  ──────────────────────────────
-#    0  – 20              2,500   (minimum — base plate barely engaged)
+#    0  – 20              2,500   (minimum - base plate barely engaged)
 #   20  – 60              linear increase to 5,000
 #   60  – 80              continues to 6,250 (fully engaged)
 #
@@ -37,15 +34,14 @@ from fers_core.settings.enums import AnalysisOrder
 #   • 9 load cases, one per axial-load level
 #
 # Three results are compared:
-#   (A)  StiffnessCurve   — nonlinear: stiffness re-evaluated each iteration
-#   (B)  Constant Spring  — nonlinear: fixed at the curve minimum (2,500 kNm/rad)
-#   (C)  Analytical 1st-order — closed-form δ = Fh²/k + Fh³/(3EI), no P-δ
+#   (A)  StiffnessCurve - nonlinear: stiffness re-evaluated each iteration
+#   (B)  Constant Spring - nonlinear: fixed at the curve minimum (2,500 kNm/rad)
+#   (C)  Analytical 1st-order - closed-form δ = Fh²/k + Fh³/(3EI), no P-δ
 #
 # Reference data: Spring/ folder (StiffnessDiagram.png, FirstOrder.csv)
-# =============================================================================
 
 
-# ── Parameters ────────────────────────────────────────────────────────────────
+# Parameters
 
 H = 5.0  # column height [m]
 F_H = 1000.0  # 1 kN lateral load [N]
@@ -68,7 +64,7 @@ STIFFNESS_CURVE = [
 K_CONST = 2_500_000  # constant spring for comparison [Nm/rad]
 
 
-# ── Material & Section ───────────────────────────────────────────────────────
+# Material & Section
 
 steel = Material(
     name="Steel S235",
@@ -82,7 +78,7 @@ heb200 = Section(
     name="HEB 200",
     material=steel,
     i_y=2.003e-5,  # weak-axis I  [m⁴]
-    i_z=5.696e-5,  # strong-axis I [m⁴] — resists bending in XZ plane
+    i_z=5.696e-5,  # strong-axis I [m⁴] - resists bending in XZ plane
     j=5.92e-7,  # torsion constant [m⁴]
     area=7.81e-3,  # area [m²]
 )
@@ -90,7 +86,7 @@ heb200 = Section(
 EI = steel.e_mod * heb200.i_z  # flexural stiffness for analytical formula
 
 
-# ── Helper: build cantilever model ───────────────────────────────────────────
+# Helper: build cantilever model
 
 
 def build_model(ry_condition):
@@ -134,7 +130,7 @@ def build_model(ry_condition):
     return model, base, top
 
 
-# ── Analytical first-order deflection ─────────────────────────────────────────
+# Analytical first-order deflection
 
 
 def interpolate_k(n_kn):
@@ -153,14 +149,14 @@ def interpolate_k(n_kn):
 
 
 def analytical_first_order_mm(n_kn):
-    """δ = Fh²/k + Fh³/(3EI)  — first-order, no P-δ  [mm]."""
+    """δ = Fh²/k + Fh³/(3EI) - first-order, no P-δ  [mm]."""
     k = interpolate_k(n_kn)
     delta_spring = F_H * H**2 / k
     delta_beam = F_H * H**3 / (3 * EI)
     return (delta_spring + delta_beam) * 1000  # m → mm
 
 
-# ── Run models ────────────────────────────────────────────────────────────────
+# Run models
 
 print("=" * 78)
 print("  Example 131: StiffnessCurve — Axial-Load Dependent Rotational Spring")
@@ -188,7 +184,7 @@ model_b, base_b, top_b = build_model(SupportCondition.spring(K_CONST))
 model_b.run_analysis()
 
 
-# ── Results table ─────────────────────────────────────────────────────────────
+# Results table
 
 print()
 print("─" * 78)

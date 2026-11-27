@@ -1,9 +1,7 @@
 from fers_core.builders import create_beam
 
 
-# =============================================================================
 # Example: self-weight in the load combinations
-# =============================================================================
 # The solver loads every member with its own weight, density·area·g, in the load
 # case that `self_weight_load_case_id` names. A combination carries the
 # self-weight only if it includes that case, so let the permanent-load case G
@@ -33,7 +31,6 @@ for name, (g, q) in {"ULS": (1.35, 1.5), "SLS": (1.0, 1.0)}.items():
 # Without G: `enable_self_weight` alone puts the self-weight in a "Self-weight"
 # case of the solver's own, which no combination built from Q includes. Every
 # combination would be solved without it, so run_analysis refuses the model.
-# -------------------------------------------------------------------------------
 bare = create_beam(span, "IPE300", udl=imposed_load, load_case_name="Q")
 bare.settings.analysis_options.enable_self_weight = True
 bare.create_load_combination("ULS", {bare.load_cases[0]: 1.5}, limit_state="ULS")

@@ -1,6 +1,6 @@
 # fers_core/cloud/client.py
 """
-FersCloudClient — authenticate with FersCloud and manage cloud models.
+FersCloudClient - authenticate with FersCloud and manage cloud models.
 
 Usage with API key (recommended)::
 
@@ -43,7 +43,7 @@ from typing import Any
 DEFAULT_BASE_URL = "https://ferscloud.com"
 
 # Seconds. Without an explicit timeout, urlopen inherits the global socket
-# default, which is normally None — so a server that accepts the connection and
+# default, which is normally None - so a server that accepts the connection and
 # then never answers blocks the caller forever. Same failure mode that hung the
 # engine's licence handshake before 0.2.53.
 DEFAULT_TIMEOUT = 30.0
@@ -89,7 +89,7 @@ class FersCloudClient:
         self._user_id: str | None = None
         self._email: str | None = None
 
-    # ── Properties ──────────────────────────────────────
+    # Properties
 
     @property
     def is_authenticated(self) -> bool:
@@ -117,7 +117,7 @@ class FersCloudClient:
     def token_expires_at(self) -> datetime | None:
         return self._expires_at
 
-    # ── Authentication ──────────────────────────────────
+    # Authentication
 
     def login(self, email: str, password: str) -> dict[str, Any]:
         """Authenticate with FersCloud and obtain a 1-hour SDK token.
@@ -193,7 +193,7 @@ class FersCloudClient:
         self._user_id = None
         self._email = None
 
-    # ── Cloud Models ────────────────────────────────────
+    # Cloud Models
 
     def list_models(self) -> list[dict[str, Any]]:
         """Return a list of all cloud models for the authenticated user.
@@ -218,7 +218,7 @@ class FersCloudClient:
             Display name for the cloud model.
         model_dict : dict
             The model data, typically from ``fers.to_dict(include_results=False)``.
-            Any ``results`` key is stripped server-side and never stored — the
+            Any ``results`` key is stripped server-side and never stored - the
             web viewer recomputes results in-browser.
         description : str, optional
             An optional description.
@@ -280,7 +280,7 @@ class FersCloudClient:
         """
         return self._get("/api/sdk/me")
 
-    # ── Internal HTTP helpers (stdlib only) ─────────────
+    # Internal HTTP helpers (stdlib only)
 
     def _ensure_auth(self) -> None:
         if not self.is_authenticated:

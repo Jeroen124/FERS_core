@@ -12,12 +12,9 @@ from fers_core import (
 )
 
 
-# =============================================================================
 # Example and Validation: Cantilever Beam with Uniform Distributed Load
-# =============================================================================
 
 # Step 1: Set up the model
-# -------------------------
 # Create the main FERS object that will manage the analysis
 calculation_1 = FERS()
 calculation_1.settings.analysis_options.order = AnalysisOrder.LINEAR
@@ -49,7 +46,6 @@ membergroup1 = MemberSet(members=[beam])
 calculation_1.add_member_set(membergroup1)
 
 # Step 2: Apply the load
-# ----------------------
 # Create a load case for the analysis
 load_case_1 = calculation_1.create_load_case(name="Triangular Load")
 load_case_2 = calculation_1.create_load_case(name="Inverse Triangular Load")
@@ -77,7 +73,6 @@ os.makedirs(os.path.dirname(file_path), exist_ok=True)
 calculation_1.save_to_json(file_path, indent=4)
 
 # Step 3: Run FERS calculation
-# ----------------------------
 print("Running the analysis...")
 calculation_1.run_analysis()
 results_triangular = calculation_1.resultsbundle.loadcases["Triangular Load"]
@@ -92,7 +87,6 @@ Mz_fers_triangular = results_triangular.reaction_nodes["1"].nodal_forces.mz
 Mz_fers_triangular_inverse = results_inverse.reaction_nodes["1"].nodal_forces.mz
 
 # Step 4: Validate Results Against Analytical Solution
-# ----------------------------------------------------
 # Analytical solution parameters for a cantilever with a uniform load 'w' over length L
 w = 1000.0  # N/m (same as above)
 L = 5  # Beam length in meters
@@ -140,9 +134,7 @@ if abs(Mz_fers_triangular_inverse - M_max_analytical_inverse) < 1e-3:
 else:
     print("Reaction moment does NOT match the analytical solution ❌")
 
-# =============================================================================
 # Notes for Users
-# =============================================================================
 # This script demonstrates how to set up and analyze a cantilever beam with a uniform distributed load.
 # It validates the FERS results against the classical analytical solutions for deflection and moment.
 # You can adapt this script for your own models or include it in a CI/CD pipeline for regression testing.

@@ -147,16 +147,16 @@ class LoadCase:
         if lc_id is not None and lc_id >= cls._load_case_counter:
             cls._load_case_counter = lc_id + 1
 
-        # --- Nodal loads ---
+        # Nodal loads
         for nl_data in data.get("nodal_loads", []):
             NodalLoad.from_dict(nl_data, nodes=nodes, load_case=load_case)
 
-        # --- Nodal moments ---
+        # Nodal moments
         for nm_data in data.get("nodal_moments", []):
             if isinstance(nm_data, dict):
                 NodalMoment.from_dict(nm_data, nodes=nodes, load_case=load_case)
 
-        # --- Distributed loads ---
+        # Distributed loads
         for dl_data in data.get("distributed_loads", []):
             if isinstance(dl_data, dict):
                 if hasattr(DistributedLoad, "from_dict"):
@@ -171,28 +171,28 @@ class LoadCase:
                     }
                     DistributedLoad(member=member, load_case=load_case, **kwargs)
 
-        # --- Surface loads ---
+        # Surface loads
         for sl_data in data.get("surface_loads", []):
             if isinstance(sl_data, dict):
                 SurfaceLoad.from_dict(sl_data, load_case=load_case)
 
-        # --- Member point loads ---
+        # Member point loads
         for mpl_data in data.get("member_point_loads") or []:
             if isinstance(mpl_data, dict):
                 MemberPointLoad.from_dict(mpl_data, members=members, load_case=load_case)
 
-        # --- Member point moments ---
+        # Member point moments
         for mpm_data in data.get("member_point_moments") or []:
             if isinstance(mpm_data, dict):
                 MemberPointMoment.from_dict(mpm_data, members=members, load_case=load_case)
 
-        # --- Plate pressures ---
+        # Plate pressures
         for pp_data in data.get("plate_pressures") or []:
             if isinstance(pp_data, dict):
                 PlatePressure.from_dict(pp_data, load_case=load_case)
 
         # Imperfections are modeled via ImperfectionCase (analysis.imperfection_cases),
-        # not on the load case — see imperfections/imperfectioncase.py.
+        # not on the load case - see imperfections/imperfectioncase.py.
 
         return load_case
 

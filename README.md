@@ -1,20 +1,15 @@
 # FERS: structural analysis in Python
 
-FERS: structural finite-element analysis (3D frames, trusses, plates, Eurocode 3
-checks) for engineers and AI agents. This is its Python SDK and the `fers`
-command. The solver is a compiled engine that runs on your machine, with no
-account and no network call: free for non-commercial use up to 100 members.
-This SDK is open source (BSD-3-Clause) at
-[github.com/Jeroen124/FERS_core](https://github.com/Jeroen124/FERS_core); the
-engine's licence is under [Licence](#licence).
+FERS is a finite-element solver for 3D frames, trusses and plates, with
+Eurocode 3 member checks. This repository is its Python package and the `fers`
+command. The solver is a compiled engine, `fers_calculations`, that the package
+installs; it runs on your machine with no account and no network call, free for
+non-commercial use up to 100 members.
 
 It computes linear and second-order (P-Delta) static analysis, natural
 frequencies, elastic buckling load factors (α_cr), response-spectrum seismic
 analysis, and EN 1993-1-1 steel member checks, flexural and lateral-torsional
-buckling included. A model is JSON in and JSON out, written from Python, by the
-`fers` command, or by an AI agent through the
-[FERS MCP server](https://ferscloud.com/mcp), the Claude Code plugin or the
-agent skill.
+buckling included.
 
 ```bash
 pip install FERS
@@ -38,530 +33,96 @@ print(f"EC3 utilization {ec3['max_utilization']:.2f}")
 
 ```text
 M -45.0 kNm, sag -41.8 mm at x/L 0.50
-EC3 utilization 2.85
+EC3 utilization 2.87
 ```
 
 The sag is 41.3 mm of bending (5wL⁴/384EI) plus 0.4 mm of shear deformation,
 which the engine includes. The beam fails: the ULS moment of 60.75 kNm exceeds
 its bending resistance of 51.9 kNm, and with nothing restraining its compression
-flange, lateral-torsional buckling takes the utilization to 2.85.
+flange, lateral-torsional buckling takes the utilization to 2.87.
 
-- **Agents and scripts:** `fers solve`, `fers check` and `fers validate` take a
-  model JSON file, print one line (or `--json`) and say in their exit code
-  whether the numbers can be used; see [From the terminal and from coding
-  agents](#from-the-terminal-and-from-coding-agents). `fers skill --install .`
-  gives a coding agent the FERS skill, and MCP clients can use the
-  [FERS MCP server](https://ferscloud.com/mcp). In Claude Code, both come as one
-  plugin: `/plugin install fers --marketplace Jeroen124/FERS_core`.
-- **Extras:** plots (`pip install "FERS[plot]"`), section properties meshed from
-  your own dimensions (`"FERS[sections]"`) and DXF import (`"FERS[dxf]"`);
-  `"FERS[all]"` installs everything 0.1.x did. Catalogue sections (`IPE200`,
-  `HEB300`, `UB 457x191x67`, `W14X30`, ...) need no extra.
-- **Licence:** the SDK is BSD-3-Clause; the engine it installs is free for
-  non-commercial use ([Licence](#licence)).
+## How it is checked
 
-## Solving a model
+FERS is written by a structural engineer, with AI coding tools. A release goes
+to PyPI only after the test suite passes against the engine version it pins.
+That suite includes:
 
-Building a model by hand, create the `FERS` object first, then its nodes,
-members and loads. Creating a `FERS` restarts the id counters, so a node made
-before it would share an id with one made after it, and the solver refuses
-node ids that do not run from 1 without gaps.
+- closed-form beam results: cantilevers, simply supported and fixed-ended beams
+  under point, uniform and triangular loads and end moments
+  ([tests/beam_equation_checks](https://github.com/Jeroen124/FERS_core/tree/main/tests/beam_equation_checks));
+- nine NAFEMS benchmarks: free vibration of frames, a deep beam, a ring and a
+  plate (FV1, FV2, FV3, FV5, FV6, FVP), an elliptic membrane (LE1), warping
+  torsion of a Z-section (LE5) and a skew plate (LE6)
+  ([tests/nafems](https://github.com/Jeroen124/FERS_core/tree/main/tests/nafems)).
+  Each one's target, result and error is on
+  [ferscloud.com/nafems](https://ferscloud.com/nafems), solved live in your
+  browser.
+
+## Building a model
+
+`check_beam`, `create_beam` and `create_frame` build common models in one call.
+To build one by hand, create the `FERS` object first, then its nodes, members
+and loads. Creating a `FERS` restarts the id counters, so a node made before it
+would share an id with one made after it, and the solver refuses node ids that
+do not run from 1 without gaps.
+
+`fers examples list` lists the numbered examples in `fers_core/examples`, from
+single beams checked against their textbook formulas to a 3D shed.
 
 ## Reading results
 
-`run_analysis()` puts the results on `model.resultsbundle`. Load cases and load
-combinations are keyed by name. Within each, nodes and members are keyed by
-their id as a string, because results round-trip through JSON.
-
 ```python
-case = model.resultsbundle.loadcases["Load"]    # or .loadcombinations["ULS 1"]
+case = model.resultsbundle.loadcases["Q"]       # or .loadcombinations["ULS 1"]
 
-case.displacement_nodes["5"].dy                  # dx dy dz rx ry rz warp
+case.displacement_nodes["2"].dy                  # dx dy dz rx ry rz warp
 case.reaction_nodes["1"].nodal_forces.fy         # fx fy fz mx my mz bw
-beam = case.member_results["4"]
-beam.local_maximums.mz, beam.local_minimums.mz   # envelope along the member
-beam.local_start_forces.fy                       # end forces, member axes
+beam = case.member_results["1"]
+beam.local_maximums.mz, beam.local_minimums.mz   # envelope along the member, member axes
 ```
 
-`start_node_forces`, `end_node_forces`, `maximums` and `minimums` are in the
-global frame; the `local_*` forces, `section_forces` and `internal_force_series`
-are in the member's own axes, with `mz` the strong-axis moment. Read a frame's
-moments from the local ones: outside the XY plane the global `mz` is not the
-bending moment, and in a frame in the YZ plane it reads 0.
-
-Since 0.1.98, `member_results` and `displacement_nodes` are read-only tables
-rather than dicts of objects. That is what keeps a large result small in
-memory. They read like dicts: `[]`, `get`, `in`, `len`, `.items()`, and
-iteration in the solver's order. Each lookup builds a fresh object, and nothing
-in it can be changed:
-
-```python
-beam.local_maximums.mz = 0.0                     # AttributeError: read-only
-editable = case.member_results.copy()            # a plain dict of editable objects
-editable["4"].local_maximums.mz = 0.0            # fine
-```
-
-`section_forces`, `internal_force_series` and `member_displacements` come back
-as tuples. To test for a table, use `isinstance(x, collections.abc.Mapping)`,
-not `dict`. `reaction_nodes` and `plate_results` are plain dicts, as before.
-
-### Saving and loading
-
-```python
-from fers_core import FERS
-
-model.save_to_json("beam.json")                  # the model and its results
-model = FERS.from_json("beam.json")
-```
-
-`FERS.from_json` reads any file the solver or the SDK wrote, one entry at a
-time. A typical result needs less memory than its file to load, and at most
-about twice the file's size; before 0.1.98 it needed 15 to 20 times. For a
-large model, let the solver write the file itself. The result then never
-passes through Python as one string:
-
-```python
-model.run_analysis_to_file("beam_results.json")
-solved = FERS.from_json("beam_results.json")
-```
-
-`fers_core/examples/809_Reading_Results.py` runs all of this end to end.
-
-Saving a loaded model writes back everything the solver reads, with the same
-ids. That includes what the file defines but nothing uses yet, such as a section
-an editor keeps in its library. Nodes, members and the rest created after
-loading get ids the loaded model does not use, so saving never lets a new object
-replace a loaded one.
-
-### Only the results you read (engine 0.2.68)
-
-`AnalysisOptions(result_filter=[...])` keeps or drops whole result blocks.
-`result_requests` goes further. Each `ResultRequest` names a block and narrows
-it to chosen members or nodes, load combinations, components and one member
-end:
-
-```python
-from fers_core import ResultBlock, ResultRequest
-from fers_core.builders import check_beam
-from fers_core.result_requests import nodes_of
-from fers_core.unity_checks import classification
-
-model = check_beam(5.0, "IPE300", udl=10000.0)    # one "Beam", one ULS combination
-beams = classification("Beam")
-model.settings.analysis_options.result_requests = [
-    ResultRequest(ResultBlock.LOCAL_ENVELOPES, members=[beams],
-                  limit_state="ULS", components=["fx", "my", "mz"]),
-    ResultRequest(ResultBlock.NODE_DISPLACEMENTS, nodes=nodes_of(beams),
-                  limit_state="ULS", components=["dy"]),
-    ResultRequest(ResultBlock.REACTIONS, limit_state="ULS"),
-]
-model.run_analysis()
-```
-
-The values load into the same `member_results`, `displacement_nodes` and
-`reaction_nodes`, so code that reads them keeps working. **Anything that was not
-requested reads as `None`, not zero.** A check that reads a value nobody asked
-for therefore fails instead of passing on a zero.
-
-- `members` takes the unity checks' selectors: `classification(...)`,
-  `members([...])`, `member_sets([...])` and `all_members()`. Several selectors
-  form a union.
-- `nodes` takes `nodes([...])`, or `nodes_of(*selectors)` for the end nodes of
-  the selected members.
-- Load combinations are matched on their `limit_state`, as unity checks match
-  them, or by `load_combination_ids`. To select by limit state, set
-  `limit_state` on each `LoadCombination`; the solver does not read `situation`.
-- A request with neither `limit_state` nor `load_combination_ids` also covers
-  the load cases.
-- `end="start"` or `end="end"` keeps one end of the end-force and
-  end-displacement blocks.
-- The solver refuses a request it cannot meet, before it starts. That includes
-  `section_forces`, `internal_force_series`, a component the block does not
-  have, a limit state no combination carries, and `result_filter` set as well.
-
-The values themselves are on `model.resultsbundle.selections`, one entry per
-request and group of result sets. Each entry's `values` is a read-only numpy
-array shaped `(result_sets, ids, fields, components)`, with each axis listed
-beside it:
-
-```python
-sel = model.resultsbundle.selections[0]
-sel["group"]                     # "loadcombinations" or "loadcases"
-sel["result_sets"], sel["ids"]   # combination names, member or node ids
-sel["fields"], sel["components"] # e.g. ["local_maximums", "local_minimums"], ["fx", "my", "mz"]
-my = sel["values"][..., sel["components"].index("my")]   # every set, member and field
-```
-
-`save_to_json` writes the selections back as the solver wrote them, so a saved
-result reloads unchanged. `fers_core/examples/810_Result_Requests.py` runs this
-end to end.
-
-## Scissor hinges: a continuous beam that turns on what it crosses (engine 0.2.68)
-
-A rail running over beams and resting on each one is continuous along its
-length, but free to turn on every beam. A `MemberHinge` releases one member end,
-so releasing both rail ends at a beam splits the rail into two spans. Put the
-rail's members in a member set of their own and give the set a
-`ScissorHinge` instead. No link member or extra node is needed:
-
-```python
-from fers_core import FERS, DistributedLoad, Material, Member, MemberSet, NodalSupport, Node, ScissorHinge, Section
-from fers_core.supports.supportcondition import SupportCondition as C
-
-model = FERS()
-steel = Material(name="S355", e_mod=210e9, g_mod=81e9, density=7850.0, yield_stress=355e6)
-rail_section = Section(name="rail", material=steel, i_y=1e-6, i_z=1e-6, j=1e-7, area=1e-3)
-beam_section = Section(name="beam", material=steel, i_y=1e-4, i_z=1e-4, j=1e-4, area=5e-3)
-
-turns = {"X": C.fixed(), "Y": C.free(), "Z": C.free()}
-a, m, b = Node(0.0, 0.0, 0.0), Node(1.0, 0.0, 0.0), Node(2.0, 0.0, 0.0)
-a.nodal_support = NodalSupport(rotation_conditions=turns)
-b.nodal_support = NodalSupport(
-    displacement_conditions={"X": C.free(), "Y": C.fixed(), "Z": C.fixed()}, rotation_conditions=turns
-)
-beam_start, beam_end = Node(1.0, 0.0, -0.5), Node(1.0, 0.0, 0.5)
-beam_start.nodal_support = beam_end.nodal_support = NodalSupport()  # clamped
-
-rail_1 = Member(start_node=a, end_node=m, section=rail_section)
-rail_2 = Member(start_node=m, end_node=b, section=rail_section)
-model.add_member_set(MemberSet(
-    members=[rail_1, rail_2],
-    scissor_hinge=ScissorHinge(rotational_release_y=0.0, rotational_release_z=0.0),
-))
-model.add_member_set(MemberSet(members=[
-    Member(start_node=beam_start, end_node=m, section=beam_section),
-    Member(start_node=m, end_node=beam_end, section=beam_section),
-]))
-
-span = model.create_load_case(name="span")
-DistributedLoad(member=rail_1, load_case=span, magnitude=1000.0, end_magnitude=1000.0, direction=(0, -1, 0))
-model.run_analysis()
-mz = model.resultsbundle.loadcases["span"].member_results[str(rail_1.id)].local_end_forces.mz
-print(f"{abs(mz):.1f} Nm")  # 62.4; a knife edge gives qL²/16 = 62.5, a rigid joint 122.6
-```
-
-- **Where it applies:** at every node where a member of the set meets a member
-  outside the set, or a plate. There the set's members stay joined to each
-  other and move relative to the node along and about the released axes.
-  Nothing is released where the set meets only itself or a support. So the
-  continuous beam's members belong in a set of their own; a set holding every
-  member meets nothing, and the solver refuses it.
-- **Only some of those nodes:** `MemberSet(scissor_hinge_nodes=[...])` lists
-  where the hinge applies, for a beam that turns on some of the members it
-  meets and is joined to the rest.
-- **Each value** works as a `MemberHinge` release does: `None` holds it, `0.0`
-  frees it, and a positive value is a spring between the set and the node, in
-  force per length for a translation (`translational_release_x/_y/_z`) and
-  moment per radian for a rotation (`rotational_release_x/_y/_z`).
-- **The axes are global** unless the hinge names its own:
-  `ScissorHinge(..., axes=ReleaseAxes.user(x=..., y=...))` takes the first axis
-  along `x`, the second along `y` made perpendicular to it, and the third as
-  their cross product, as a frame turned in plan needs.
-- **Supports and nodal loads** at a released node act on the node, meaning the
-  members outside the set. A node's reported displacement is theirs. The set's
-  own motion there is in its members' `local_displacement_start_node` and
-  `local_displacement_end_node`.
-- **Two hinged sets crossing** with nothing else are each released from the
-  node, so every axis either one releases is free between them.
-- **A set of one member** gives a release about the hinge's axes at that
-  member's ends.
-- **Second order:** as with member hinges, a model with scissor hinges takes the
-  corotational correction only when `NonlinearMethod.COROTATIONAL` is named.
-
-A rail that may also slide over its posts frees that translation. Here it slides
-over the first post only, so the second takes its share of the pull:
-
-```python
-from fers_core import (
-    FERS, DistributedLoad, Material, Member, MemberPointLoad, MemberSet, NodalSupport, Node,
-    ScissorHinge, Section,
-)
-
-model = FERS()
-steel = Material(name="S355", e_mod=210e9, g_mod=81e9, density=7850.0, yield_stress=355e6)
-frame = Section(name="frame", material=steel, i_y=4e-6, i_z=4e-6, j=1e-7, area=2e-3)
-anchor, top_1, top_2 = Node(0.0, 0.0, 0.0), Node(2.0, 0.0, 0.0), Node(4.0, 0.0, 0.0)
-foot_1, foot_2 = Node(2.0, -1.5, 0.0), Node(4.0, -1.5, 0.0)
-anchor.nodal_support = foot_1.nodal_support = foot_2.nodal_support = NodalSupport()
-
-rail_1 = Member(start_node=anchor, end_node=top_1, section=frame)
-rail_2 = Member(start_node=top_1, end_node=top_2, section=frame)
-model.add_member_set(MemberSet(
-    members=[rail_1, rail_2],
-    scissor_hinge=ScissorHinge(translational_release_x=0.0),  # slides along X
-    scissor_hinge_nodes=[top_1],                               # over the first post only
-))
-for foot, top in ((foot_1, top_1), (foot_2, top_2)):
-    model.add_member_set(MemberSet(members=[Member(start_node=foot, end_node=top, section=frame)]))
-
-pull = model.create_load_case(name="pull")
-DistributedLoad(member=rail_1, load_case=pull, magnitude=2000.0, end_magnitude=2000.0, direction=(0, -1, 0))
-MemberPointLoad(member=rail_2, load_case=pull, position=0.5, magnitude=1000.0, direction=(1, 0, 0))
-model.run_analysis()
-reactions = model.resultsbundle.loadcases["pull"].reaction_nodes
-takes = [abs(reactions[str(foot.id)].nodal_forces.fx) for foot in (foot_1, foot_2)]
-print(f"post 1 takes {takes[0]:.1f} N, post 2 {takes[1]:.1f} N")  # 0.0 N and 67.2 N
-```
-
-A model that uses scissor hinges is written with `schema_version` 3, so a solver
-older than 0.2.68 refuses it instead of solving every connection as rigid.
-Without them, a model is written exactly as before.
-`fers_core/examples/054_Scissor_Hinge_Rail_On_Beam.py` compares the rigid
-connection, member hinges, the scissor hinge and a spring, and
-`fers_core/examples/055_Scissor_Hinge_Sliding_Rail_And_Release_Axes.py` slides
-the rail, limits the hinge to one post, and turns the frame in plan.
-
-### Member hinges in global or user axes (engine 0.2.68)
-
-A `MemberHinge` releases its rotations about its member's own axes. A beam at an
-angle in plan, pinned about the girder it hangs from, needs a pin about the
-girder's axis instead, which in the beam's own axes mixes its bending with its
-torsion. `rotation_axes` names the axes the rotational releases, their stiffness
-curves and their moment–rotation diagrams use:
-
-```python
-from fers_core import MemberHinge, ReleaseAxes
-
-pin_about_x = MemberHinge(rotational_release_mx=0.0, rotation_axes=ReleaseAxes.GLOBAL)
-```
-
-`ReleaseAxes.LOCAL` (the default) keeps the member's axes; `ReleaseAxes.user(x, y)`
-names a frame as above. A curve on such a hinge reads the end moment about the
-same axes; the member's results stay in its local axes. Translational releases
-stay member-local. A model whose member hinges release in other axes is written
-with `schema_version` 3 as well. Release axes are fixed in space, so a
-corotational solve does not turn them with the structure.
-
-## A member's self-weight
-
-The solver works out each member's self-weight, density·area·g, and puts it in
-the load case that `self_weight_load_case_id` names. A load combination carries
-the self-weight only if it includes that case, so give it your permanent-load
-case: `create_load_case("G", self_weight=True)` creates G and sets both options.
-
-```python
-from fers_core.builders import create_beam
-
-model = create_beam(6.0, "IPE300", udl=5_000.0, load_case_name="Q")   # 5 kN/m imposed load
-imposed = model.load_cases[0]
-dead = model.create_load_case("G", self_weight=True)                   # G takes the self-weight
-model.create_load_combination("ULS", {dead: 1.35, imposed: 1.5}, limit_state="ULS")
-model.run_analysis()
-
-uls = model.resultsbundle.loadcombinations["ULS"]
-print(round(sum(r.nodal_forces.fy for r in uls.reaction_nodes.values()), 1))   # 48357.4
-```
-
-The ULS reactions are 1.5 × 30 kN plus 1.35 × the beam's 2.49 kN. With
-`enable_self_weight` set and no `self_weight_load_case_id`, the solver puts the
-self-weight in a load case of its own, "Self-weight", which combinations built
-from your load cases do not include. `run_analysis` refuses such a model when it
-has combinations, rather than solve every one of them without self-weight, and
-the solver warns with `self_weight_not_in_combinations` on each combination. A
-model without combinations solves, and its "Self-weight" case is a result of its
-own, as below.
-
-The solver also works out each member's mass for modal and seismic analysis from
-the section. A member that carries more, such as cladding or a services run, can
-override both:
-
-```python
-from fers_core.builders import create_beam
-
-model = create_beam(5.0, "IPE180")                  # no load but its own weight
-model.settings.analysis_options.enable_self_weight = True
-for member in model.members:
-    member.weight_override = 1500.0                 # N/m, gravity included
-model.run_analysis()
-
-self_weight = model.resultsbundle.loadcases["Self-weight"]
-print(round(sum(r.nodal_forces.fy for r in self_weight.reaction_nodes.values()), 1))   # 7500.0
-```
-
-The solver applies 1500 N/m in place of the section's 184 N/m, and takes
-1500 / 9.81 kg/m as the member's mass. `weight_override` is in the model's
-force/length units. `Member.weight` is a different thing: the member's mass as
-the SDK computes it, density·area·length, which is never sent to the solver.
-
-## Seismic analysis
-
-`add_seismic_analysis` asks the solver for a modal response-spectrum analysis
-(the default), the lateral-force method, or both. The spectrum helpers build
-EN 1998-1 design spectra. Accelerations are in m/s² and periods in seconds,
-whatever the model's units; nodal masses are in kg.
-
-```python
-from fers_core import (
-    FERS, Member, MemberSet, MaterialLibrary, NodalMass, NodalSupport, Node, Section,
-    SeismicAnalysisSettings,
-)
-
-model = FERS()                                                    # first: it restarts the ids
-steel = MaterialLibrary.S235()
-column = Section.from_name("HEB200", steel)
-nodes = [Node(0.0, float(height), 0.0) for height in range(7)]    # a 6 m mast
-nodes[0].nodal_support = NodalSupport()                           # fixed base
-model.add_member_set(MemberSet(members=[Member(a, b, section=column) for a, b in zip(nodes, nodes[1:])]))
-model.add_nodal_mass(NodalMass(nodes[-1], 2000.0))                # 2 t of equipment on top
-
-model.add_seismic_analysis(
-    SeismicAnalysisSettings.eurocode_spectrum(ag=2.5, ground_type="C", q=1.5),
-    directions=["X"],
-    num_modes=4,
-)
-model.run_analysis()
-
-x = model.resultsbundle.seismic["modal_response_spectrum"]["per_direction"][0]
-print(f"{x['participating_mass_ratio']:.0%} of the mass, base shear {x['base_shear'] / 1000:.1f} kN")
-```
-
-`mass_sources=[(load_case, psi)]` turns gravity load cases into seismic mass
-(ψE = 1.0 for permanent loads). `direct_spectrum` takes S, T_B, T_C and T_D
-directly for a national annex, and `custom_spectrum` a table of periods and
-accelerations. The results are plain dicts in `resultsbundle.seismic`, one
-entry per method. `fers_core/examples/151_Seismic_Response_Spectrum.py` runs a
-portal frame through both methods.
-
-## Unity-check reports
-
-The solver can embed one HTML report of every unity check in the result:
-
-```python
-from fers_core.builders import check_beam
-
-model = check_beam(5.0, "IPE300", udl=10000.0)
-model.settings.analysis_options.include_report_html = True
-model.run_analysis()
-html = model.unity_report_html()                    # a complete HTML page
-```
-
-`render_unity_reports = True` also fills each checked member's
-`rendered_report` from its check's `report_template`, and adds those narratives
-to the HTML report. Both are off by default, which keeps the result small.
-
-## Premium solves and timeouts
-
-Without an API key the solver runs at Free-tier limits (100 members) and makes
-**no network call at all**. The free tier is for non-commercial use; commercial
-use needs a Pro key at any model size. Passing `api_key` raises those limits, to
-10,000 members with a Pro key and 1,000,000 with an Enterprise one (granted by
-agreement):
-
-```python
-model.run_analysis(api_key=KEY)
-```
-
-A key of a Free account solves at Free-tier limits, with a `UserWarning` that
-says so.
-
-A key means each solve first verifies the licence with ferscloud.com, so that
-handshake is bounded. If the licence server does not answer within
-`license_timeout` seconds (default 30) the call raises `FersTimeoutError`
-**before the solve starts** — so retrying is always safe:
-
-```python
-import fers_calculations
-
-try:
-    model.run_analysis(api_key=KEY, license_timeout=60)
-except fers_calculations.FersTimeoutError:
-    ...   # transient stall — retry or skip this model
-except RuntimeError:
-    ...   # definitive — bad key or a rejected model
-```
-
-Keeping those two arms apart is the point: retrying a `RuntimeError` fails
-identically, while collapsing both into `except Exception` turns a retryable
-blip into a lost result. See `fers_core/examples/203_Premium_Batch_Solve.py`
-for the full unattended-batch pattern.
-
-`FersTimeoutError` subclasses the built-in `TimeoutError`, so a plain
-`except TimeoutError` catches it too.
-
-Set `FERS_LICENSE_TIMEOUT` (seconds) to change the default without editing any
-call sites. It must be a real environment variable — `.env` files are not read
-by the engine.
-
-> `license_timeout` bounds the **licence handshake, not the solve**. A solve is
-> native code with no cancellation point, so no in-process timeout can interrupt
-> it. For a hard ceiling on total wall time per model, run each solve in a
-> killable subprocess — that also reclaims its memory.
-
-Requires engine `fers_calculations >= 0.2.53`.
+Load cases and combinations are keyed by name, nodes and members by their id as
+a string. Read a frame's bending moments from the `local_*` forces: outside the
+XY plane the global `mz` is not the bending moment.
+[docs/results.md](https://github.com/Jeroen124/FERS_core/blob/main/docs/results.md)
+covers the rest: read-only result tables, saving and loading, and asking the
+solver for only the results you need.
 
 ## From the terminal and from coding agents
 
-`pip install FERS` puts a `fers` command on the path: a thin layer over the
-objects above and the engine, for shells, scripts, CI jobs and coding agents.
-Every large output goes to a file; stdout carries one line per command, or a
-JSON object with `--json`.
-
 ```bash
-fers validate model.json                 # the input schema: the failing field, and keys the engine ignores
-fers solve model.json --out results.json # the engine streams the results to the file
-fers check model.json                    # solve, print each unity check's utilization and a verdict
-fers report results.json --out report.html
-fers schema                              # the schema's definitions; `fers schema Member` prints one
-fers sections get IPE200                 # catalogue properties in SI; `sections list` names the series
-fers materials list
-fers examples list                       # the numbered examples; `examples show 001`, `examples run 001`
-fers skill --install .                   # the skill for coding agents, into .claude/skills
-fers skill --zip fers-skill.zip          # the same skill as a zip to upload to Claude.ai
-fers doctor                              # versions, and whether the key is accepted
+fers validate model.json                 # the failing field, and keys the engine ignores
+fers solve model.json --out results.json
+fers check model.json                    # each unity check's utilization and a verdict
 ```
 
-`fers solve` sends the file to the engine as it is, and reads the results back
-only for its summary line: load cases, combinations, recorded failures,
-non-converged result sets and messages. A model that writes hundreds of
-megabytes costs this process nothing.
+Each command prints one line, or JSON with `--json`, and its exit code says
+whether the numbers can be used: 4 means solved but do not use them, 6 a check
+that fails.
+[docs/command-line.md](https://github.com/Jeroen124/FERS_core/blob/main/docs/command-line.md)
+has every command and exit code.
 
-The exit code says whether to use the numbers:
+For AI agents there is a skill (`fers skill --install .`), an
+[MCP server](https://ferscloud.com/mcp), and a Claude Code plugin with both:
+`/plugin install fers --marketplace Jeroen124/FERS_core`.
 
-| Code | Meaning |
-|---|---|
-| 0 | done; for `check`, every check passes |
-| 1 | the engine refused or failed the solve |
-| 2 | bad input: a missing file, invalid JSON, a model that fails the schema (with `validate --strict`, also a key the schema does not know) |
-| 3 | licence: no key where one is needed, a rejected key, a licence timeout |
-| 4 | solved, but **do not use the numbers**: a result set has errors (a mechanism is `singular_model`), did not converge, or failures were recorded. The output says why. |
-| 5 | `check`: nothing decided: a check is Indeterminate, left combinations unsolved, or the model has no checks |
-| 6 | `check`: a check fails (utilization above 1) |
+## More
 
-A `check` that meets several of these exits with the first of 4, 6, 5. With
-`--json`, `solve` and `check` add a `verdict` and its `reasons`. After "DO NOT
-USE these results" comes the reason: the solver's first error, or the error a
-load case or combination recorded when it failed outright. `fers check` names
-what governs each check, `governing member 4 (Column, HEA300) in "ULS 1"
-(combination 2)`, and `--json` carries the same as `governing_entity_label` and
-`governing_combination_name`.
-
-`FERS_API_KEY` supplies the key for Premium limits when `--api-key` is not
-given; without a key the engine runs at Free-tier limits and makes no network
-call, as above. `--solve-token` (or `FERS_SOLVE_TOKEN`) takes a short-lived
-Premium token from FERS Cloud instead, which the engine checks offline: Premium
-limits on a machine that cannot reach ferscloud.com. In Python it is
-`run_analysis(solve_token=...)`.
-
-For an agent, the skill is the working loop on one page: which route to take
-(MCP tools, a shell or code sandbox, or a file for FERS Studio), validate,
-solve, check, and the conventions that change answers, with runnable models in
-`reference/api.md`. It ships in the package (`fers_core/skills/fers/`); `fers
-skill --install .` copies it to `.claude/skills/fers/`, where Claude Code looks,
-`fers skill --zip fers-skill.zip` packs it for upload to Claude.ai, and `fers
-skill --path` names `SKILL.md` for any other agent. MCP clients can
-run the same engine as a local MCP server instead (`npx -y @ferscloud/fers-mcp`,
-which solves on the user's machine); clients that cannot start a program use the
-hosted server at https://ferscloud.com/api/mcp, which returns a browser-solve
-link. Setup for each client: https://ferscloud.com/mcp.
-
-`fers_core/examples/811_Command_Line_Workflow.py` runs the loop end to end.
+- [Hinges](https://github.com/Jeroen124/FERS_core/blob/main/docs/hinges.md):
+  scissor hinges for a continuous beam that turns on what it crosses, and
+  member hinges in global or user axes.
+- [Self-weight, seismic analysis and reports](https://github.com/Jeroen124/FERS_core/blob/main/docs/loads-and-analyses.md).
+- [API keys, solve tokens and timeouts](https://github.com/Jeroen124/FERS_core/blob/main/docs/keys-and-timeouts.md).
+- Plots, section properties meshed from your own dimensions and DXF import are
+  extras: `pip install "FERS[plot]"`, `"FERS[sections]"`, `"FERS[dxf]"`, or
+  `"FERS[all]"`. Catalogue sections (`IPE200`, `HEB300`, `UB 457x191x67`,
+  `W14X30`, ...) need none.
 
 ## Licence
 
 This package, `FERS`, is open source under the BSD 3-Clause License (`LICENSE`).
 
-The solver engine it installs, `fers_calculations`, is licensed separately. From
-0.2.70 it is under the PolyForm Strict License 1.0.0: free for any non-commercial
-purpose, such as study, teaching, research and hobby projects. Commercial use
-needs a paid [FERS Cloud plan](https://ferscloud.com/pricing), which includes the
+The solver engine it installs, `fers_calculations`, is licensed separately,
+under the PolyForm Strict License 1.0.0: free for any non-commercial purpose,
+such as study, teaching, research and hobby projects. Commercial use needs a
+paid [FERS Cloud plan](https://ferscloud.com/pricing), which includes the
 commercial licence.

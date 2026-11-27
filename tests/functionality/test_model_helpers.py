@@ -26,9 +26,7 @@ def _steel():
     return Material(name="S355", e_mod=210e9, g_mod=81e9, density=7850.0, yield_stress=355e6)
 
 
-# ---------------------------------------------------------------------------
 # LoadCase.apply_deadload_to_members
-# ---------------------------------------------------------------------------
 
 
 def test_dead_load_is_the_members_weight_spread_over_its_length():
@@ -78,9 +76,7 @@ def test_dead_load_reactions_equal_the_solvers_own_self_weight():
     assert applied == pytest.approx(sum(r.nodal_forces.fy for r in computed), rel=1e-9)
 
 
-# ---------------------------------------------------------------------------
 # FERS.create_combined_model_pattern
-# ---------------------------------------------------------------------------
 
 
 def _portal() -> FERS:

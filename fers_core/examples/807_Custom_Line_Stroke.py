@@ -1,5 +1,5 @@
 """
-807 — Custom Line Stroke (Path Extrusion)
+807 - Custom Line Stroke (Path Extrusion)
 ==========================================
 Demonstrates how to draw a custom open path and extrude it into a closed
 filled cross-section using ``ShapePath.stroke_path()``.
@@ -22,20 +22,15 @@ import math
 from fers_core import ShapePath, Section, Material
 from fers_core.members.shapecommand import ShapeCommand
 
-# =============================================================================
 # Step 1: Material
-# =============================================================================
 steel = Material(name="S355", e_mod=210e9, g_mod=81e9, density=7850, yield_stress=355e6)
 
 
-# =============================================================================
 # Step 2: Draw some open paths
-# =============================================================================
 
-# --- 2a: A simple horizontal straight line (100 mm long) ---------------------
+# 2a: A simple horizontal straight line (100 mm long)
 #
 #          z →
-#          ──────────────
 #   y ↑   (y=0, z=0)  (y=0, z=100mm)
 #
 line_path = [
@@ -43,7 +38,7 @@ line_path = [
     ShapeCommand("lineTo", y=0.0, z=+0.050),
 ]
 
-# --- 2b: An L-shaped path (two line segments meeting at a corner) ------------
+# 2b: An L-shaped path (two line segments meeting at a corner)
 #
 #   Start at bottom-left, go right then up.
 #
@@ -53,7 +48,7 @@ l_path = [
     ShapeCommand("lineTo", y=+0.050, z=+0.050),  # vertical leg
 ]
 
-# --- 2c: A curved arc path (quarter circle, r = 75 mm) ----------------------
+# 2c: A curved arc path (quarter circle, r = 75 mm)
 #
 #  Arc convention:  z(θ) = cz + r·sin(θ),  y(θ) = cy + r·cos(θ)
 #  Increasing θ sweeps clockwise in the yz-plane.
@@ -76,12 +71,10 @@ mixed_path += ShapePath.arc_center_angles(
 )
 
 
-# =============================================================================
 # Step 3: Extrude each path with stroke_path
-# =============================================================================
 THICKNESS = 0.010  # 10 mm wall thickness
 
-# --- offset modes demonstrated on the straight line ---
+# offset modes demonstrated on the straight line
 line_center = ShapePath(
     name="Line – center",
     shape_commands=ShapePath.stroke_path(line_path, thickness=THICKNESS, offset="center"),
@@ -95,28 +88,26 @@ line_right = ShapePath(
     shape_commands=ShapePath.stroke_path(line_path, thickness=THICKNESS, offset="right"),
 )
 
-# --- L-shaped strip, centred ---
+# L-shaped strip, centred
 l_strip = ShapePath(
     name="L-path strip – center",
     shape_commands=ShapePath.stroke_path(l_path, thickness=THICKNESS, offset="center"),
 )
 
-# --- Curved arc strip: outer r = R + t/2, inner r = R − t/2 ---
+# Curved arc strip: outer r = R + t/2, inner r = R − t/2
 arc_strip = ShapePath(
     name="Arc strip – center",
     shape_commands=ShapePath.stroke_path(arc_path, thickness=THICKNESS, offset="center"),
 )
 
-# --- Mixed straight + arc, centred ---
+# Mixed straight + arc, centred
 mixed_strip = ShapePath(
     name="Mixed strip – center",
     shape_commands=ShapePath.stroke_path(mixed_path, thickness=THICKNESS, offset="center"),
 )
 
 
-# =============================================================================
 # Step 4: Print a summary of generated commands
-# =============================================================================
 profiles = [line_center, line_left, line_right, l_strip, arc_strip, mixed_strip]
 
 print(f"\n{'Profile':<30s}  {'Commands':>8s}  {'Types'}")
@@ -126,9 +117,7 @@ for p in profiles:
     print(f"{p.name:<30s}  {len(p.shape_commands):8d}  {cmd_types}")
 
 
-# =============================================================================
 # Step 5: Wrap a stroked arc strip as a Section (manual properties)
-# =============================================================================
 # Section properties for a curved flat bar (approximate, for illustration).
 # Replace with values from sectionproperties or hand calculations.
 t = THICKNESS
@@ -154,9 +143,7 @@ print(f"  Iz = {arc_section.i_z * 1e8:.4f} cm⁴")
 print(f"  J  = {arc_section.j * 1e8:.4f} cm⁴")
 
 
-# =============================================================================
 # Step 6 (optional): Plot cross-sections
-# =============================================================================
 # Uncomment any line below to visualise the profile:
 #
 # line_center.plot()

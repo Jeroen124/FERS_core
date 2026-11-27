@@ -1,7 +1,7 @@
 """
 Tests for MaterialLibrary
 ==========================
-All tests are self-contained — no solver or FEM dependency.
+All tests are self-contained - no solver or FEM dependency.
 
 Checks:
   • Every factory method returns a valid Material instance.
@@ -17,9 +17,7 @@ from fers_core.members.material import Material
 from fers_core.members.material_library import MaterialLibrary
 
 
-# ---------------------------------------------------------------------------
 # Helpers
-# ---------------------------------------------------------------------------
 
 ALL_FACTORIES = [
     # steel
@@ -56,9 +54,7 @@ ALL_FACTORIES = [
 EXPECTED_TOTAL = 22  # update this when new materials are added
 
 
-# ---------------------------------------------------------------------------
-# 1. Return type and completeness
-# ---------------------------------------------------------------------------
+# Return type and completeness
 
 
 class TestReturnType:
@@ -76,9 +72,7 @@ class TestReturnType:
         assert names == sorted(names)
 
 
-# ---------------------------------------------------------------------------
-# 2. Physical sanity — every material must have positive, non-zero values
-# ---------------------------------------------------------------------------
+# Physical sanity - every material must have positive, non-zero values
 
 
 class TestPhysicalSanity:
@@ -121,9 +115,7 @@ class TestPhysicalSanity:
         assert isinstance(factory().name, str) and factory().name.strip()
 
 
-# ---------------------------------------------------------------------------
-# 3. Group-specific reference values
-# ---------------------------------------------------------------------------
+# Group-specific reference values
 
 
 class TestSteelProperties:
@@ -269,9 +261,7 @@ class TestConcreteProperties:
             assert factory().density == pytest.approx(2400)
 
 
-# ---------------------------------------------------------------------------
-# 4. Registry helpers
-# ---------------------------------------------------------------------------
+# Registry helpers
 
 
 class TestRegistry:
@@ -309,9 +299,7 @@ class TestRegistry:
             assert expected in names, f"'{expected}' missing from list_available()"
 
 
-# ---------------------------------------------------------------------------
-# 5. Independence — each call must return a distinct object
-# ---------------------------------------------------------------------------
+# Independence - each call must return a distinct object
 
 
 class TestIndependence:

@@ -36,7 +36,7 @@ class ResultsBundle:
     loadcases: Dict[str, SingleResults] = field(default_factory=dict)
     loadcombinations: Dict[str, SingleResults] = field(default_factory=dict)
     # Unity-check results: one entry per check definition (see the solver's
-    # `UnityCheckResult` — utilization, status colour, per-entity + governing).
+    # `UnityCheckResult` - utilization, status colour, per-entity + governing).
     unity_check_results: List[Dict[str, Any]] = field(default_factory=list)
     # Eigenvalue results, carried as plain dicts mirroring the solver schema
     # (`ModalResults` / `BucklingResults`: {"modes": [...]}), or None when the
@@ -47,7 +47,7 @@ class ResultsBundle:
     report_html: Optional[str] = None
     # Free-tier provenance stamp, as a plain dict mirroring the solver's
     # `Attribution` schema (generated_by / url / engine_version / tier / text /
-    # html). None on Premium, where the solver omits it entirely — so a plain
+    # html). None on Premium, where the solver omits it entirely - so a plain
     # `if bundle.attribution:` is a reliable tier check.
     attribution: Optional[Dict[str, Any]] = None
     # Load combinations that failed to solve and are therefore MISSING from

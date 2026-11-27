@@ -45,10 +45,8 @@ class MaterialLibrary:
     :meth:`get` to look one up by name string.
     """
 
-    # ------------------------------------------------------------------
-    # Structural steel — EN 10025 / EN 1993-1-1
+    # Structural steel - EN 10025 / EN 1993-1-1
     # E = 210 GPa, G = 81 GPa, rho = 7850 kg/m³
-    # ------------------------------------------------------------------
 
     @staticmethod
     def S235() -> Material:
@@ -75,10 +73,8 @@ class MaterialLibrary:
         """High-strength structural steel S460 (EN 10025-3/4)."""
         return Material("S460", e_mod=210e9, g_mod=81e9, density=7850, yield_stress=460e6)
 
-    # ------------------------------------------------------------------
-    # Stainless steel — EN 10088 / EN 1993-1-4
+    # Stainless steel - EN 10088 / EN 1993-1-4
     # E = 200 GPa, G = 77 GPa
-    # ------------------------------------------------------------------
 
     @staticmethod
     def stainless_304() -> Material:
@@ -92,9 +88,7 @@ class MaterialLibrary:
         0.2% proof stress (Rp0.2) used as yield_stress."""
         return Material("Stainless 1.4401 (316)", e_mod=200e9, g_mod=77e9, density=8000, yield_stress=220e6)
 
-    # ------------------------------------------------------------------
-    # Aluminium alloys — EN 1999-1-1
-    # ------------------------------------------------------------------
+    # Aluminium alloys - EN 1999-1-1
 
     @staticmethod
     def aluminum_6061_T6() -> Material:
@@ -120,9 +114,7 @@ class MaterialLibrary:
         Marine / cryogenic applications, excellent corrosion resistance."""
         return Material("Aluminium 5083-H111", e_mod=70.3e9, g_mod=26.4e9, density=2660, yield_stress=145e6)
 
-    # ------------------------------------------------------------------
-    # Titanium — ASTM / AMS
-    # ------------------------------------------------------------------
+    # Titanium - ASTM / AMS
 
     @staticmethod
     def titanium_grade2() -> Material:
@@ -138,9 +130,7 @@ class MaterialLibrary:
             "Titanium Grade 5 (Ti-6Al-4V)", e_mod=114e9, g_mod=44e9, density=4430, yield_stress=880e6
         )
 
-    # ------------------------------------------------------------------
     # Copper and copper alloys
-    # ------------------------------------------------------------------
 
     @staticmethod
     def copper() -> Material:
@@ -160,12 +150,10 @@ class MaterialLibrary:
         Good wear resistance and bearing properties."""
         return Material("Bronze CuSn8", e_mod=105e9, g_mod=40e9, density=8800, yield_stress=320e6)
 
-    # ------------------------------------------------------------------
-    # Concrete — EN 1992-1-1 / EN 206
+    # Concrete - EN 1992-1-1 / EN 206
     # Ecm (secant modulus) computed from Ecm = 22000·(fcm/10)^0.3 [MPa]
     # Poisson's ratio ν ≈ 0.20  →  G = Ecm / 2.4
     # yield_stress = fck (characteristic cylinder compressive strength)
-    # ------------------------------------------------------------------
 
     @staticmethod
     def concrete_C20_25() -> Material:
@@ -191,9 +179,7 @@ class MaterialLibrary:
         Ecm = 34 GPa, fck = 35 MPa (cylinder)."""
         return Material("Concrete C35/45", e_mod=34.0e9, g_mod=14.2e9, density=2400, yield_stress=35e6)
 
-    # ------------------------------------------------------------------
-    # Cast iron — EN 1561 / EN 1563
-    # ------------------------------------------------------------------
+    # Cast iron - EN 1561 / EN 1563
 
     @staticmethod
     def cast_iron_grey() -> Material:
@@ -209,9 +195,7 @@ class MaterialLibrary:
             "Ductile Cast Iron GJS-400-18", e_mod=169e9, g_mod=65e9, density=7100, yield_stress=250e6
         )
 
-    # ------------------------------------------------------------------
     # Registry helpers
-    # ------------------------------------------------------------------
 
     #: Internal map: display name → factory callable.
     #: Populated at class-definition time; order reflects grouping above.
@@ -244,10 +228,8 @@ class MaterialLibrary:
             raise KeyError(f"Unknown material '{name}'. Available: {available}") from None
 
 
-# ---------------------------------------------------------------------------
 # Build the registry automatically from all public static methods
 # that return a Material (i.e. every factory defined above).
-# ---------------------------------------------------------------------------
 def _build_registry() -> None:
     for _attr_name in dir(MaterialLibrary):
         if _attr_name.startswith("_"):

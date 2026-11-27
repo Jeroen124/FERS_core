@@ -590,9 +590,7 @@ def test_kitchen_sink_refers_only_to_what_it_defines():
     assert _dangling_references(_reload(saved)) == []
 
 
-# ---------------------------------------------------------------------------
 # Coverage guard
-# ---------------------------------------------------------------------------
 
 # Subtrees the SDK carries as plain dicts and never interprets, so a round trip
 # cannot lose a field inside them; the kitchen sink still carries one.
@@ -709,9 +707,7 @@ def test_kitchen_sink_sets_every_input_field():
     )
 
 
-# ---------------------------------------------------------------------------
 # What used to be lost, one at a time
-# ---------------------------------------------------------------------------
 
 
 def _reloaded(model: FERS) -> FERS:
@@ -884,9 +880,7 @@ def test_weight_is_still_the_member_mass_after_loading():
     assert reloaded_column.weight == pytest.approx(column.weight)
 
 
-# ---------------------------------------------------------------------------
 # Ids after loading
-# ---------------------------------------------------------------------------
 
 
 def test_new_objects_after_loading_never_reuse_a_loaded_id():

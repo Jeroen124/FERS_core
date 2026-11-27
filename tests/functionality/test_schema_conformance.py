@@ -1,7 +1,7 @@
 """Schema conformance: every FERS *input* model built in Python must validate
 against the GENERATED pydantic ``FERS`` schema (the single source of truth,
 generated from the solver's OpenAPI). Guards against a hand-written ``to_dict()``
-drifting from the solver contract — the class of bug that let the analysis-order
+drifting from the solver contract - the class of bug that let the analysis-order
 enum and the unity-check ``report_template`` placement diverge silently.
 """
 
@@ -214,7 +214,6 @@ def test_one_way_support_round_trips_through_from_dict():
     assert support.displacement_conditions["Y"].condition_type is (SupportConditionType.POSITIVE_ONLY)
 
 
-# ---------------------------------------------------------------------------
 # Result classes: the other direction.
 #
 # Everything above guards the INPUT side -- a model built in Python validating
@@ -232,7 +231,6 @@ def test_one_way_support_round_trips_through_from_dict():
 # A test per field would only ever catch the field someone thought to add. This
 # asserts the property instead: every field the generated model declares must
 # exist on the hand-written class.
-# ---------------------------------------------------------------------------
 
 _RESULT_CLASS_PAIRS = [
     (ResultsBundle, "ResultsBundle"),

@@ -1,4 +1,4 @@
-"""NAFEMS LE1 — Elliptic membrane (plane stress).
+"""NAFEMS LE1 - Elliptic membrane (plane stress).
 
 Quarter elliptic annulus, 1st quadrant. Inner ellipse (a=2.0, b=1.0), outer (a=3.25, b=2.75),
 thickness t=0.1 m. E=210 GPa, nu=0.3. Uniform OUTWARD normal traction 10 MPa on the outer arc.

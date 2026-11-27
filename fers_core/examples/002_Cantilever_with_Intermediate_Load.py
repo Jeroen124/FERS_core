@@ -1,12 +1,9 @@
 from fers_core import Node, Member, FERS, Material, Section, MemberSet, NodalSupport, NodalLoad, AnalysisOrder
 import os
 
-# =============================================================================
 # Example and Validation: Cantilever Beam with Intermediate Load
-# =============================================================================
 
 # Step 1: Set up the model
-# -------------------------
 # Create the main FERS object that will manage the analysis
 calculation_1 = FERS()
 calculation_1.settings.analysis_options.order = AnalysisOrder.LINEAR
@@ -39,7 +36,6 @@ membergroup1 = MemberSet(members=[beam1, beam2])
 calculation_1.add_member_set(membergroup1)
 
 # Step 2: Apply the intermediate load
-# -----------------------------------
 # Create a load case for the analysis
 intermediate_load_case = calculation_1.create_load_case(name="Intermediate Load")
 
@@ -54,7 +50,6 @@ os.makedirs(os.path.dirname(file_path), exist_ok=True)
 calculation_1.save_to_json(file_path, indent=4)
 
 # Step 3: Run FERS calculation
-# ----------------------------
 # Perform the analysis using the saved JSON model file
 print("Running the analysis...")
 calculation_1.run_analysis()
@@ -71,7 +66,6 @@ dy_fers_end = results.displacement_nodes["2"].dy
 Mz_fers = results.reaction_nodes["1"].nodal_forces.mz
 
 # Step 4: Validate Results Against Analytical Solution
-# ----------------------------------------------------
 # Analytical solution parameters
 F = 1000  # Force in Newtons
 L = 5  # Length of the beam in meters
@@ -112,9 +106,7 @@ if abs(Mz_fers - M_max_analytical) < 1e-3:
 else:
     print("Reaction moment does NOT match the analytical solution ❌")
 
-# =============================================================================
 # Notes for User
-# =============================================================================
 # This script is both an example and a validation tool.
 # 1. It demonstrates how to set up and analyze a cantilever beam with an intermediate load.
 # 2. It validates the FERS results against analytical solutions for deflection and moment.

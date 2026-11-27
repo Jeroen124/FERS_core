@@ -1,5 +1,5 @@
 """
-801 — Section Library Lookup
+801 - Section Library Lookup
 ============================
 Demonstrates how to use the built-in European steel section library
 to create sections by name (e.g. "IPE200", "HEB300", "RHS 200x100x8")
@@ -23,15 +23,11 @@ from fers_core import (
 )
 
 
-# =============================================================================
 # Step 1: Material
-# =============================================================================
 steel = Material(name="S355", e_mod=210e9, g_mod=81e9, density=7850, yield_stress=355e6)
 
 
-# =============================================================================
 # Step 2: Pick a section straight from the library
-# =============================================================================
 # European standard sections, and British Steel's UB / UC / PFC and ASTM W / HP
 # sections, are available by name:
 ipe200 = Section.from_name("IPE200", steel)
@@ -53,9 +49,7 @@ for sec in [ipe200, heb300, rhs_200x100, shs_100, angle_100, chs_168, upe200, ub
     )
 
 
-# =============================================================================
 # Step 3: List what is available
-# =============================================================================
 print("\n--- All IPE sizes ---")
 print(Section.list_available("IPE"))
 
@@ -65,9 +59,7 @@ print(Section.list_available("SHS"))
 print(f"\nTotal sections in library: {len(Section.list_available())}")
 
 
-# =============================================================================
 # Step 4: Use a library section in a simple analysis
-# =============================================================================
 model = FERS()
 
 node1 = Node(0, 0, 0)
@@ -90,8 +82,6 @@ dy = model.resultsbundle.loadcases["Tip load"].displacement_nodes["2"].dy
 print(f"Tip deflection dy = {dy * 1e3:.3f} mm")
 
 
-# =============================================================================
 # Step 5 (optional): Plot the cross-section
-# =============================================================================
 # Uncomment the line below to show the cross-section plot:
 # ipe200.plot()

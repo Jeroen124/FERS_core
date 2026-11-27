@@ -16,18 +16,11 @@ from fers_core import (
 def print_displacements_for_loadcase(results_for_loadcase):
     displacement_dict = results_for_loadcase.displacement_nodes
 
-    # Sort nodes numerically if possible
-    def sort_key(node_key):
-        try:
-            return (0, int(node_key))
-        except (TypeError, ValueError):
-            return (1, str(node_key))
-
     print("\nNodal displacements and rotations:")
     print("Node |     dx [m]   |     dy [m]   |     dz [m]   |     rx [rad] |     ry [rad] |     rz [rad]")
     print("-----+--------------+--------------+--------------+--------------+--------------+--------------")
 
-    for node_id in sorted(displacement_dict.keys(), key=sort_key):
+    for node_id in sorted(displacement_dict, key=int):
         d = displacement_dict[node_id]
         print(
             f"{node_id:>4} | {d.dx:>12.6e} | {d.dy:>12.6e} | {d.dz:>12.6e} | "
@@ -38,18 +31,11 @@ def print_displacements_for_loadcase(results_for_loadcase):
 def print_bending_moments_for_loadcase(results_for_loadcase):
     member_results_dict = results_for_loadcase.member_results
 
-    # Sort by numeric member identifier if possible, while remaining robust to non-numeric keys
-    def sort_key(member_key):
-        try:
-            return (0, int(member_key))
-        except (TypeError, ValueError):
-            return (1, str(member_key))
-
     print("\nBending moments per member (local z-axis):")
     print("Member | Mz_start [N·m] | Mz_end [N·m] | Mz_min [N·m] | Mz_max [N·m]")
     print("-------+-----------------+--------------+--------------+--------------")
 
-    for member_id in sorted(member_results_dict.keys(), key=sort_key):
+    for member_id in sorted(member_results_dict, key=int):
         member_result = member_results_dict[member_id]
 
         bending_moment_start = member_result.start_node_forces.mz
@@ -66,13 +52,6 @@ def print_bending_moments_for_loadcase(results_for_loadcase):
 def print_shear_forces_for_loadcase(results_for_loadcase):
     member_results_dict = results_for_loadcase.member_results
 
-    # Sort by numeric member identifier if possible, while remaining robust to non-numeric keys
-    def sort_key(member_key):
-        try:
-            return (0, int(member_key))
-        except (TypeError, ValueError):
-            return (1, str(member_key))
-
     print("\nShear forces per member (local y- and z-axes):")
     print(
         "Member | Vy_start [N] | Vy_end [N] | Vy_min [N] | Vy_max [N] | "
@@ -83,7 +62,7 @@ def print_shear_forces_for_loadcase(results_for_loadcase):
         "--------------+------------+------------+------------"
     )
 
-    for member_id in sorted(member_results_dict.keys(), key=sort_key):
+    for member_id in sorted(member_results_dict, key=int):
         member_result = member_results_dict[member_id]
 
         # Local y shear (Vy)
@@ -104,9 +83,7 @@ def print_shear_forces_for_loadcase(results_for_loadcase):
         )
 
 
-# =============================================================================
 # Example and Validation: Cantilever With Root Rotational Spring (via MemberHinge)
-# =============================================================================
 # Model: node1 --[RIGID]--> node2 s--[NORMAL + spring at start]--> node3
 # Support: full fixity at node1 (translations and rotations)
 # Load: 1 kN downward at the free end (node3)
@@ -115,10 +92,8 @@ def print_shear_forces_for_loadcase(results_for_loadcase):
 # spring at its fixed/root end. The rigid member transmits the support DOFs to
 # node2; the MemberHinge provides a rotational spring around local z at the
 # start of the flexible member.
-# =============================================================================
 
 # Step 1: Set up the model
-# ------------------------
 calculation_1 = FERS()
 calculation_1.settings.analysis_options.order = AnalysisOrder.LINEAR
 
@@ -162,7 +137,6 @@ calculation_1.add_member_set(member_set)
 # calculation_1.memberhinges.append(start_hinge)
 
 # Step 2: Apply the load
-# ----------------------
 load_case = calculation_1.create_load_case(name="End Load")
 
 # 1 kN downward at the free end
@@ -179,7 +153,6 @@ os.makedirs(os.path.dirname(file_path), exist_ok=True)
 calculation_1.save_to_json(file_path, indent=4)
 
 # Step 3: Run FERS calculation
-# ----------------------------
 print("Running the analysis...")
 calculation_1.run_analysis()
 results = calculation_1.resultsbundle.loadcases["End Load"]
@@ -190,7 +163,6 @@ rotation_tip_fers = results.displacement_nodes["3"].rz
 reaction_moment_support_fers = results.reaction_nodes["1"].nodal_forces.mz
 
 # Step 4: Validate against analytical solution
-# --------------------------------------------
 # For a cantilever of length L with a root rotational spring k_phi:
 #   Root rotation:        φ0 = (F * L) / k_phi
 #   Tip rotation:         φ_tip = (F * L**2) / (2 * E * I) + φ0
@@ -238,13 +210,10 @@ else:
     print("Support reaction moment does NOT match the analytical solution ❌")
 
 
-# =============================================================================
 # Notes for Users
-# =============================================================================
-# 1) This example shows how to model a root rotational spring using MemberHinge while
-#    keeping a rigid link from the fixed support to the spring location.
-# 2) The analytical checks use closed-form expressions for a cantilever with a root spring.
-# 3) You can tune k_phi_z to target a desired root rotation under the applied tip load.
+# A root rotational spring modelled with a MemberHinge, with a rigid link from the fixed
+# support to the spring. The checks use the closed-form cantilever with a root spring;
+# tune k_phi_z to target a root rotation under the tip load.
 results = calculation_1.resultsbundle.loadcases["End Load"]
 print_bending_moments_for_loadcase(results)
 print_shear_forces_for_loadcase(results)

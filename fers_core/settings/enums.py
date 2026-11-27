@@ -76,7 +76,7 @@ class ResultBlock(Enum):
     Values match the Rust ``ResultBlock`` enum (engine >= 0.2.48; older
     engines silently ignore ``result_filter`` and return the full output).
     Each token names the member/result JSON block(s) it keeps: when a filter
-    list is present, only the listed blocks are emitted — scalar member
+    list is present, only the listed blocks are emitted - scalar member
     blocks are omitted, list/map blocks (``section_forces``,
     ``internal_force_series``, ``displacement_nodes``, ``reaction_nodes``)
     are emitted empty.

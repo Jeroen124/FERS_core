@@ -19,15 +19,15 @@ class SupportCondition:
 
     Condition types
     ---------------
-    - **FIXED** — exact Dirichlet constraint (handled on the Rust side as a
+    - **FIXED** - exact Dirichlet constraint (handled on the Rust side as a
       constraint / elimination).
-    - **FREE** — no resistance.
-    - **SPRING** — linear spring with constant ``stiffness`` (force/disp for
+    - **FREE** - no resistance.
+    - **SPRING** - linear spring with constant ``stiffness`` (force/disp for
       translations, moment/rad for rotations).  When a ``stiffness_curve`` is
       also provided the curve overrides the constant value and the solver
       re-evaluates the stiffness each iteration based on the specified
       internal-force component (``depends_on``).
-    - **POSITIVE_ONLY / NEGATIVE_ONLY** — unilateral (contact-like).  Stiffness
+    - **POSITIVE_ONLY / NEGATIVE_ONLY** - unilateral (contact-like).  Stiffness
       is optional: if provided it acts as a spring active only in the allowed
       direction; if omitted the Rust side treats it as an ideal unilateral
       constraint.
@@ -44,9 +44,7 @@ class SupportCondition:
         self.stiffness_curve = stiffness_curve
         self._validate()
 
-    # ------------------------------------------------------------------
     # Validation
-    # ------------------------------------------------------------------
 
     # Force/moment components valid for a *support* stiffness curve. Supports
     # react in global axes, so only the global family is accepted; the
@@ -66,7 +64,7 @@ class SupportCondition:
     def _validate(self) -> None:
         if self.condition_type == SupportConditionType.SPRING:
             if self.stiffness_curve is not None:
-                # Spring with a stiffness curve — constant stiffness is optional
+                # Spring with a stiffness curve - constant stiffness is optional
                 # (the curve overrides it).  The curve validates its points in its
                 # own __init__; here we additionally enforce the *support* context:
                 # depends_on must be a global reaction component.
@@ -98,9 +96,7 @@ class SupportCondition:
                 if self.stiffness is not None:
                     raise ValueError(f"{self.condition_type.value} must not specify stiffness.")
 
-    # ------------------------------------------------------------------
     # Factory helpers
-    # ------------------------------------------------------------------
 
     @classmethod
     def fixed(cls) -> "SupportCondition":
@@ -145,7 +141,7 @@ class SupportCondition:
 
     @classmethod
     def stiffness_curve(cls, curve_points: List[List[float]]) -> "SupportCondition":
-        """Convenience factory — equivalent to ``spring_curve(ForceComponent.Fz, curve_points)``.
+        """Convenience factory - equivalent to ``spring_curve(ForceComponent.Fz, curve_points)``.
 
         Kept for ergonomic backward compatibility.  Defaults ``depends_on`` to
         ``ForceComponent.Fz`` (a support uses global reaction components
@@ -157,9 +153,7 @@ class SupportCondition:
         """
         return cls.spring_curve(ForceComponent.Fz, curve_points)
 
-    # ------------------------------------------------------------------
     # Serialization
-    # ------------------------------------------------------------------
 
     def to_dict(self) -> dict:
         """Serialize to a plain dict matching the Rust JSON schema.
@@ -200,7 +194,7 @@ class SupportCondition:
         stiffness = data.get("stiffness", None)
         raw_curve = data.get("stiffness_curve", None)
 
-        # Deserialize stiffness_curve — handles dict (new) and list (legacy).
+        # Deserialize stiffness_curve - handles dict (new) and list (legacy).
         # A legacy bare list carries no depends_on; StiffnessCurveConfig.from_dict
         # defaults it to the member-local Vz (the hinge default), which is invalid
         # for a *support*. Default it to the global Fz instead so legacy support
@@ -234,9 +228,7 @@ class SupportCondition:
 
         return cls(condition_type=condition_type, stiffness=stiffness, stiffness_curve=stiffness_curve)
 
-    # ------------------------------------------------------------------
     # Display
-    # ------------------------------------------------------------------
 
     def to_display_string(self) -> str:
         if self.condition_type == SupportConditionType.SPRING:

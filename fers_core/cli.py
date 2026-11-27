@@ -71,9 +71,7 @@ _UNTRUSTWORTHY_WARNINGS = {"self_weight_not_in_combinations"}
 _EXAMPLE_FILE = re.compile(r"^\d{3}_.*\.py$")
 
 
-# ---------------------------------------------------------------------------
 # Output
-# ---------------------------------------------------------------------------
 
 
 def _emit(as_json: bool, payload: dict[str, Any], line: str) -> None:
@@ -101,9 +99,7 @@ def _count(n: int, noun: str) -> str:
     return f"{n} {noun}" if n == 1 else f"{n} {noun}s"
 
 
-# ---------------------------------------------------------------------------
 # Shared helpers
-# ---------------------------------------------------------------------------
 
 
 def _read_model_text(path: Path) -> str:
@@ -291,9 +287,7 @@ def _find_example(selector: str) -> Path:
     raise ValueError(f"{selector!r} matches more than one example: {names}")
 
 
-# ---------------------------------------------------------------------------
 # Commands
-# ---------------------------------------------------------------------------
 
 
 def cmd_solve(args: argparse.Namespace) -> int:
@@ -900,9 +894,7 @@ def cmd_version(args: argparse.Namespace) -> int:
     return EXIT_OK
 
 
-# ---------------------------------------------------------------------------
 # Parser
-# ---------------------------------------------------------------------------
 
 
 def _add_json(parser: argparse.ArgumentParser) -> None:

@@ -222,7 +222,7 @@ def test_061_two_colinear_tension_only_members_with_mid_load():
     reaction_node_1_fx_expected = -applied_force_newton
     reaction_node_3_fx_expected = 0.0
 
-    # --- Displacement check ---------------------------------------------------
+    # Displacement check
     assert_close(
         displacement_node_2_dx_fers,
         displacement_node_2_dx_expected,
@@ -234,7 +234,7 @@ def test_061_two_colinear_tension_only_members_with_mid_load():
         elastic_modulus=elastic_modulus,
     )
 
-    # --- Reaction at node 1 (tension side) ------------------------------------
+    # Reaction at node 1 (tension side)
     absolute_force_tolerance = max(TOL.absolute_force_in_newton, 1.0e-3)
 
     assert_close(
@@ -247,7 +247,7 @@ def test_061_two_colinear_tension_only_members_with_mid_load():
         applied_force_newton=applied_force_newton,
     )
 
-    # --- Reaction at node 3 (compression side, should be ~0) ------------------
+    # Reaction at node 3 (compression side, should be ~0)
     assert_close(
         reaction_node_3_fx_fers,
         reaction_node_3_fx_expected,
