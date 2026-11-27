@@ -1,7 +1,7 @@
 """Ergonomic builders for unity-check definitions.
 
 These return plain ``dict``s in exactly the shape the Rust solver expects on
-``analysis.unity_checks`` — so you can author checks in Python and the result
+``analysis.unity_checks`` - so you can author checks in Python and the result
 flows straight through ``FERS.to_dict()`` / the solver.
 
 Example::
@@ -29,10 +29,10 @@ Example::
 
 Cross-member / serviceability quantities (solver ≥ 0.2.39)::
 
-    # Chord-relative beam sag (settlement removed) — the SLS deflection quantity:
+    # Chord-relative beam sag (settlement removed) - the SLS deflection quantity:
     var("d", member_deflection("Magnitude"))            # demand: "abs(d)"
 
-    # Compare a member to the one it points at via `reference_member` — e.g.
+    # Compare a member to the one it points at via `reference_member` - e.g.
     # "has the rail sagged below the beam it hangs under?" (deflected clearance):
     var("y_self", node_position("Start", "Y"))
     var("y_ref",  node_position("ReferenceMemberStart", "Y"))
@@ -62,7 +62,7 @@ from pydantic import ValidationError as _ValidationError
 from .types.pydantic_models import UnityCheckDefinition as _UnityCheckDefinition
 
 
-# ── variable sources ─────────────────────────────────────────────────────────
+# variable sources
 
 
 def _with_of(inner: Dict[str, Any], of: Optional[str]) -> Dict[str, Any]:
@@ -106,7 +106,7 @@ def member_deflection(
     component: str = "Magnitude", aggregation: str = "MaxAbs", fraction: Optional[float] = None
 ) -> Dict[str, Any]:
     """Chord-relative member deflection (support settlement + rigid chord rotation
-    removed) — the quantity SLS deflection limits are written against."""
+    removed) - the quantity SLS deflection limits are written against."""
     agg: Dict[str, Any] = {"type": aggregation}
     if aggregation == "AtFraction":
         agg["fraction"] = 0.5 if fraction is None else float(fraction)
@@ -114,14 +114,14 @@ def member_deflection(
 
 
 def node_displacement(at: str, component: str) -> Dict[str, Any]:
-    """Displacement (or rotation) of a node named relative to the entity — its own
+    """Displacement (or rotation) of a node named relative to the entity - its own
     ends, or the paired member/node via ``reference_member`` / ``reference_node``."""
     return {"Quantity": {"NodeDisplacement": {"at": at, "component": component}}}
 
 
 def node_position(at: str, axis: str) -> Dict[str, Any]:
     """Deflected position (undeformed coordinate + displacement) of a node named
-    relative to the entity, along a global axis — for clearance / "below a line"."""
+    relative to the entity, along a global axis - for clearance / "below a line"."""
     return {"Quantity": {"NodePosition": {"at": at, "axis": axis}}}
 
 
@@ -142,7 +142,7 @@ def var(name: str, source: Dict[str, Any]) -> Dict[str, Any]:
     return {"name": name, "source": source}
 
 
-# ── entity selectors ─────────────────────────────────────────────────────────
+# entity selectors
 
 
 def all_members() -> Dict[str, Any]:
@@ -165,7 +165,7 @@ def all_plates() -> Dict[str, Any]:
     return {"type": "AllPlates"}
 
 
-# ── check definitions ────────────────────────────────────────────────────────
+# check definitions
 
 
 def generic_check(
@@ -273,7 +273,7 @@ def _check(
 def _validate_check(d: Dict[str, Any]) -> None:
     """Validate a unity-check dict against the GENERATED ``UnityCheckDefinition``
     (the single source of truth from the solver's OpenAPI). Raises ``ValueError``
-    on any drift — e.g. an unknown field, or a ``report_template`` misplaced
+    on any drift - e.g. an unknown field, or a ``report_template`` misplaced
     inside the ``extra='forbid'`` ``GenericSpec``."""
     try:
         _UnityCheckDefinition(**d)

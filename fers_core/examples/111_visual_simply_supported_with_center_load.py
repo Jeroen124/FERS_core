@@ -13,12 +13,9 @@ from fers_core import (
 )
 
 
-# =============================================================================
 # Example and Validation: Simply Supported Beam with Center Load
-# =============================================================================
 
 # Step 1: Set up the model
-# -------------------------
 # Create the main FERS object that will manage the analysis
 calculation_1 = FERS()
 calculation_1.settings.analysis_options.order = AnalysisOrder.LINEAR
@@ -45,7 +42,7 @@ ipe_section = Section.create_ipe_section(
 beam = Member(start_node=node1, end_node=node2, section=ipe_section)
 
 # Apply supports:
-# Left support — pinned (fixed translations, free rotations)
+# Left support - pinned (fixed translations, free rotations)
 pinned_support = NodalSupport(
     rotation_conditions={
         "X": SupportCondition.fixed(),
@@ -55,7 +52,7 @@ pinned_support = NodalSupport(
 )
 node1.nodal_support = pinned_support
 
-# Right support — roller (free in X, fixed in Y and Z, free rotations)
+# Right support - roller (free in X, fixed in Y and Z, free rotations)
 roller_support = NodalSupport(
     rotation_conditions={
         "X": SupportCondition.free(),
@@ -70,7 +67,6 @@ membergroup1 = MemberSet(members=[beam])
 calculation_1.add_member_set(membergroup1)
 
 # Step 2: Apply the load
-# ----------------------
 # Create a load case for the analysis
 center_load_case = calculation_1.create_load_case(name="Center Load")
 
@@ -103,7 +99,6 @@ os.makedirs(os.path.dirname(file_path), exist_ok=True)
 calculation_1.save_to_json(file_path, indent=4)
 
 # Step 3: Run FERS calculation
-# ----------------------------
 print("Running the analysis...")
 calculation_1.run_analysis()
 result_loadcase = calculation_1.resultsbundle.loadcases["Center Load"]
@@ -113,7 +108,6 @@ dy_mid_fers = result_loadcase.displacement_nodes[str(node_mid.id)].dy
 Fy_left_fers = result_loadcase.reaction_nodes[str(node1.id)].nodal_forces.fy
 
 # Step 4: Validate Results Against Analytical Solution
-# ----------------------------------------------------
 # Analytical solution for a simply supported beam with center point load F
 L = 5  # Beam length in meters
 E = 210e9  # Elastic modulus (Pascals)
@@ -147,9 +141,7 @@ print(f"\n  Expected max bending moment at mid-span: {M_max_analytical:.2f} Nm")
 print("\nAll results validated successfully!")
 
 
-# =============================================================================
 # Step 5: Visualise
-# =============================================================================
 # Show the model with loads
 calculation_1.plot_model_3d(loadcase="Center Load")
 

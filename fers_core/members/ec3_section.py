@@ -13,7 +13,7 @@ Two things it deliberately does not do:
   (shell buckling), not an effective width. The class is reported; `a_eff` is
   refused rather than guessed.
 * **Edge-stiffened cold-formed elements** (a lipped C, a hat). Those need
-  EN 1993-1-3 §5.5.3 — an iterative spring-stiffness/distortional calculation
+  EN 1993-1-3 §5.5.3 - an iterative spring-stiffness/distortional calculation
   this module does not implement. A lip is accepted only where it is long
   enough to count under §5.5.3.1(3) (`0.2 <= c/b <= 0.6`); otherwise the flange
   is treated as the plain outstand it effectively is, which is the correct
@@ -109,8 +109,8 @@ class PlateElement:
     """One flat compression element, on the section's mid-line.
 
     `p1`/`p2` are the ends of the FLAT portion in section local `(y, z)`, so the
-    centroid of the effective section — and with it the EN 1993-1-1 §6.2.9.3
-    shift `e_N` — falls out of the same description that gives `c`.
+    centroid of the effective section - and with it the EN 1993-1-1 §6.2.9.3
+    shift `e_N` - falls out of the same description that gives `c`.
 
     For an outstand, `supported_end` says which end is attached to the rest of
     the section: EN 1993-1-5 Table 4.2 measures `b_eff` from there, leaving the
@@ -397,7 +397,7 @@ def effective_flexural_properties(
     )
 
 
-# ── plate decompositions ────────────────────────────────────────────────────
+# plate decompositions
 #
 # Local axes follow the section factories: i_y = sp.iyy_c and i_z = sp.ixx_c, so
 # local y runs along the depth and local z along the width. Flat widths are the
@@ -521,7 +521,7 @@ def angle_plates(h: float, b: float, t: float, r: float = 0.0) -> List[PlateElem
     ]
 
 
-# ── buckling curves (EN 1993-1-1 Table 6.2) ─────────────────────────────────
+# buckling curves (EN 1993-1-1 Table 6.2)
 
 
 def buckling_curves(
@@ -535,7 +535,7 @@ def buckling_curves(
     """`(curve_y, curve_z, curve_lt)` per EN 1993-1-1 Tables 6.2 and 6.4.
 
     `curve_y` is about local y and `curve_z` about local z, matching the section
-    factories' `i_y = sp.iyy_c` / `i_z = sp.ixx_c` mapping — so for an I-section
+    factories' `i_y = sp.iyy_c` / `i_z = sp.ixx_c` mapping - so for an I-section
     or a channel, local z is the STRONG axis and local y the weak one, and the
     table's "y-y" row maps onto `curve_z` here.
 
@@ -662,7 +662,7 @@ def code_shear_areas(
     return {}
 
 
-# ── the block the solver actually reads ─────────────────────────────────────
+# the block the solver actually reads
 
 
 def ec3_params(
@@ -682,7 +682,7 @@ def ec3_params(
     substitute a rounded copy of a number it already has.
 
     With `classify=False` only the buckling curves go out. Those do not depend on
-    the stress distribution, whereas the class does — see `section_ec3`.
+    the stress distribution, whereas the class does - see `section_ec3`.
     """
     curve_y, curve_z, curve_lt = curves
     cls = section_class if section_class is not None else (eff.section_class if eff else None)
@@ -720,7 +720,7 @@ def section_ec3(
     """`(ec3_block, effective_section_or_None)` for a parametric profile.
 
     One call per profile family, so the section factories do not each re-derive
-    the plate decomposition. A CHS gets its class but no `a_eff` — a class 4 tube
+    the plate decomposition. A CHS gets its class but no `a_eff` - a class 4 tube
     is EN 1993-1-6, not an effective width, and inventing one would be worse than
     leaving it out.
 
@@ -731,7 +731,7 @@ def section_ec3(
     72·eps), while `Section.ec3.section_class` is a single field the solver uses
     for both. Stamping the compression class onto a section that will be used as
     a beam would have the solver demand effective moduli for a check that never
-    needed them — 28 of the 348 catalogue sections are affected.
+    needed them - 28 of the 348 catalogue sections are affected.
 
     So the buckling curves, which do not depend on the stress state, are always
     emitted; the class and `a_eff` only when the caller says how the member is

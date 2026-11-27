@@ -1,5 +1,5 @@
 """
-803 — DXF Cross-Section Import
+803 - DXF Cross-Section Import
 ===============================
 Demonstrates how to import a cross-section outline from a DXF file
 and use it in a FERS analysis.
@@ -20,15 +20,11 @@ import os
 from fers_core import ShapePath, Section, Material
 
 
-# =============================================================================
 # Step 1: Material
-# =============================================================================
 steel = Material(name="S355", e_mod=210e9, g_mod=81e9, density=7850, yield_stress=355e6)
 
 
-# =============================================================================
 # Step 2: Import a cross-section from DXF
-# =============================================================================
 # Point this to your own DXF file containing a closed cross-section outline.
 # The DXF should be drawn in mm (X → ShapePath z-axis, Y → ShapePath y-axis).
 #
@@ -38,7 +34,7 @@ steel = Material(name="S355", e_mod=210e9, g_mod=81e9, density=7850, yield_stres
 dxf_path = os.path.join(os.path.dirname(__file__), "sample_section.dxf")
 
 if os.path.isfile(dxf_path):
-    # --- Import from file ---
+    # Import from file
     shape = ShapePath.from_dxf(
         filepath=dxf_path,
         name="DXF Section",
@@ -50,7 +46,7 @@ if os.path.isfile(dxf_path):
     # Optional: visualise what was imported
     # shape.plot()
 
-    # --- Compute section properties and create a Section ---
+    # Compute section properties and create a Section
     # For a DXF-imported shape you will need to provide section properties
     # either manually or via sectionproperties.  Here is the manual route:
     section_dxf = Section(

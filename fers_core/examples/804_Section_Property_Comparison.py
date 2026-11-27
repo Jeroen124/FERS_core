@@ -1,8 +1,8 @@
 """
-804 — Section Property Comparison
+804 - Section Property Comparison
 ==================================
 Demonstrates how to iterate over the section library to compare
-properties across an entire series — useful for preliminary design
+properties across an entire series - useful for preliminary design
 and optimisation.
 
 Key features shown:
@@ -15,15 +15,11 @@ Key features shown:
 from fers_core import Material, Section
 
 
-# =============================================================================
 # Step 1: Material
-# =============================================================================
 steel = Material(name="S355", e_mod=210e9, g_mod=81e9, density=7850, yield_stress=355e6)
 
 
-# =============================================================================
 # Step 2: Compare all IPE sections
-# =============================================================================
 print("=" * 90)
 print(f"{'IPE Series':^90s}")
 print("=" * 90)
@@ -42,9 +38,7 @@ for name in Section.list_available("IPE"):
     )
 
 
-# =============================================================================
 # Step 3: Find the lightest IPE that satisfies a deflection limit
-# =============================================================================
 # Problem: cantilever L = 5 m, tip load F = 10 kN, max deflection L/300
 L = 5.0  # m
 F = 10_000.0  # N
@@ -77,9 +71,7 @@ else:
     print("  ✗ No IPE section is large enough — consider HEB or a welded section.")
 
 
-# =============================================================================
 # Step 4: Compare HEA vs HEB vs HEM at the same nominal height
-# =============================================================================
 print("\n" + "=" * 90)
 print(f"{'HE-series comparison at h ≈ 300 mm':^90s}")
 print("=" * 90)

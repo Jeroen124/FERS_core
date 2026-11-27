@@ -3,9 +3,7 @@ from fers_core import Node, Member, FERS, Material, Section, MemberSet, NodalSup
 from fers_core.supports.supportcondition import SupportCondition
 
 
-# =============================================================================
 # Creating a cantilever with an end_load
-# =============================================================================
 # Create analysis object
 calculation_1 = FERS()
 
@@ -53,9 +51,7 @@ node2.nodal_support = simply_supported
 node4.nodal_support = simply_supported
 node5.nodal_support = simply_supported
 
-# =============================================================================
 # Now that the geometrical part is created. Lets create the model and the loadcases
-# =============================================================================
 # Create a memberset holding the beam
 membergroup = MemberSet(members=[beam1, beam2])
 ropegroup = MemberSet(members=[rope_1, rope_2])
@@ -92,7 +88,6 @@ os.makedirs(os.path.dirname(file_path), exist_ok=True)
 calculation_1.save_to_json(file_path, indent=4)
 
 # Step 3: Run FERS calculation
-# ----------------------------
 # Perform the analysis using the saved JSON model file
 print("Running the analysis...")
 calculation_1.run_analysis()

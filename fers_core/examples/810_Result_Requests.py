@@ -1,5 +1,5 @@
 """
-810 — Result Requests
+810 - Result Requests
 =====================
 Asks the solver for only the results a design check reads (engine 0.2.68):
 member envelopes and the beam's start forces for the ULS combinations, the eave
@@ -32,9 +32,7 @@ from fers_core.result_requests import nodes_of
 from fers_core.unity_checks import classification
 
 
-# =============================================================================
 # Step 1: The portal frame of example 809, members classified for selecting
-# =============================================================================
 model = FERS()
 steel = Material(name="S355", e_mod=210e9, g_mod=81e9, density=7850, yield_stress=355e6)
 column_section = Section.from_name("HEA200", steel)
@@ -71,9 +69,7 @@ options = model.settings.analysis_options
 options.order = AnalysisOrder.LINEAR
 
 
-# =============================================================================
 # Step 2: Ask for what the checks read
-# =============================================================================
 columns, beams = classification("column"), classification("beam")
 options.result_requests = [
     ResultRequest(
@@ -100,9 +96,7 @@ options.result_requests = [
 model.run_analysis()
 
 
-# =============================================================================
 # Step 3: Read them as usual
-# =============================================================================
 uls_results = model.resultsbundle.loadcombinations["ULS 1"]
 sls_results = model.resultsbundle.loadcombinations["SLS 1"]
 
@@ -122,9 +116,7 @@ reaction = uls_results.reaction_nodes[str(foot_left.id)].nodal_forces
 print(f"Left foot, ULS: Fy = {reaction.fy / 1e3:.1f} kN")
 
 
-# =============================================================================
 # Step 4: The arrays behind them
-# =============================================================================
 # One entry per request and group of result sets; `values` is a read-only numpy
 # array shaped (result_sets, ids, fields, components), with each axis listed.
 for selection in model.resultsbundle.selections:
@@ -142,9 +134,7 @@ for position, member_id in enumerate(envelopes["ids"]):
     print(f"Member {member_id}: largest bending moment over the ULS combinations {largest / 1e3:.1f} kNm")
 
 
-# =============================================================================
 # Step 5: A request that cannot be met is refused before the solve
-# =============================================================================
 options.result_requests = [ResultRequest(ResultBlock.REACTIONS, limit_state="ALS")]
 try:
     model.run_analysis()

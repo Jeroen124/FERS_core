@@ -3,7 +3,6 @@ import os
 from fers_core import Node, Member, FERS, Material, Section, MemberSet, NodalSupport, NodalLoad, AnalysisOrder
 
 
-# =============================================================================
 # Triple cantilever: same structure as 923, rotated -45° around the global Y axis
 #
 # Rotation matrix Ry(-45°):
@@ -19,7 +18,6 @@ from fers_core import Node, Member, FERS, Material, Section, MemberSet, NodalSup
 #
 # The same global load (-1000 N in Y at the free end) is applied to allow
 # direct comparison of global displacements with the base case.
-# =============================================================================
 
 S = math.sqrt(0.5)  # ≈ 0.7071  (cos45 = sin45)
 S2 = math.sqrt(2.0)  # ≈ 1.4142
@@ -60,7 +58,7 @@ mg3 = MemberSet(members=[beam3])
 
 calculation.add_member_set(mg1, mg2, mg3)
 
-# Load case: -1000 N in global Y at free end (node 3) — same global load as base case
+# Load case: -1000 N in global Y at free end (node 3) - same global load as base case
 lc = calculation.create_load_case(name="End Load")
 NodalLoad(node=node3, load_case=lc, magnitude=-1000, direction=(0, 1, 0))
 
@@ -69,7 +67,7 @@ file_path = os.path.join("json_input_solver", "085_triple_cantilever_3D_rotated_
 os.makedirs(os.path.dirname(file_path), exist_ok=True)
 calculation.save_to_json(file_path, indent=4)
 
-# Run analysis (linear — matches base case 084)
+# Run analysis (linear - matches base case 084)
 print("Running analysis: 085 Triple Cantilever 3D (rotated -45° around Y)")
 calculation.settings.analysis_options.order = AnalysisOrder.LINEAR
 calculation.run_analysis()

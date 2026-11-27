@@ -16,19 +16,19 @@ class AnalysisOptions:
 
     P-Delta migration hint: the engine's default ``pdelta_mode`` is ``FULL``
     (P-Delta amplification in all directions). Most commercial solvers use an
-    in-plane-only sway approach — for parity, set it explicitly::
+    in-plane-only sway approach - for parity, set it explicitly::
 
         AnalysisOptions(pdelta_mode=PdeltaMode.IN_PLANE_ONLY)
 
     The two modes diverge most on braced structures with
     tension-only diagonals. NOTE: ``pdelta_mode`` (with ``nonlinear_method``,
     ``pdelta_formulation``, ``pdelta_suppress_axes``) is expressible here since
-    fers_core 0.1.70 — wires built with ≤ 0.1.69 builder objects always ran
+    fers_core 0.1.70 - wires built with ≤ 0.1.69 builder objects always ran
     the engine default ``FULL``, even when the author intended
     ``IN_PLANE_ONLY``.
 
     Result filtering (engine >= 0.2.48): ``result_filter`` is a whitelist of
-    result blocks to emit — ``None`` (default) returns the full output. The
+    result blocks to emit - ``None`` (default) returns the full output. The
     smallest set that still feeds a full unity-check pipeline is::
 
         AnalysisOptions(result_filter=[
@@ -40,7 +40,7 @@ class AnalysisOptions:
         ])
 
     which shrinks large responses ~60%. A token names the block it *keeps*,
-    not the check it serves — dropping ``LOCAL_END_FORCES`` or
+    not the check it serves - dropping ``LOCAL_END_FORCES`` or
     ``LOCAL_DISPLACEMENTS`` silently zeroes start-node-force / chord-deflection
     checks (no crash), while dropping ``NODE_DISPLACEMENTS`` is a hard
     ``KeyError`` on node-displacement checks. An empty list is a maximal strip;
@@ -50,7 +50,7 @@ class AnalysisOptions:
 
     Result requests (engine >= 0.2.68): ``result_requests`` narrows a block to
     chosen members or nodes, combinations, components and member end, and
-    returns only that — see ``fers_core.result_requests``. Not combinable with
+    returns only that - see ``fers_core.result_requests``. Not combinable with
     ``result_filter``.
 
     Unity-check reports: ``include_report_html=True`` makes the solver embed one

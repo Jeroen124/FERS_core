@@ -1,4 +1,4 @@
-"""NAFEMS FV3 — Free square frame, in-plane vibration (free-free).
+"""NAFEMS FV3 - Free square frame, in-plane vibration (free-free).
 
 Closed 10 m × 10 m square frame, 4 rigid-jointed 10 m sides, solid 0.25 × 0.25 m square
 section, E=200 GPa, ρ=8000. Completely free → 3 in-plane rigid-body modes (~0 Hz) then the

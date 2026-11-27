@@ -12,9 +12,7 @@ from fers_core import (
 )
 
 
-# =============================================================================
 # Example 142: Plate Strip with Surface Pressure Load
-# =============================================================================
 #
 # A cantilevered plate strip (2 m long × 0.2 m wide, 30 mm steel) is modelled
 # as a grid of triangular plate elements and loaded with a uniform pressure of
@@ -32,9 +30,8 @@ from fers_core import (
 #   • Building a plate mesh manually with triangular Plate elements
 #   • Applying a SurfaceLoad (pressure) over a polygon region
 #   • Running a linear analysis and reading plate + node results
-# =============================================================================
 
-# ── Geometry parameters ───────────────────────────────────────────────────────
+# Geometry parameters
 
 LENGTH = 2.0  # strip length [m]
 WIDTH = 0.20  # strip width  [m]
@@ -42,7 +39,7 @@ THICKNESS = 0.03  # plate thickness [m]
 NX = 20  # number of element columns along the length
 PRESSURE = 1000.0  # surface pressure [N/m²]
 
-# ── Model setup ───────────────────────────────────────────────────────────────
+# Model setup
 
 model = FERS()
 model.settings.analysis_options.order = AnalysisOrder.LINEAR
@@ -57,7 +54,7 @@ steel = Material(
 
 fixed_support = NodalSupport()
 
-# ── Build node grid ───────────────────────────────────────────────────────────
+# Build node grid
 # Two rows of nodes (Y=0 and Y=WIDTH) marching along X.
 # Left column (X=0) is fully fixed.
 
@@ -69,7 +66,7 @@ for ix in range(NX + 1):
     top = Node(X=x, Y=WIDTH, Z=0.0, nodal_support=support)
     columns.append((bottom, top))
 
-# ── Build triangular plate elements ──────────────────────────────────────────
+# Build triangular plate elements
 # Each quad cell is split into two triangles.
 
 for ix in range(NX):
@@ -90,7 +87,7 @@ for ix in range(NX):
         ),
     )
 
-# ── Apply surface pressure load ───────────────────────────────────────────────
+# Apply surface pressure load
 
 load_case = LoadCase(name="Pressure")
 SurfaceLoad(
@@ -106,20 +103,20 @@ SurfaceLoad(
 )
 model.add_load_case(load_case)
 
-# ── Save model ────────────────────────────────────────────────────────────────
+# Save model
 
 file_path = os.path.join("json_input_solver", "142_Plate_Strip_Surface_Load.json")
 os.makedirs(os.path.dirname(file_path), exist_ok=True)
 model.save_to_json(file_path, indent=4)
 
-# ── Run analysis ──────────────────────────────────────────────────────────────
+# Run analysis
 
 print("Running analysis...")
 model.run_analysis()
 
 results = model.resultsbundle.loadcases["Pressure"]
 
-# ── Extract results ───────────────────────────────────────────────────────────
+# Extract results
 
 # Total reaction force in Z (sum of all fixed-end nodes)
 total_reaction_fz = sum(node.nodal_forces.fz for node in results.reaction_nodes.values())

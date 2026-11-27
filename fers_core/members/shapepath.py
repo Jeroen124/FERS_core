@@ -471,7 +471,7 @@ class ShapePath:
         half_b = b / 2.0
         r_in = max(0.0, r_out - t)
 
-        # ---- Outer contour (CCW) ----
+        # Outer contour (CCW)
         if r_out > 0.0:
             # Start at top-left, just right of the top-left radius
             commands.append(ShapeCommand("moveTo", z=-half_b + r_out, y=+half_h))
@@ -506,7 +506,7 @@ class ShapePath:
             commands.append(ShapeCommand("lineTo", z=-half_b, y=-half_h))
         commands.append(ShapeCommand("closePath"))
 
-        # ---- Inner contour (hole, CW) ----
+        # Inner contour (hole, CW)
         ih = half_h - t
         ib = half_b - t
         if r_in > 0.0:
@@ -578,7 +578,7 @@ class ShapePath:
         if r_root > 0.0:
             z3, y3 = p(t + r_root, t)
             commands.append(ShapeCommand("lineTo", z=z3, y=y3))
-            # Inner corner fillet — use the shifted coordinates directly
+            # Inner corner fillet - use the shifted coordinates directly
             fillet_cy = t + r_root - y_c
             fillet_cz = t + r_root - z_c
             commands.extend(
@@ -769,7 +769,7 @@ class ShapePath:
         Join style between consecutive offset segments is **bevel** (a straight lineTo
         bridges any gap between the end of one offset segment and the start of the next).
         """
-        # ---- parse input into simple geometric segments -----------------------
+        # parse input into simple geometric segments
         # Each segment is a tuple:
         #   ("line", y0, z0, y1, z1)
         #   ("arc",  center_y, center_z, r, theta0, theta1)
@@ -798,7 +798,7 @@ class ShapePath:
         if not segments:
             return []
 
-        # ---- determine signed offset for each side ----------------------------
+        # determine signed offset for each side
         # Positive d → offset to the *left* of the travel direction.
         if offset == "center":
             d_left = thickness / 2.0
@@ -812,7 +812,7 @@ class ShapePath:
         else:
             raise ValueError(f"stroke_path: unknown offset '{offset}'. Use 'center', 'left', or 'right'.")
 
-        # ---- helpers ----------------------------------------------------------
+        # helpers
         def _offset_seg(seg, d):
             """Return a copy of *seg* shifted *d* to the left of travel direction."""
             if seg[0] == "line":
@@ -880,11 +880,11 @@ class ShapePath:
             result_cmds.extend(_seg_to_cmds(seg))
             return _seg_end(seg)
 
-        # ---- build the two offset sides --------------------------------------
+        # build the two offset sides
         left_segs = [_offset_seg(s, d_left) for s in segments]
         right_segs = [_offset_seg(s, d_right) for s in segments]
 
-        # ---- assemble the closed profile ------------------------------------
+        # assemble the closed profile
         result: List[ShapeCommand] = []
 
         # Start: moveTo the beginning of the left-side path

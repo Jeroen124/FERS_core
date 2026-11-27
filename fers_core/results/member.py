@@ -181,11 +181,9 @@ class MemberResult:
             ),
         }
 
-    # ------------------------------------------------------------------
-    # Rendering helpers — each returns a list of (mesh, color, line_width)
+    # Rendering helpers - each returns a list of (mesh, color, line_width)
     # so the ResultRenderer can add them to a plotter without knowledge
     # of the internal result layout.
-    # ------------------------------------------------------------------
 
     def render_deformed_shape(
         self,
@@ -272,7 +270,7 @@ class MemberResult:
 
         Args:
             member: The :class:`~fers_core.members.member.Member` instance.
-            diagram_type: Force/moment component — ``'N'``, ``'Vy'``, ``'Vz'``,
+            diagram_type: Force/moment component - ``'N'``, ``'Vy'``, ``'Vz'``,
                 ``'My'``, ``'Mz'``, or ``'T'``.
             scale: Visual scale factor for the diagram offset.
             num_points: Number of points along the member for the diagram.
@@ -307,7 +305,7 @@ class MemberResult:
 
         offset_axis = self._offset_axis(member, diagram_type)
 
-        # Build t and value arrays — use section_forces when available
+        # Build t and value arrays - use section_forces when available
         if self.section_forces:
             t_vals = _np.array([0.0] + [sf.x_frac for sf in self.section_forces] + [1.0])
             v_vals = _np.array(

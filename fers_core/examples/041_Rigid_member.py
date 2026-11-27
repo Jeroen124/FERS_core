@@ -2,12 +2,9 @@ import math
 import os
 from fers_core import Node, Member, FERS, Material, Section, MemberSet, NodalSupport, NodalLoad, AnalysisOrder
 
-# =============================================================================
 # Example and Validation: Cantilever Beam with End Load
-# =============================================================================
 
 # Step 1: Set up the model
-# -------------------------
 # Create the main FERS object that will manage the analysis
 calculation_1 = FERS()
 calculation_1.settings.analysis_options.order = AnalysisOrder.LINEAR
@@ -42,7 +39,6 @@ membergroup1 = MemberSet(members=[beam, rigid_member])
 calculation_1.add_member_set(membergroup1)
 
 # Step 2: Apply the load
-# ----------------------
 # Create a load case for the analysis
 end_load_case = calculation_1.create_load_case(name="End Load")
 
@@ -55,7 +51,6 @@ os.makedirs(os.path.dirname(file_path), exist_ok=True)
 calculation_1.save_to_json(file_path, indent=4)
 
 # Step 3: Run FERS calculation
-# ----------------------------
 # Perform the analysis using the saved JSON model file
 print("Running the analysis...")
 calculation_1.run_analysis()
@@ -78,7 +73,6 @@ dy_end_calculated = dy_fers_intermediate + 5 * math.sin(rz_fers_intermediate)
 
 
 # Step 4: Validate Results Against Analytical Solution
-# ----------------------------------------------------
 # Analytical solution parameters
 F = 1000  # Force in Newtons
 L = 5  # Length of the beam in meters
@@ -143,9 +137,7 @@ else:
     print("Reaction moment does NOT match the analytical solution ❌")
 
 
-# =============================================================================
 # Notes for Users
-# =============================================================================
 # This script is both an example and a validation tool.
 # 1. It demonstrates how to set up and analyze a cantilever beam with an end load.
 # 2. It validates the FERS results against analytical solutions for deflection and moment.

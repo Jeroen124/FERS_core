@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.31
+
+A shorter README: what FERS computes, one checked example, how it is tested, and
+links. The longer sections moved to `docs/` (results, hinges, self-weight and
+seismic, keys and timeouts, the command line), with the example's utilization
+updated to the 2.87 the current engine gives. Banner comments are gone from the
+code, and the plotting methods share one result-set picker, which now refuses a
+load-case index of 0 instead of taking the last one.
+
 ## 0.2.30
 
 ### Engine 0.2.106: plate models are assembled sparse

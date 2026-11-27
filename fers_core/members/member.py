@@ -200,8 +200,8 @@ class Member:
             # The solver reads `weight` as a force/length self-weight OVERRIDE and,
             # when it is 0, derives BOTH self-weight (density·area·g) and modal/seismic
             # mass (density·area) itself. `self.weight` here is the member MASS
-            # (density·area·length) — used by the Python-side self-weight helper
-            # (loadcase.py) — so emitting it on the wire would mis-scale modal mass
+            # (density·area·length) - used by the Python-side self-weight helper
+            # (loadcase.py) - so emitting it on the wire would mis-scale modal mass
             # (by ~g/L_elem) and self-weight. Only `weight_override` goes there.
             "weight": self.weight_override if self.weight_override is not None else 0.0,
             "chi": self.chi,
@@ -241,11 +241,11 @@ class Member:
 
         member_id = data.get("id")
 
-        # --- nodes (referenced by id) ---
+        # nodes (referenced by id)
         start_node = nodes_by_id[data["start_node_id"]]
         end_node = nodes_by_id[data["end_node_id"]]
 
-        # --- section ---
+        # section
         section = None
         section_data = data.get("section")
         if isinstance(section_data, dict):
@@ -260,7 +260,7 @@ class Member:
             if section_id is not None:
                 section = sections_by_id.get(section_id)
 
-        # --- hinges ---
+        # hinges
         start_hinge = None
         end_hinge = None
 
@@ -276,13 +276,13 @@ class Member:
         if end_hinge_id is not None:
             end_hinge = hinges_by_id.get(end_hinge_id)
 
-        # --- reference member ---
+        # reference member
         reference_member = None
         ref_member_id = data.get("reference_member")
         if ref_member_id is not None and members_by_id is not None:
             reference_member = members_by_id.get(ref_member_id)
 
-        # --- reference node ---
+        # reference node
         reference_node = None
         ref_node = data.get("reference_node")
         if isinstance(ref_node, dict):
@@ -294,7 +294,7 @@ class Member:
         elif ref_node is not None:
             reference_node = nodes_by_id.get(ref_node)
 
-        # --- build ---
+        # build
         # The wire `weight` is the solver's per-length override, 0 meaning none;
         # `weight` on the SDK side is the member's mass and is computed again.
         wire_weight = data.get("weight")

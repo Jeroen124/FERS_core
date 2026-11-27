@@ -1,7 +1,7 @@
-"""NAFEMS FV1 — Pin-ended cross, in-plane vibration.
+"""NAFEMS FV1 - Pin-ended cross, in-plane vibration.
 
 A planar "+" cross: 4 arms of length 5 m from a rigid centre, tips pinned. Same arm
-geometry/material as FV2 (double cross), so the SAME four frequencies appear — but with
+geometry/material as FV2 (double cross), so the SAME four frequencies appear - but with
 multiplicity 1/3/1/3 (single cross, 4 arms) instead of FV2's 1/7/1/7.
 
 Targets (NAFEMS TNSB / R0015; derived closed-form, cross-checked vs FV2 theory):

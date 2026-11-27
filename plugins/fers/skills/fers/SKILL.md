@@ -107,4 +107,4 @@ A one-member beam has nodes only at its ends: read its sag from
 `member_results[id].member_displacement_peak` after setting
 `analysis_options.include_member_deflected_shape = True`. Signs and axes:
 https://ferscloud.com/conventions. A large model writes hundreds of megabytes; ask for a
-selection with `ResultRequest` (the README's "Only the results you read").
+selection with `ResultRequest` (https://github.com/Jeroen124/FERS_core/blob/main/docs/results.md).

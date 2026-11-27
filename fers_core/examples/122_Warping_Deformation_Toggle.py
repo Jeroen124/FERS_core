@@ -1,5 +1,5 @@
 """
-122 — Warping Deformation Toggle (St. Venant vs Vlasov Torsion)
+122 - Warping Deformation Toggle (St. Venant vs Vlasov Torsion)
 ================================================================
 
 Demonstrates how to toggle warping on and off for a cantilever beam
@@ -34,9 +34,7 @@ from fers_core.settings.settings import Settings
 from fers_core.settings.anlysis_options import AnalysisOptions, AnalysisOrder
 
 
-# =============================================================================
 # Parameters
-# =============================================================================
 L = 3.0  # Beam length [m]
 T = 1_000.0  # End torque [N·m] (1 kN·m about X-axis)
 
@@ -95,16 +93,12 @@ def run_torsion_cantilever(include_warping: bool, label: str, n_elements: int = 
     return rx
 
 
-# =============================================================================
 # Run with and without warping
-# =============================================================================
 theta_sv = run_torsion_cantilever(include_warping=False, label="St. Venant only")
 theta_vlasov = run_torsion_cantilever(include_warping=True, label="Vlasov warping")
 
 
-# =============================================================================
 # Analytical reference values
-# =============================================================================
 E = steel.e_mod
 G = steel.g_mod
 J = ipe300.j
@@ -124,9 +118,7 @@ else:
     bimoment_root = 0.0
 
 
-# =============================================================================
 # Results comparison
-# =============================================================================
 print("\n" + "=" * 72)
 print("RESULTS: Cantilever IPE300, L = {:.1f} m, T = {:.1f} kN·m".format(L, T / 1000))
 print("=" * 72)

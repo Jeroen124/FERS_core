@@ -386,7 +386,7 @@ class FERS:
                 giving up (engine >= 0.2.53). Omitted (``None``) uses the engine
                 default of 30 s, or ``FERS_LICENSE_TIMEOUT``. Only meaningful
                 together with ``api_key``, since without one no network call is
-                made. It bounds the handshake, **not** the solve — for a hard
+                made. It bounds the handshake, **not** the solve - for a hard
                 ceiling on the whole call, run it in a killable subprocess.
             solve_token: A short-lived Premium token from FERS Cloud, checked
                 offline (engine >= 0.2.72): Premium limits with no network call,
@@ -559,7 +559,7 @@ class FERS:
 
     def validate_schema(self) -> None:
         """Validate this model's serialized input against the GENERATED pydantic
-        ``FERS`` schema — the single source of truth generated (via datamodel-
+        ``FERS`` schema - the single source of truth generated (via datamodel-
         codegen) from the solver's OpenAPI. Raises ``ValueError`` on any drift
         between a hand-written ``to_dict()`` and the schema (missing/renamed
         fields, wrong enum value, wrong nesting, …). Mirrors how solver *output*
@@ -704,7 +704,7 @@ class FERS:
         id_to_member: dict[int, Member] = {}
         id_to_plate_surface: dict[int, PlateSurface] = {}
 
-        # Top-level nodes — members and plates reference these by id, so load
+        # Top-level nodes - members and plates reference these by id, so load
         # them first.
         for node_data in as_list(data.get("nodes"), "nodes"):
             Node.get_or_create_from_dict(
@@ -713,7 +713,7 @@ class FERS:
                 nodal_supports_by_id=id_to_support,
             )
 
-        # Top-level members — the single source of truth. Member sets reference
+        # Top-level members - the single source of truth. Member sets reference
         # these by id, so build them first.
         loaded_members = []
         for m_data in as_list(data.get("members"), "members"):
@@ -951,7 +951,7 @@ class FERS:
 
     def add_unity_check(self, *checks):
         """Register one or more unity-check definitions (plain dicts in the
-        solver schema — build them with `fers_core.unity_checks`)."""
+        solver schema - build them with `fers_core.unity_checks`)."""
         for c in checks:
             self.unity_checks.append(c.to_dict() if hasattr(c, "to_dict") else c)
 
@@ -964,9 +964,9 @@ class FERS:
     def compression_capacity(self, check_id: str = "ec3"):
         """Allowable axial compression of the governing member, in newtons.
 
-        For a member carrying no moment every EN 1993-1-1 sub-check — §6.2.4
+        For a member carrying no moment every EN 1993-1-1 sub-check - §6.2.4
         axial, §6.3.1 flexural buckling, §6.3.1.4 torsional-flexural, §6.3.3
-        interaction — is linear in the axial force, so the utilization scales
+        interaction - is linear in the axial force, so the utilization scales
         with the load and the allowable follows from a single solve:
 
             N_allow = N_Ed / UC
@@ -1306,6 +1306,42 @@ class FERS:
             new_model.add_member_set(new_member_set)
 
         return new_model
+
+    def _pick_result_set(self, loadcase=None, loadcombination=None):
+        """Returns (results, key, is_loadcase); an int picks by 1-based position."""
+        bundle = self.resultsbundle
+        if bundle is None:
+            raise ValueError("No analysis results available. Run an analysis first.")
+        if loadcase is not None and loadcombination is not None:
+            raise ValueError("Specify either loadcase or loadcombination, not both.")
+
+        def names(group):
+            return ", ".join(f"'{getattr(v, 'name', None) or k}'" for k, v in group.items()) or "none"
+
+        if loadcase is None and loadcombination is None:
+            if len(bundle.loadcases) == 1 and not bundle.loadcombinations:
+                key = next(iter(bundle.loadcases))
+                return bundle.loadcases[key], key, True
+            raise ValueError(
+                "Multiple results available: specify loadcase= or loadcombination=. "
+                f"Available loadcases: {names(bundle.loadcases)}. "
+                f"Available loadcombinations: {names(bundle.loadcombinations)}."
+            )
+
+        is_loadcase = loadcase is not None
+        wanted = loadcase if is_loadcase else loadcombination
+        group = bundle.loadcases if is_loadcase else bundle.loadcombinations
+        label = "Loadcase" if is_loadcase else "Loadcombination"
+        if isinstance(wanted, int):
+            keys = list(group)
+            if not 1 <= wanted <= len(keys):
+                raise IndexError(f"{label} index {wanted} is out of range.")
+            key = keys[wanted - 1]
+        else:
+            key = str(wanted)
+            if key not in group:
+                raise KeyError(f"{label} '{key}' not found. Available {label.lower()}s: {names(group)}")
+        return group[key], key, is_loadcase
 
     def get_structure_bounds(self):
         """
@@ -1754,7 +1790,7 @@ class FERS:
                     plotter.add_arrows(origin, ly * sc, color="green")
                     plotter.add_arrows(origin, lz * sc, color="blue")
 
-        # ── Collect load cases to render (with factors) ──────────────
+        # Collect load cases to render (with factors)
         load_cases_to_render: list[tuple] = []  # [(LoadCase, factor), ...]
         if loadcombination:
             combo = self.get_load_combination_by_name(loadcombination)
@@ -1770,7 +1806,7 @@ class FERS:
             else:
                 print(f"Warning: load case '{loadcase}' not found.")
 
-        # ── Resolve units for load labels ────────────────────────
+        # Resolve units for load labels
         _us = self.settings.unit_settings if self.settings else None
         _force_unit = getattr(_us, "force_unit", "N") if _us else "N"
         _length_unit = getattr(_us, "length_unit", "m") if _us else "m"
@@ -1855,7 +1891,7 @@ class FERS:
 
             return items
 
-        # ── Add load case actors to the scene ────────────────────────
+        # Add load case actors to the scene
         _lc_colors = [
             "#FFA500",
             "#FF6B6B",
@@ -1899,7 +1935,7 @@ class FERS:
                     actors.append(actor)
             lc_actor_groups.append((lc_name, color, actors))
 
-        # ── Checkbox widgets to toggle each load case (top-left) ─────
+        # Checkbox widgets to toggle each load case (top-left)
         if len(lc_actor_groups) > 1:
             _win_w, _win_h = plotter.window_size
             for cb_idx, (lc_name, color, actors) in enumerate(lc_actor_groups):
@@ -2060,57 +2096,8 @@ class FERS:
 
         plt = require("matplotlib.pyplot", "plot")
 
-        if self.resultsbundle is None:
-            raise ValueError("No analysis results available. Run an analysis first.")
-
-        if loadcase is not None and loadcombination is not None:
-            raise ValueError("Specify either 'loadcase' OR 'loadcombination', not both.")
-
-        # Select which result set to show
-        if loadcase is not None:
-            loadcase_keys = list(self.resultsbundle.loadcases.keys())
-            if isinstance(loadcase, int):
-                if loadcase < 1 or loadcase > len(loadcase_keys):
-                    raise IndexError(f"Loadcase index {loadcase} is out of range.")
-                selected_key = loadcase_keys[loadcase - 1]
-            else:
-                selected_key = str(loadcase)
-                if selected_key not in self.resultsbundle.loadcases:
-                    available_loadcases = [
-                        f"'{v.name}'" if getattr(v, "name", None) else f"'{k}'"
-                        for k, v in self.resultsbundle.loadcases.items()
-                    ]
-                    raise KeyError(
-                        f"Loadcase '{selected_key}' not found. "
-                        f"Available loadcases: {', '.join(available_loadcases)}"
-                    )
-            chosen_results = self.resultsbundle.loadcases[selected_key]
-            chosen_title = chosen_results.name if hasattr(chosen_results, "name") else str(selected_key)
-        elif loadcombination is not None:
-            loadcomb_keys = list(self.resultsbundle.loadcombinations.keys())
-            if isinstance(loadcombination, int):
-                if loadcombination < 1 or loadcombination > len(loadcomb_keys):
-                    raise IndexError(f"Loadcombination index {loadcombination} is out of range.")
-                selected_key = loadcomb_keys[loadcombination - 1]
-            else:
-                selected_key = str(loadcombination)
-                if selected_key not in self.resultsbundle.loadcombinations:
-                    available_combinations = [
-                        f"'{v.name}'" if getattr(v, "name", None) else f"'{k}'"
-                        for k, v in self.resultsbundle.loadcombinations.items()
-                    ]
-                    raise KeyError(
-                        f"Loadcombination '{selected_key}' not found. "
-                        f"Available loadcombinations: {', '.join(available_combinations) or 'none'}"
-                    )
-            chosen_results = self.resultsbundle.loadcombinations[selected_key]
-            chosen_title = chosen_results.name if hasattr(chosen_results, "name") else str(selected_key)
-        else:
-            if len(self.resultsbundle.loadcases) == 1 and not self.resultsbundle.loadcombinations:
-                chosen_results = next(iter(self.resultsbundle.loadcases.values()))
-                chosen_title = chosen_results.name if hasattr(chosen_results, "name") else "Loadcase"
-            else:
-                raise ValueError("Multiple results available. Specify 'loadcase' or 'loadcombination'.")
+        chosen_results, selected_key, _ = self._pick_result_set(loadcase, loadcombination)
+        chosen_title = getattr(chosen_results, "name", None) or str(selected_key)
 
         # Plane helpers
         def project_xyz_to_plane(
@@ -2607,79 +2594,9 @@ class FERS:
                 checkboxes.  ``plot_bending_moment`` is ignored in this mode.
             show_node_values: If True, display displacement values at nodes.
         """
-        if self.resultsbundle is None:
-            raise ValueError("No analysis results available.")
-        if loadcase is not None and loadcombination is not None:
-            raise ValueError("Specify either loadcase or loadcombination, not both.")
+        chosen, key, _viewing_loadcase = self._pick_result_set(loadcase, loadcombination)
 
-        # ---------------------------
-        # Select which results to use
-        # ---------------------------
-        if loadcase is not None:
-            _viewing_loadcase = True
-            keys = list(self.resultsbundle.loadcases.keys())
-            if isinstance(loadcase, int):
-                try:
-                    key = keys[loadcase - 1]
-                except IndexError:
-                    raise IndexError(f"Loadcase index {loadcase} is out of range.")
-            else:
-                key = str(loadcase)
-                if key not in self.resultsbundle.loadcases:
-                    available_loadcases = [
-                        f"'{v.name}'" if getattr(v, "name", None) else f"'{k}'"
-                        for k, v in self.resultsbundle.loadcases.items()
-                    ]
-                    raise KeyError(
-                        f"Loadcase '{key}' not found. "
-                        f"Available loadcases: {', '.join(available_loadcases) or 'none'}"
-                    )
-            chosen = self.resultsbundle.loadcases[key]
-
-        elif loadcombination is not None:
-            _viewing_loadcase = False
-            keys = list(self.resultsbundle.loadcombinations.keys())
-            if isinstance(loadcombination, int):
-                try:
-                    key = keys[loadcombination - 1]
-                except IndexError:
-                    raise IndexError(f"Loadcombination index {loadcombination} is out of range.")
-            else:
-                key = str(loadcombination)
-                if key not in self.resultsbundle.loadcombinations:
-                    available_combinations = [
-                        f"'{v.name}'" if getattr(v, "name", None) else f"'{k}'"
-                        for k, v in self.resultsbundle.loadcombinations.items()
-                    ]
-                    raise KeyError(
-                        f"Loadcombination '{key}' not found. "
-                        f"Available loadcombinations: {', '.join(available_combinations) or 'none'}"
-                    )
-            chosen = self.resultsbundle.loadcombinations[key]
-
-        else:
-            _viewing_loadcase = True
-            if len(self.resultsbundle.loadcases) == 1 and not self.resultsbundle.loadcombinations:
-                key = next(iter(self.resultsbundle.loadcases.keys()))
-                chosen = self.resultsbundle.loadcases[key]
-            else:
-                available_loadcases = [
-                    f"'{v.name}'" if getattr(v, "name", None) else f"'{k}'"
-                    for k, v in self.resultsbundle.loadcases.items()
-                ]
-                available_combinations = [
-                    f"'{v.name}'" if getattr(v, "name", None) else f"'{k}'"
-                    for k, v in self.resultsbundle.loadcombinations.items()
-                ]
-                raise ValueError(
-                    "Multiple results available – specify loadcase= or loadcombination=. "
-                    f"Available loadcases: {', '.join(available_loadcases) or 'none'}. "
-                    f"Available loadcombinations: {', '.join(available_combinations) or 'none'}."
-                )
-
-        # ---------------------------
         # Plotter + global scales
-        # ---------------------------
         pv = require("pyvista", "plot")
 
         plotter = pv.Plotter()
@@ -2692,9 +2609,7 @@ class FERS:
             structure_size = 1.0
         support_arrow_scale = max(1e-6, structure_size * support_size_fraction)
 
-        # ---------------------------
         # Diagram plane detection
-        # ---------------------------
         _plane_normal: Optional[np.ndarray] = None
         _plane_map = {
             "xy": np.array([0.0, 0.0, 1.0]),
@@ -2715,9 +2630,7 @@ class FERS:
                     _plane_normal = normal
         # dp_lower == "local" or auto didn't detect a plane → _plane_normal stays None
 
-        # ---------------------------
         # Unit labels
-        # ---------------------------
         _us = self.settings.unit_settings if self.settings else None
         if length_unit is None:
             length_unit = getattr(_us, "length_unit", "m") if _us else "m"
@@ -2725,9 +2638,7 @@ class FERS:
             force_unit = getattr(_us, "force_unit", "N") if _us else "N"
         moment_unit = f"{force_unit}·{length_unit}"
 
-        # ---------------------------
         # Helpers
-        # ---------------------------
         def _normalize_key(s: str) -> str:
             return str(s).lower().replace("_", "")
 
@@ -2914,7 +2825,7 @@ class FERS:
             else:
                 return np.array([0.0, 1.0], float), np.array([0.0, float(val)], float)
 
-        # ── Distributed-load enrichment helpers ──────────────────────
+        # Distributed-load enrichment helpers
         def _get_member_distributed_loads(member_id: int):
             """Return [(DistributedLoad, factor), ...] for this member."""
             pairs = []
@@ -3152,9 +3063,7 @@ class FERS:
                     )
                 added_legend = True
 
-        # ---------------------------
         # Compute displacements (always – needed for deformed centerlines)
-        # ---------------------------
         node_displacements: dict[int, Tuple[np.ndarray, np.ndarray]] = {}
         displacement_nodes = getattr(chosen, "displacement_nodes", {})
         for node_id_string, disp in displacement_nodes.items():
@@ -3170,9 +3079,7 @@ class FERS:
                 r_global = np.zeros(3, dtype=float)
             node_displacements[node_id] = (d_global, r_global)
 
-        # ================================================================
         # NON-INTERACTIVE MODE  (original behaviour, backward compatible)
-        # ================================================================
         if not interactive_diagrams:
             if plot_bending_moment is None:
                 # ── BRANCH A: Displacement only ──
@@ -3576,11 +3483,9 @@ class FERS:
             plotter.show(title=f'Bending Moment Diagram: {plot_bending_moment} – "{chosen.name}"')
             return
 
-        # ================================================================
         # INTERACTIVE MODE  (interactive_diagrams=True)
-        # ================================================================
 
-        # ── Build member centerlines (always visible as base) ────────
+        # Build member centerlines (always visible as base)
         all_pts = []
         all_lines = []
         pt_off = 0
@@ -3647,7 +3552,7 @@ class FERS:
 
         _plot_reactions()
 
-        # ── Helper: build displacement actors ────────────────────────
+        # Helper: build displacement actors
         def _build_displacement_actors():
             actors = []
             centerline_samples = num_points
@@ -3694,7 +3599,7 @@ class FERS:
 
             return actors
 
-        # ── Helper: build node displacement value label actors ────────
+        # Helper: build node displacement value label actors
         def _build_node_value_actors():
             """Build displacement-value text label actors for each node."""
             value_actors = []
@@ -3721,7 +3626,7 @@ class FERS:
                 value_actors.append(a)
             return value_actors
 
-        # ── Helper: build diagram actors for one component ───────────
+        # Helper: build diagram actors for one component
         def _build_diagram_actors(comp: str, color: str):
             """Build filled-ribbon diagram actors for a single internal-force component."""
             actors = []
@@ -3833,7 +3738,7 @@ class FERS:
 
             return actors
 
-        # ── Build all toggle-able layers ─────────────────────────────
+        # Build all toggle-able layers
         # Each entry: (label, color, actors, initially_visible)
         _layers: list[tuple[str, str, list, bool]] = []
 
@@ -3866,7 +3771,7 @@ class FERS:
             if hasattr(a, "SetVisibility"):
                 a.SetVisibility(show_node_values)
 
-        # ── Top-left: diagram-layer checkbox widgets ──────────────────
+        # Top-left: diagram-layer checkbox widgets
         _win_w, _win_h = plotter.window_size
 
         def _make_layer_toggle(actor_list):
@@ -4280,7 +4185,7 @@ class FERS:
 
         return ResultRenderer(self)
 
-    # ── FersCloud integration ───────────────────────────
+    # FersCloud integration
 
     _cloud_client: Optional["FersCloudClient"] = None
 
@@ -4399,7 +4304,7 @@ class FERS:
         >>> print(info["id"])
         """
         client = self._ensure_cloud()
-        # Always upload inputs only — results are recomputed in the web viewer
+        # Always upload inputs only - results are recomputed in the web viewer
         # and are never persisted in the cloud. `include_results` is ignored.
         return client.save_model(
             name,

@@ -1,9 +1,9 @@
 """EN 1993-1-3 §8.3 bolted connections in thin steel sheet.
 
 A cold-formed member is rarely limited by the member. It is bolted through one
-of its own walls, and both of the things that follow from that — the bearing
+of its own walls, and both of the things that follow from that - the bearing
 and net-section resistance of a 2 or 3 mm sheet, and the eccentricity between
-the bolt line and the section's centroid — routinely govern well below the
+the bolt line and the section's centroid - routinely govern well below the
 §6.3 buckling resistance the member would otherwise reach.
 
 `ec3_section` derives what the cross-section is; this module derives what the
@@ -73,7 +73,7 @@ class BoltedLap:
 
     Args:
         d: bolt shank diameter.
-        t: thickness of the connected sheet — the member's own wall, or the
+        t: thickness of the connected sheet - the member's own wall, or the
             thinner part if the bracket is thinner still.
         f_u: ultimate tensile strength of that sheet.
         e1: end distance from the bolt centre to the sheet edge, measured in
@@ -81,7 +81,7 @@ class BoltedLap:
         e2: edge distance perpendicular to it.
         d_0: hole diameter. Defaults to `d + 1 mm`, normal clearance up to M14.
         n_bolts: bolts in this end connection.
-        n_at_section: bolts crossing the critical net section — usually all of
+        n_at_section: bolts crossing the critical net section - usually all of
             them for one transverse line, one of them for a staggered pair.
         p1: pitch along the load. Only used for the detailing checks.
         p2: spacing across the load. Caps `u` in the net-section rule, and is
@@ -187,8 +187,8 @@ def net_section_resistance(lap: BoltedLap, a_gross: float) -> float:
     connection whose bolts are well spread across the width; it is clamped at 1
     so a narrow member never gains from it.
 
-    Compression takes no deduction at all — the bolt fills the hole, EN 1993-1-1
-    §6.2.4(1) — so this is not part of the compression envelope. Prefer
+    Compression takes no deduction at all - the bolt fills the hole, EN 1993-1-1
+    §6.2.4(1) - so this is not part of the compression envelope. Prefer
     `connection_resistance`, which knows that.
     """
     a_net = a_gross - lap.n_at_section * lap.hole * lap.t
@@ -285,7 +285,7 @@ def eccentric_compression_capacity(
     Args:
         n_b_rd: the member's own buckling resistance, from the solver.
         w_eff: minimum elastic modulus of the EFFECTIVE section about the axis
-            the moment acts on — `FlexuralEffective.w_eff_y` for a load offset
+            the moment acts on - `FlexuralEffective.w_eff_y` for a load offset
             along local z.
         e: distance from the point the load is applied to the EFFECTIVE
             centroid. Measuring to the effective centroid is what makes this one

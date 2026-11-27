@@ -17,9 +17,7 @@ def number(value: Any) -> float:
     return 0.0 if value is None else float(value)
 
 
-# -------------------------------
 # Leaf data classes
-# -------------------------------
 
 
 class NodeDisplacement:

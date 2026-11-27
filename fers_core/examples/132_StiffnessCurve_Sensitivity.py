@@ -16,9 +16,7 @@ from fers_core.settings.anlysis_options import AnalysisOptions
 from fers_core.settings.enums import AnalysisOrder
 
 
-# =============================================================================
-# Example 132: StiffnessCurve — Deflection Sensitivity to Axial Load
-# =============================================================================
+# Example 132: StiffnessCurve - Deflection Sensitivity to Axial Load
 #
 # Eight independent cantilevers, each with the same 1 kN lateral load but a
 # different compressive axial load (10 – 80 kN).  The base rotation spring
@@ -26,10 +24,9 @@ from fers_core.settings.enums import AnalysisOrder
 #
 # This example builds individual models per axial-load level so that the
 # JSON output for each is self-contained and easy to inspect.
-# =============================================================================
 
 
-# ── Parameters ────────────────────────────────────────────────────────────────
+# Parameters
 
 H = 5.0  # column height [m]
 F_LATERAL = 1000.0  # 1 kN lateral force [N]
@@ -66,7 +63,7 @@ heb200 = Section(
 )
 
 
-# ── Solve one cantilever per axial-load level ─────────────────────────────────
+# Solve one cantilever per axial-load level
 
 print("=" * 60)
 print("  Example 132: Deflection Sensitivity to Axial Load")
@@ -122,7 +119,7 @@ for n_kn in range(10, 90, 10):
     print(f"dx = {dx:>7.2f} mm")
 
 
-# ── Summary table ─────────────────────────────────────────────────────────────
+# Summary table
 
 print("\n" + "─" * 60)
 print(f"  {'N [kN]':>8}  │ {'dx [mm]':>10}  │ {'φy [mrad]':>10}  │ {'Fz [kN]':>10}")

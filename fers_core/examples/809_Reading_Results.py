@@ -1,5 +1,5 @@
 """
-809 — Reading Results
+809 - Reading Results
 =====================
 Solves a small portal frame with two load cases and a load combination, then
 reads the results: node displacements, reactions and member forces. Shows the
@@ -8,11 +8,11 @@ saves the solved model and reloads it, and solves straight to a file, which is
 the route for large models.
 
 Key features shown:
-  • model.resultsbundle.loadcases / .loadcombinations  — results by name
-  • displacement_nodes / reaction_nodes / member_results — by id, as a string
+  • model.resultsbundle.loadcases / .loadcombinations - results by name
+  • displacement_nodes / reaction_nodes / member_results - by id, as a string
   • read-only tables, and .copy() for editable dicts
   • model.save_to_json(path) and FERS.from_json(path)
-  • model.run_analysis_to_file(path)  — the solver writes the file itself
+  • model.run_analysis_to_file(path) - the solver writes the file itself
 """
 
 import collections.abc
@@ -31,9 +31,7 @@ from fers_core import (
 )
 
 
-# =============================================================================
 # Step 1: A portal frame, 6 m wide and 4 m high, fixed at both feet
-# =============================================================================
 model = FERS()
 steel = Material(name="S355", e_mod=210e9, g_mod=81e9, density=7850, yield_stress=355e6)
 column_section = Section.from_name("HEA200", steel)
@@ -60,9 +58,7 @@ model.settings.analysis_options.order = AnalysisOrder.LINEAR
 model.run_analysis()
 
 
-# =============================================================================
 # Step 2: Read the results
-# =============================================================================
 # Load cases and combinations are keyed by name; nodes and members by their id,
 # as a string, because results round-trip through JSON.
 uls = model.resultsbundle.loadcombinations["ULS 1"]
@@ -88,9 +84,7 @@ for member_id, result in uls.member_results.items():
     )
 
 
-# =============================================================================
 # Step 3: The tables are read-only
-# =============================================================================
 # member_results and displacement_nodes read like dicts but are not dicts, and
 # every lookup builds a fresh object that cannot be changed.
 assert isinstance(uls.member_results, collections.abc.Mapping)
@@ -106,9 +100,7 @@ editable[str(beam.id)].local_maximums.mz = 0.0
 print("The same edit on a copy works:", editable[str(beam.id)].local_maximums.mz)
 
 
-# =============================================================================
 # Step 4: Save, reload, and solve straight to a file
-# =============================================================================
 folder = "json_input_solver"
 os.makedirs(folder, exist_ok=True)
 

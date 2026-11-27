@@ -63,7 +63,7 @@ def main():
     # Create model
     model = create_simple_model()
 
-    # ===== Model Visualization =====
+    # Model Visualization
     print("Creating model renderer...")
     model_renderer = model.get_model_renderer()
 
@@ -82,7 +82,7 @@ def main():
     # Clean up
     model_renderer.close()
 
-    # ===== Result Visualization =====
+    # Result Visualization
     # After running analysis, you can use the result renderer
     # model.run_analysis()
 

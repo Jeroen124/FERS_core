@@ -12,9 +12,7 @@ from fers_core import (
 )
 
 
-# =============================================================================
 # Example: load-exact member deflected shape (member_displacements)
-# =============================================================================
 # The solver can return, per member, a sampled deflected shape
 # (`member_displacements`). Enable it with
 # `analysis_options.include_member_deflected_shape = True`; the ResultRenderer
@@ -22,7 +20,7 @@ from fers_core import (
 #
 # Requires fers_calculations >= 0.2.56 (>= 0.2.58 for the peak). Between 0.2.40 and 0.2.55 the array
 # existed but was itself a Hermite reconstruction, so under a span load it
-# under-rendered the mid-span sag by w*L^4/(384*E*I) — the very thing this
+# under-rendered the mid-span sag by w*L^4/(384*E*I) - the very thing this
 # example claimed it fixed. Since 0.2.56 the shape is integrated from the
 # member's internal force field and is exact, shear deformation included.
 #
@@ -30,7 +28,7 @@ from fers_core import (
 # used for, and until 0.2.58 that was a trap: the array is a *display grid* of 11
 # evenly spaced stations, so on a 4 m member it steps 0.4 m at a time and walks
 # straight over a peak that does not land on a station. The reported maximum was
-# therefore under the true one, always — the unconservative direction for a
+# therefore under the true one, always - the unconservative direction for a
 # deflection limit. Since 0.2.58 read `member_displacement_peak` instead: the same
 # curve reduced on the grid it was integrated on, so the answer does not depend on
 # how finely the member was meshed.
@@ -40,7 +38,6 @@ from fers_core import (
 # always agreed. That is why the checks below deliberately sample the interior.
 
 # Step 1: Set up the model
-# -------------------------
 calculation_1 = FERS()
 calculation_1.settings.analysis_options.order = AnalysisOrder.LINEAR
 
@@ -64,7 +61,6 @@ node1.nodal_support = wall_support
 calculation_1.add_member_set(MemberSet(members=[beam]))
 
 # Step 2: Apply a uniform distributed load (1000 N/m, downward)
-# ------------------------------------------------------------
 load_case = calculation_1.create_load_case(name="Uniform Load")
 DistributedLoad(
     member=beam,
@@ -78,13 +74,11 @@ os.makedirs(os.path.dirname(file_path), exist_ok=True)
 calculation_1.save_to_json(file_path, indent=4)
 
 # Step 3: Solve
-# -------------
 print("Running the analysis...")
 calculation_1.run_analysis()
 results = calculation_1.resultsbundle.loadcases["Uniform Load"]
 
 # Step 4: Inspect the sampled deflected shape
-# -------------------------------------------
 member_result = results.member_results[str(beam.id)]
 samples = member_result.member_displacements  # list of (x_frac, (dx, dy, dz))
 
@@ -115,7 +109,7 @@ print(f"  end   station dy = {d_last[1]: .6e} m   vs free-end node dy = {end_dis
 
 # The endpoints above are nodal values, so they were exact even when the curve
 # between them was not. The interior is where the reconstruction is actually on
-# trial — check every station against the textbook cantilever-under-UDL curve
+# trial - check every station against the textbook cantilever-under-UDL curve
 #
 #     w(x) = -q * x^2 * (6L^2 - 4Lx + x^2) / (24 EI)
 #
@@ -144,9 +138,8 @@ print(
 )
 
 # Step 5: Visualise
-# -----------------
 # The deformed shape follows the engine's load-exact polyline, with an automatic
-# fall back to client-side Hermite when member_displacements is absent — older
+# fall back to client-side Hermite when member_displacements is absent - older
 # engines, mode shapes, or the option simply being off.
 #
 # Interactive window:
@@ -158,16 +151,14 @@ calculation_1.plot_results_3d(loadcase="Uniform Load")
 #   renderer.active_loadcase = "Uniform Load"
 #   renderer.screenshot("deflected_shape.png")
 
-# =============================================================================
 # Notes for Users
-# =============================================================================
 # Set `include_member_deflected_shape = True` to get the per-member deflected
 # polyline in the results (`MemberResult.member_displacements`).
 #
 # From 0.2.56 the curve is integrated from the member's own internal force field,
 # so it is exact under any span load and includes shear deformation wherever the
 # section carries a shear area. A member with no span load short-circuits to the
-# end-DOF cubic, which is exact there — the two agree to machine precision.
+# end-DOF cubic, which is exact there - the two agree to machine precision.
 #
 # Stations are evenly spaced, except on a member the solver split internally at a
 # mid-span point load: each segment is sampled over its own share of the parent's

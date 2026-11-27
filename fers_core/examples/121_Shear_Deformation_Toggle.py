@@ -1,5 +1,5 @@
 """
-121 — Shear Deformation Toggle (Euler-Bernoulli vs Timoshenko)
+121 - Shear Deformation Toggle (Euler-Bernoulli vs Timoshenko)
 ==============================================================
 
 Demonstrates how to toggle shear deformation on and off for a cantilever beam.
@@ -28,10 +28,8 @@ from fers_core.settings.settings import Settings
 from fers_core.settings.anlysis_options import AnalysisOptions, AnalysisOrder
 
 
-# =============================================================================
 # Parameters
-# =============================================================================
-L = 1.0  # Beam length [m]  — short beam so shear matters
+L = 1.0  # Beam length [m] - short beam so shear matters
 P = 100_000.0  # End load [N] (10 kN, downward → negative Y)
 
 # Material: Steel S355
@@ -77,16 +75,12 @@ def run_cantilever(include_shear: bool, label: str):
     return dy
 
 
-# =============================================================================
 # Run with and without shear deformation
-# =============================================================================
 dy_eb = run_cantilever(include_shear=False, label="Euler-Bernoulli (no shear)")
 dy_timo = run_cantilever(include_shear=True, label="Timoshenko (with shear)")
 
 
-# =============================================================================
 # Analytical reference values
-# =============================================================================
 E = steel.e_mod
 G = steel.g_mod
 I_z = ipe300.i_z  # bending about z-axis for load in Y
@@ -97,9 +91,7 @@ delta_shear = -P * L / (G * A_sz) if A_sz else 0.0
 delta_timo_analytical = delta_eb_analytical + delta_shear
 
 
-# =============================================================================
 # Results comparison
-# =============================================================================
 print("\n" + "=" * 72)
 print("RESULTS: Cantilever IPE300, L = {:.1f} m, P = {:.0f} kN".format(L, P / 1000))
 print("=" * 72)
