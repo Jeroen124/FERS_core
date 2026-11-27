@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.2.32
+
+### A plate with only some stiffness modifiers set now solves
+
+`PlateStiffnessModifiers(membrane=0.5)` left `bending` and `shear` as `None`,
+and `to_dict()` wrote them as JSON `null`. The engine reads a missing factor as
+1.0 but refuses a `null` one, so the solve stopped with "JSON deserialization
+error: invalid type: null, expected f64", naming neither the plate nor the
+field. Setting one factor and leaving the others at 1.0 (cracked concrete in
+bending only, say) is the normal use. `to_dict()` now leaves an unset factor
+out, on plates and plate surfaces alike, so the engine applies 1.0. A model
+read back with `from_dict` still has `None` for the factors it left out.
+Factors that are set, including 0.0, are written as before. The engine pin
+stays at 0.2.106.
+
 ## 0.2.31
 
 A shorter README: what FERS computes, one checked example, how it is tested, and
