@@ -84,7 +84,10 @@ class PlateStiffnessModifiers:
         self.shear = shear
 
     def to_dict(self) -> Dict[str, Any]:
-        return {"bending": self.bending, "membrane": self.membrane, "shear": self.shear}
+        # The engine reads a missing factor as 1.0 but refuses a null one, so an
+        # unset factor is left out rather than written as None.
+        factors = {"bending": self.bending, "membrane": self.membrane, "shear": self.shear}
+        return {k: v for k, v in factors.items() if v is not None}
 
     @classmethod
     def from_dict(cls, data: Optional[Dict[str, Any]]) -> Optional["PlateStiffnessModifiers"]:
