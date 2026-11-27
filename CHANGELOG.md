@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.2.33
+
+### Engine 0.2.107: a second-order solve past its critical load stops at once and says so
+
+`fers_calculations` is pinned to 0.2.107, up from 0.2.106. A second-order load
+step that did not converge was halved up to ten times, and each halving ran the
+load schedule again from its first step. Past the elastic critical load none of
+that can help, because there is no equilibrium to find. Such a combination took
+minutes to hours and then failed with "non-descent at αmin; flip-left failed;
+max substepping reached".
+
+The engine now checks a failed step against the critical load of the last
+equilibrium it found, with the tension- and compression-only members as they
+were engaged there. If the step was carrying the load past it, the combination
+fails at once, and `solve_failures` says so: "Second-order: the load is past
+the elastic critical load of the model. Linearized about the equilibrium found
+at 80.0 % of the load, the model buckles at 94.7 %, …". Combinations that
+converge are unchanged. `fers_core.types` only takes the new engine version.
+
 ## 0.2.32
 
 ### A plate with only some stiffness modifiers set now solves
