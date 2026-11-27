@@ -36,6 +36,12 @@ class StiffnessCurveConfig:
     internal-force component (``depends_on``).  The solver linearly
     interpolates between the ``points`` and clamps at the boundaries.
 
+    A Linear analysis (``fers_calculations >= 0.2.108``) solves each load case
+    and each combination at its own load, with the curve iterated to its
+    secant there, so the results do not superpose: a combination is not the
+    sum of its load cases' results. ``solver_diagnostics.curve_secant_iterations``
+    marks such a result. Before 0.2.108 a Linear analysis refused a curve.
+
     Args:
         depends_on: The internal-force component the stiffness depends on.
         points: List of ``[force_value, stiffness]`` pairs, sorted by
