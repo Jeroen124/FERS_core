@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.2.34
+
+### Engine 0.2.108: a Linear analysis takes stiffness curves, each set at its own load
+
+`fers_calculations` is pinned to 0.2.108, up from 0.2.107. A Linear analysis
+of a model with a stiffness curve on a support, or a stiffness curve or
+moment–rotation diagram on a member hinge, was refused ("require NonLinear
+(second-order) analysis order"). It now solves: each load case and each
+combination on its own, at its own load, with every curve iterated to its
+secant there. The results do not superpose: a combination is not the sum of
+its load cases' results, and each such result says so in the new
+`solver_diagnostics.curve_secant_iterations`. A set whose curves do not settle
+fails alone, in `load_case_failures` or `solve_failures`, naming the curve.
+The buckling reference of a span-loaded member with a curve hinge now reads its
+connector at the reference load's own secant. `StiffnessCurveConfig`'s
+docstring says this, and `fers_core.types` takes the new field.
+
 ## 0.2.33
 
 ### Engine 0.2.107: a second-order solve past its critical load stops at once and says so
