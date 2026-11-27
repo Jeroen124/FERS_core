@@ -1,4 +1,4 @@
-"""NAFEMS FV5 — Deep simply-supported beam (Timoshenko: shear + rotary inertia).
+"""NAFEMS FV5 - Deep simply-supported beam (Timoshenko: shear + rotary inertia).
 
 Public facts: L=10 m (extensional mode 125.0 = sqrt(E/rho)/(4L), exact); E=200 GPa, nu=0.3,
 rho=8000; End A ux=uy=uz=rx=0, End B uy=uz=0. Torsion 77.54 = sqrt(G/rho)/(4L) => J=Ip =>

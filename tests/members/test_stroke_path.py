@@ -1,7 +1,7 @@
 """
 Tests for ShapePath.stroke_path()
 ===================================
-All tests are purely geometric — no solver or FEM dependency.
+All tests are purely geometric - no solver or FEM dependency.
 
 Coordinate convention (same as ShapePath / arc_center_angles):
     z(θ) = center_z + r·sin(θ)
@@ -20,9 +20,7 @@ from fers_core.members.shapepath import ShapePath
 from fers_core.members.shapecommand import ShapeCommand
 
 
-# ---------------------------------------------------------------------------
 # Helpers
-# ---------------------------------------------------------------------------
 
 
 def _cmds(offset, thickness=0.010):
@@ -49,9 +47,7 @@ def approx(v, rel=1e-9):
     return pytest.approx(v, rel=rel, abs=1e-12)
 
 
-# ---------------------------------------------------------------------------
-# 1. Output structure — every result must start with moveTo / end with closePath
-# ---------------------------------------------------------------------------
+# Output structure - every result must start with moveTo / end with closePath
 
 
 class TestOutputStructure:
@@ -78,18 +74,16 @@ class TestOutputStructure:
             ShapePath.stroke_path(path, thickness=0.010, offset="diagonal")
 
 
-# ---------------------------------------------------------------------------
-# 2. Straight-line strokes — exact coordinate checks
+# Straight-line strokes - exact coordinate checks
 #
 #  Path: y=0, z=0 → y=0, z=100 mm  (travel direction = +z)
 #  Left normal = +y direction.
-# ---------------------------------------------------------------------------
 
 
 class TestStraightLineStroke:
     T = 0.010  # 10 mm
 
-    # ---- center offset ----
+    # center offset
 
     def test_center_command_sequence(self):
         assert _commands_sequence(_cmds("center")) == ["moveTo", "lineTo", "lineTo", "lineTo", "closePath"]
@@ -112,7 +106,7 @@ class TestStraightLineStroke:
         assert min(z_vals) == approx(0.0)
         assert max(z_vals) == approx(0.100)
 
-    # ---- left offset (original path = right edge) ----
+    # left offset (original path = right edge)
 
     def test_left_right_edge_at_y_zero(self):
         cmds = _cmds("left")
@@ -127,7 +121,7 @@ class TestStraightLineStroke:
         line_cmds = [c for c in cmds if c.command in ("moveTo", "lineTo")]
         assert any(abs(c.y - self.T) < 1e-9 for c in line_cmds if c.y is not None)
 
-    # ---- right offset (original path = left edge) ----
+    # right offset (original path = left edge)
 
     def test_right_left_edge_at_y_zero(self):
         cmds = _cmds("right")
@@ -139,7 +133,7 @@ class TestStraightLineStroke:
         line_cmds = [c for c in cmds if c.command in ("moveTo", "lineTo")]
         assert any(abs(c.y - (-self.T)) < 1e-9 for c in line_cmds if c.y is not None)
 
-    # ---- thickness is symmetric for center ----
+    # thickness is symmetric for center
 
     def test_center_total_width_equals_thickness(self):
         cmds = _cmds("center")
@@ -157,12 +151,10 @@ class TestStraightLineStroke:
         assert max(y_vals) - min(y_vals) == approx(self.T)
 
 
-# ---------------------------------------------------------------------------
-# 3. Arc strokes — radius checks
+# Arc strokes - radius checks
 #
 #  Quarter-circle arc, center at origin, r = 75 mm, θ: 0 → π/2 (CW sweep).
 #  Left = outward.
-# ---------------------------------------------------------------------------
 
 
 class TestArcStroke:
@@ -238,9 +230,7 @@ class TestArcStroke:
         assert max(radii) == approx(r + t / 2)
 
 
-# ---------------------------------------------------------------------------
-# 4. L-shaped path (two line segments) — bevel join check
-# ---------------------------------------------------------------------------
+# L-shaped path (two line segments) - bevel join check
 
 
 class TestLShapedStroke:
@@ -268,9 +258,7 @@ class TestLShapedStroke:
         assert not any(c.command == "arcTo" for c in cmds)
 
 
-# ---------------------------------------------------------------------------
-# 5. Mixed path (line + arc)
-# ---------------------------------------------------------------------------
+# Mixed path (line + arc)
 
 
 class TestMixedStroke:

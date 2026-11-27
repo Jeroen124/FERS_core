@@ -1,4 +1,4 @@
-"""Plate free-vibration — simply-supported square plate (classical closed form).
+"""Plate free-vibration - simply-supported square plate (classical closed form).
 
 Demonstrates that plate/shell elements now contribute mass to the modal mass
 matrix (engine >= 0.2.43; before this, plate free-vibration was impossible). This
@@ -14,7 +14,7 @@ element converges to it from above under mesh refinement.
 
 Emits FVP.json (the wire model, with analysis.modal); the frequencies are computed
 by the 0.2.43 engine (the published 0.2.42 wheel has no plate mass), so this script
-does NOT solve — it only builds. Pass the mesh N as argv[1] (default 16).
+does NOT solve - it only builds. Pass the mesh N as argv[1] (default 16).
 """
 
 import sys

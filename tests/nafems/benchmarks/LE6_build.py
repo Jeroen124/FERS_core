@@ -1,4 +1,4 @@
-"""NAFEMS LE6 — Skew (Morley 30deg-acute rhombic) plate under uniform normal pressure.
+"""NAFEMS LE6 - Skew (Morley 30deg-acute rhombic) plate under uniform normal pressure.
 
 Parallelogram A=(0,0) B=(1,0) C=(1.8660254,0.5) D=(0.8660254,0.5); side 1.0 m; t=0.01 m.
 E=210 GPa, nu=0.3. Uniform pressure 700 Pa (-Z). Simply supported (w=0) on all 4 edges.

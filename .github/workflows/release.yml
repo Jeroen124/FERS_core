@@ -1,4 +1,3 @@
-# .github/workflows/ci-and-release.yml
 name: Lint, Test & Release
 
 on:
@@ -13,7 +12,7 @@ permissions:
 
 jobs:
   lint:
-    name: 🔍 Ruff Lint
+    name: Ruff lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -27,7 +26,7 @@ jobs:
       - run: ruff format --check .
 
   test:
-    name: 🧪 Pytest
+    name: Pytest
     needs: lint
     runs-on: ubuntu-latest
     steps:
@@ -43,7 +42,7 @@ jobs:
       - run: pytest --maxfail=1 --disable-warnings -q
 
   lean:
-    name: 🪶 Lean install
+    name: Lean install
     needs: lint
     runs-on: ubuntu-latest
     steps:
@@ -67,7 +66,7 @@ jobs:
           fers examples run 811 --dir "$RUNNER_TEMP/examples"
 
   deploy:
-    name: 📦 Build & Publish to PyPI
+    name: Build and publish to PyPI
     needs: [lint, test, lean]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest

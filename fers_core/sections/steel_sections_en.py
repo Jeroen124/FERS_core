@@ -24,16 +24,14 @@ from . import aisc, british_steel
 # published_si(), dimensions() and catalogue_of(); a name may appear in only one.
 _TABULATED = (british_steel, aisc)
 
-# ---------------------------------------------------------------------------
 # Dimension tables – dict of  name → (params-dict)
 # Keys vary per family; the resolve_section() dispatcher knows which factory
 # to call and how to unpack.
 #
 # Source: EN 10365:2017 (hot-rolled IPE/HE/UPE), EN 10210-2 (CHS/RHS/SHS)
 # Values converted from mm → m.
-# ---------------------------------------------------------------------------
 
-# --- IPE series -----------------------------------------------------------
+# IPE series
 # fmt: off
 _IPE: dict[str, dict] = {
     "IPE80":  {"h": 0.080, "b": 0.046, "t_w": 0.0038, "t_f": 0.0052, "r": 0.005},
@@ -57,7 +55,7 @@ _IPE: dict[str, dict] = {
 }
 # fmt: on
 
-# --- HEA series -----------------------------------------------------------
+# HEA series
 # fmt: off
 _HEA: dict[str, dict] = {
     "HEA100": {"h": 0.096,  "b": 0.100, "t_w": 0.005,  "t_f": 0.008,  "r": 0.012},
@@ -87,7 +85,7 @@ _HEA: dict[str, dict] = {
 }
 # fmt: on
 
-# --- HEB series -----------------------------------------------------------
+# HEB series
 # fmt: off
 _HEB: dict[str, dict] = {
     "HEB100": {"h": 0.100, "b": 0.100, "t_w": 0.006,  "t_f": 0.010,  "r": 0.012},
@@ -117,7 +115,7 @@ _HEB: dict[str, dict] = {
 }
 # fmt: on
 
-# --- HEM series -----------------------------------------------------------
+# HEM series
 # fmt: off
 _HEM: dict[str, dict] = {
     "HEM100": {"h": 0.120, "b": 0.106, "t_w": 0.012, "t_f": 0.020, "r": 0.012},
@@ -147,7 +145,7 @@ _HEM: dict[str, dict] = {
 }
 # fmt: on
 
-# --- UPE series (European parallel-flange channels) ----------------------
+# UPE series (European parallel-flange channels)
 # fmt: off
 _UPE: dict[str, dict] = {
     "UPE80":  {"h": 0.080, "b": 0.050, "t_w": 0.004,  "t_f": 0.007,  "r": 0.008},
@@ -167,7 +165,7 @@ _UPE: dict[str, dict] = {
 }
 # fmt: on
 
-# --- CHS series (Circular Hollow Sections, EN 10210-2) -------------------
+# CHS series (Circular Hollow Sections, EN 10210-2)
 # name → (outer_diameter, thickness) in metres
 # fmt: off
 _CHS: dict[str, dict] = {
@@ -228,7 +226,7 @@ _CHS: dict[str, dict] = {
 }
 # fmt: on
 
-# --- RHS series (Rectangular Hollow Sections, EN 10210-2) -----------------
+# RHS series (Rectangular Hollow Sections, EN 10210-2)
 # fmt: off
 _RHS: dict[str, dict] = {
     "RHS 50x30x3":     {"h": 0.050, "b": 0.030, "t": 0.003},
@@ -291,7 +289,7 @@ _RHS: dict[str, dict] = {
 }
 # fmt: on
 
-# --- SHS series (Square Hollow Sections, EN 10210-2) ---------------------
+# SHS series (Square Hollow Sections, EN 10210-2)
 # fmt: off
 _SHS: dict[str, dict] = {
     "SHS 40x40x3":    {"b": 0.040, "t": 0.003},
@@ -362,7 +360,7 @@ _SHS: dict[str, dict] = {
 }
 # fmt: on
 
-# --- L-section (Equal / Unequal Angle) -----------------------------------
+# L-section (Equal / Unequal Angle)
 # fmt: off
 _L: dict[str, dict] = {
     "L 20x20x3":    {"h": 0.020, "b": 0.020, "t": 0.003, "r_root": 0.0035, "r_toe": 0.0},
@@ -438,9 +436,7 @@ _L: dict[str, dict] = {
 # fmt: on
 
 
-# ---------------------------------------------------------------------------
 #  Unified lookup  –  maps canonical name → (family, params-dict)
-# ---------------------------------------------------------------------------
 
 
 _EN_TABLES: dict[str, dict] = {
@@ -602,9 +598,7 @@ def _apply_published(section: Section, p: dict) -> Section:
     return section
 
 
-# ---------------------------------------------------------------------------
 #  Public API
-# ---------------------------------------------------------------------------
 
 
 def resolve_section(name: str, material: Material) -> Section:

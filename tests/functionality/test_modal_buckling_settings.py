@@ -3,7 +3,7 @@ normalization, round-trips, and schema conformance of a full model.
 
 The wire contract (verified against the solver source):
 - ``analysis.modal``    = ``{"num_modes", "mass_formulation", "tolerance"?, "max_iterations"?}``
-  with ``mass_formulation`` emitted UPPERCASE (``"CONSISTENT"``/``"LUMPED"`` —
+  with ``mass_formulation`` emitted UPPERCASE (``"CONSISTENT"``/``"LUMPED"`` -
   the solver also takes titlecase via serde aliases, but the generated pydantic
   input schema only accepts the uppercase tokens).
 - ``analysis.buckling`` = ``{"num_modes", "reference", "tolerance"?, "max_iterations"?}``
@@ -43,7 +43,7 @@ def _beam() -> FERS:
     return m
 
 
-# --- exact wire shapes -------------------------------------------------------
+# exact wire shapes
 
 
 def test_modal_default_wire_shape():
@@ -68,7 +68,7 @@ def test_modal_full_wire_shape():
 
 def test_modal_mass_formulation_accepts_strings_and_normalizes_uppercase():
     # Titlecase passes the Rust solver via a serde alias but FAILS the generated
-    # pydantic input schema — the builder must normalize to the uppercase token.
+    # pydantic input schema - the builder must normalize to the uppercase token.
     for raw in ("Consistent", "CONSISTENT", "consistent", MassFormulation.CONSISTENT):
         assert ModalAnalysisSettings(6, mass_formulation=raw).to_dict()["mass_formulation"] == ("CONSISTENT")
     assert ModalAnalysisSettings(6, mass_formulation="Lumped").to_dict()["mass_formulation"] == "LUMPED"
@@ -106,7 +106,7 @@ def test_buckling_wire_shape_full():
     }
 
 
-# --- buckling reference normalization ----------------------------------------
+# buckling reference normalization
 
 
 def test_buckling_reference_accepts_load_case_object():
@@ -140,7 +140,7 @@ def test_buckling_reference_rejects_invalid_forms():
         BucklingAnalysisSettings(3.14)
 
 
-# --- settings round-trips -----------------------------------------------------
+# settings round-trips
 
 
 def test_modal_settings_from_dict_round_trip():
@@ -155,7 +155,7 @@ def test_buckling_settings_from_dict_round_trip():
     assert BucklingAnalysisSettings.from_dict(original).to_dict() == original
 
 
-# --- FERS document integration ------------------------------------------------
+# FERS document integration
 
 
 def test_plain_model_omits_modal_and_buckling_keys():
@@ -176,7 +176,7 @@ def test_model_emits_modal_and_buckling_and_conforms_to_schema():
         "reference": {"LoadCase": m.load_cases[0].id},
     }
     # The full document must pass the repo's schema gate (generated pydantic
-    # FERS input model — single source of truth from the solver's OpenAPI).
+    # FERS input model - single source of truth from the solver's OpenAPI).
     m.validate_schema()
 
 
@@ -197,7 +197,7 @@ def test_fers_document_round_trip_preserves_modal_and_buckling():
     rebuilt.validate_schema()
 
 
-# --- end-to-end modal solve ----------------------------------------------------
+# end-to-end modal solve
 
 
 def test_end_to_end_modal_solve_on_cantilever():
@@ -224,10 +224,8 @@ def test_end_to_end_modal_solve_on_cantilever():
     assert freqs == sorted(freqs)
 
 
-# ─────────────────────────────────────────────────────────────────────────────
 #  Engine 0.2.52 surface: multi-reference buckling, effective lengths,
 #  modal stiffness_reference / preloaded modal.
-# ─────────────────────────────────────────────────────────────────────────────
 
 
 def test_buckling_multi_reference_list_serializes():
@@ -325,7 +323,7 @@ def test_modal_omits_new_fields_when_unset():
     assert "include_geometric_stiffness" not in data
 
 
-# ── add_buckling_analysis / add_modal_analysis ────────────────────────────────
+# add_buckling_analysis / add_modal_analysis
 
 
 class TestAnalysisRequestBuilders:

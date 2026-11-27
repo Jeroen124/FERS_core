@@ -1,4 +1,4 @@
-"""Convenience builders — a ready-to-solve model from a few keyword arguments.
+"""Convenience builders - a ready-to-solve model from a few keyword arguments.
 
 These compose the core objects (``Node`` / ``Member`` / ``Section`` / ``LoadCase`` …)
 into a solvable :class:`FERS` model, so you can go from an idea to results without
@@ -79,7 +79,7 @@ def create_beam(
     Args:
         span: Beam length in metres.
         section: A :class:`Section`, or a European section name such as ``"IPE180"``.
-        material: A :class:`Material`, or a steel grade — ``"S235"``, ``"S275"``,
+        material: A :class:`Material`, or a steel grade - ``"S235"``, ``"S275"``,
             ``"S355"`` or ``"S460"``.
         support: ``"simply_supported"`` (pin + roller), ``"cantilever"`` (fixed at
             the start), or ``"fixed"`` (fixed–fixed).
@@ -92,7 +92,7 @@ def create_beam(
         load_case_name: Name of the created load case.
 
     Returns:
-        A :class:`FERS` model — call ``.run_analysis()`` and read ``.resultsbundle``.
+        A :class:`FERS` model - call ``.run_analysis()`` and read ``.resultsbundle``.
     """
     if span <= 0:
         raise ValueError("span must be a positive length in metres.")
@@ -186,11 +186,11 @@ def check_beam(
         check_name: Display title for the unity check.
 
     Returns:
-        A :class:`FERS` model — call ``.run_analysis()`` then ``.unity_check_results()``.
+        A :class:`FERS` model - call ``.run_analysis()`` then ``.unity_check_results()``.
 
     Note:
         Covers cross-section resistance (bending, shear, N+M) and lateral-torsional
-        buckling (6.3.2), both on the actual strong (major) axis — verified against
+        buckling (6.3.2), both on the actual strong (major) axis - verified against
         hand calculations. Requires ``fers_calculations >= 0.2.42`` (the major-axis
         LTB fix); an older solver reports the LTB row as 0.
     """
@@ -270,7 +270,7 @@ def check_strut(
     carrying pure axial compression, so §6.3.1 flexural buckling and §6.3.1.4
     torsional-flexural buckling are the checks that decide it. Both ends are held
     against translation and against twist, and free to rotate about both bending
-    axes — the fork-supported strut the buckling curves are written for.
+    axes - the fork-supported strut the buckling curves are written for.
 
     Because there is no moment, every sub-check is linear in the axial force, so
     the allowable load follows from one solve without iterating::
@@ -286,8 +286,8 @@ def check_strut(
             Build it from one of the ``Section.create_*`` factories with
             ``classify_for="compression"`` to get the section class, buckling
             curves and effective area derived for you. Classification is opt-in
-            because it depends on the stress state — the same web can be class 4
-            in compression and class 1 in bending — and without it the solver
+            because it depends on the stress state - the same web can be class 4
+            in compression and class 1 in bending - and without it the solver
             defaults every curve to b and infers class 1 from ``wpl_y``.
         material: A :class:`Material` or a grade name (``"S235"`` … ``"S460"``).
         axial_load: Compression in newtons. Any positive value works; the
@@ -307,7 +307,7 @@ def check_strut(
         check_name: Display title for the unity check.
 
     Returns:
-        A :class:`FERS` model — call ``.run_analysis()``, then
+        A :class:`FERS` model - call ``.run_analysis()``, then
         ``.compression_capacity()`` or ``.unity_check_results()``.
     """
     if length <= 0:
@@ -323,7 +323,7 @@ def check_strut(
 
     # Fork supports: translation and twist held, both bending rotations free.
     # Leaving RX free at either end would make the strut a torsional mechanism,
-    # which is also the mode 6.3.1.4 is about — the model has to hold it while
+    # which is also the mode 6.3.1.4 is about - the model has to hold it while
     # the check accounts for it.
     n1 = Node(0.0, 0.0, 0.0)
     n1.nodal_support = NodalSupport(

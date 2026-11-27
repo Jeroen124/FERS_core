@@ -1,17 +1,17 @@
 """
-808 — Default Material Library
+808 - Default Material Library
 ================================
 Demonstrates the built-in ``MaterialLibrary`` and how to use its
 pre-defined materials directly in a FERS model.
 
 Materials covered:
-  • Structural steel        — S235, S275, S355, S420, S460
-  • Stainless steel         — 1.4301 (304), 1.4401 (316)
-  • Aluminium alloys        — 6061-T6, 7075-T6, 2024-T3, 5083-H111
-  • Titanium                — Grade 2 (CP), Grade 5 (Ti-6Al-4V)
-  • Copper / brass / bronze — C11000, CuZn37, CuSn8
-  • Concrete                — C20/25, C25/30, C30/37, C35/45
-  • Cast iron               — GJL-250, GJS-400-18
+  • Structural steel - S235, S275, S355, S420, S460
+  • Stainless steel - 1.4301 (304), 1.4401 (316)
+  • Aluminium alloys - 6061-T6, 7075-T6, 2024-T3, 5083-H111
+  • Titanium - Grade 2 (CP), Grade 5 (Ti-6Al-4V)
+  • Copper / brass / bronze - C11000, CuZn37, CuSn8
+  • Concrete - C20/25, C25/30, C30/37, C35/45
+  • Cast iron - GJL-250, GJS-400-18
 
 All SI units (Pa, kg/m³).
 """
@@ -21,18 +21,14 @@ from fers_core import (
 )
 
 
-# =============================================================================
 # Step 1: List every registered material
-# =============================================================================
 print("Available materials in MaterialLibrary:")
 print("-" * 44)
 for name in MaterialLibrary.list_available():
     print(f"  {name}")
 
 
-# =============================================================================
 # Step 2: Print a comparison table
-# =============================================================================
 groups = {
     "Structural steel": [
         MaterialLibrary.S235,
@@ -87,19 +83,15 @@ for group_name, factories in groups.items():
         )
 
 
-# =============================================================================
 # Step 3: Look up a material by name (useful when reading from config / JSON)
-# =============================================================================
 mat_by_name = MaterialLibrary.get("Aluminium 6061-T6")
 print(f"\nLooked up by name: '{mat_by_name.name}'  E = {mat_by_name.e_mod / 1e9:.1f} GPa")
 
 
-# =============================================================================
 # Step 4: Compare tip deflection of a cantilever across materials
 #
 #  Same IPE200 section geometry, same 5 kN end load, L = 4 m.
 #  Only the material (Young's modulus) changes.
-# =============================================================================
 print("\n--- Cantilever tip deflection — IPE200, L=4 m, F=5 kN ---")
 print(f"{'Material':<35s}  {'E (GPa)':>9s}  {'δ (mm)':>9s}")
 print("-" * 60)

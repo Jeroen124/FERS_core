@@ -20,7 +20,7 @@ class CurveEndBehaviour(Enum):
     #:
     #: From engine 0.2.59 this redistributes properly on an indeterminate frame:
     #: the connector holds its plateau and the moment it cannot carry appears
-    #: elsewhere. Earlier engines could not converge that case at all — the secant
+    #: elsewhere. Earlier engines could not converge that case at all - the secant
     #: was read at the end moment, which means inverting ``M(phi)`` across a
     #: near-flat plateau, and it oscillated. It is read at the rotation there now.
     #:

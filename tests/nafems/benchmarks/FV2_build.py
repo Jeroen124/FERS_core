@@ -1,4 +1,4 @@
-"""NAFEMS FV2 — Pin-ended double cross, in-plane vibration.
+"""NAFEMS FV2 - Pin-ended double cross, in-plane vibration.
 
 8 straight arms of length 5 m radiating from a central rigid joint C=(5,5) at 45deg
 increments (= four 10 m beams crossing at their midpoint). Square 0.125x0.125 section.

@@ -6,9 +6,7 @@
             "lengthUnit": "m",
             "forceUnit": "N",
             "densityUnit": "kg\/m3",
-            "weightUnit": "kg",
-            "pressureUnit": "Pa",
-            "temperatureUnit": "celsius"
+            "pressureUnit": "Pa"
         },
         "general_info": {
             "project_name": "Unnamed Project",
@@ -20,7 +18,6 @@
         "nodes": [
             {
                 "id": 1,
-                "classification": "",
                 "X": 0.0,
                 "Y": 0.0,
                 "Z": 0.0,
@@ -28,7 +25,6 @@
             },
             {
                 "id": 2,
-                "classification": "",
                 "X": 2.5,
                 "Y": 0.0,
                 "Z": 0.0,
@@ -36,7 +32,6 @@
             },
             {
                 "id": 3,
-                "classification": "",
                 "X": 5.0,
                 "Y": 0.0,
                 "Z": 0.0,
@@ -56,7 +51,7 @@
                 "start_hinge": null,
                 "end_hinge": null,
                 "classification": "",
-                "weight": 38.464999999999996,
+                "weight": 0.0,
                 "chi": null,
                 "reference_member": null,
                 "reference_node": null,
@@ -76,7 +71,7 @@
                 "start_hinge": 1,
                 "end_hinge": null,
                 "classification": "",
-                "weight": 38.464999999999996,
+                "weight": 0.0,
                 "chi": null,
                 "reference_member": null,
                 "reference_node": null,
@@ -151,6 +146,7 @@
                 "warping_condition": null
             }
         ],
+        "nodal_masses": [],
         "member_hinges": [
             {
                 "id": 1,
@@ -174,7 +170,10 @@
                 "stiffness_curve_vz": null,
                 "stiffness_curve_mx": null,
                 "stiffness_curve_my": null,
-                "stiffness_curve_mz": null
+                "stiffness_curve_mz": null,
+                "moment_rotation_mx": null,
+                "moment_rotation_my": null,
+                "moment_rotation_mz": null
             }
         ],
         "shape_paths": [],
@@ -192,8 +191,8 @@
             "tolerance": 0.01,
             "max_iterations": 30,
             "dimensionality": "3D",
-            "order": "Linear",
-            "rigid_strategy": "Rigid_Member",
+            "order": "LINEAR",
+            "rigid_strategy": "RigidMember",
             "axial_slack": 500,
             "include_shear_deformation": true,
             "include_warping": true,

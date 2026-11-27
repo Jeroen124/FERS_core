@@ -2,8 +2,8 @@
 
 Why this exists
 ---------------
-This harness builds each benchmark with the normal Python API — including the
-first-class ``ModalAnalysisSettings`` request (``calc.analysis.modal``) — then
+This harness builds each benchmark with the normal Python API - including the
+first-class ``ModalAnalysisSettings`` request (``calc.analysis.modal``) - then
 talks to the exact same ``calculate_from_json`` entry point the WASM website
 uses.
 
@@ -30,7 +30,7 @@ from fers_core import MassFormulation, ModalAnalysisSettings
 G_STANDARD = 9.81  # m/s^2, the solver's default gravity for weight->mass
 
 
-# --- low-level solve -------------------------------------------------------
+# low-level solve
 
 
 def solve_dict(model_dict: dict) -> dict:
@@ -48,7 +48,7 @@ def _zero_member_weights(model_dict: dict) -> None:
         m["weight"] = 0.0
 
 
-# --- modal -----------------------------------------------------------------
+# modal
 
 
 def modal_frequencies(calc, num_modes: int = 6, mass_formulation=MassFormulation.CONSISTENT):
@@ -73,7 +73,7 @@ def modal_frequencies(calc, num_modes: int = 6, mass_formulation=MassFormulation
     return freqs, modal
 
 
-# --- static ----------------------------------------------------------------
+# static
 
 
 def static_results(calc) -> dict:
@@ -82,7 +82,7 @@ def static_results(calc) -> dict:
     return solve_dict(d)["results"]
 
 
-# --- utilities -------------------------------------------------------------
+# utilities
 
 
 def rel_err_pct(fers: float, target: float) -> float:

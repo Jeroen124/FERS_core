@@ -1,8 +1,8 @@
 """Result renderer for FERS finite element analysis results.
 
 This module provides the :class:`ResultRenderer` class for visualising
-analysis results — deformed shapes, internal-force diagrams, and reaction
-arrows — using PyVista.
+analysis results - deformed shapes, internal-force diagrams, and reaction
+arrows - using PyVista.
 
 The renderer follows the same *"each class knows how to display itself"*
 pattern as :class:`ModelRenderer`: it looks up result objects (e.g.
@@ -67,11 +67,11 @@ class ResultRenderer:
     def __init__(self, model: "FERS") -> None:
         self.model = model
 
-        # --- result selection ---
+        # result selection
         self._active_loadcase: Optional[str] = None
         self._active_loadcombination: Optional[str] = None
 
-        # --- rendering options ---
+        # rendering options
         self._deformed_shape: bool = True
         self._deformed_scale: float = 30.0
         self._member_diagrams: Optional[str] = None
@@ -84,7 +84,7 @@ class ResultRenderer:
         self._scalar_bar: bool = True
         self._num_points: int = 20
 
-        # --- plotter ---
+        # plotter
         self.plotter: pv.Plotter = pv.Plotter(off_screen=pv.OFF_SCREEN)
         self.plotter.set_background("white")
 
@@ -95,9 +95,7 @@ class ResultRenderer:
 
         self.plotter.iren.add_observer("ExitEvent", lambda obj, event: obj.TerminateApp())
 
-    # ------------------------------------------------------------------
     # Properties
-    # ------------------------------------------------------------------
 
     @property
     def annotation_size(self) -> float:
@@ -122,7 +120,7 @@ class ResultRenderer:
     def annotation_size(self, value: float) -> None:
         self._annotation_size = value
 
-    # --- active result selection ---
+    # active result selection
 
     @property
     def active_loadcase(self) -> Optional[str]:
@@ -146,7 +144,7 @@ class ResultRenderer:
         if value is not None:
             self._active_loadcase = None
 
-    # --- toggles ---
+    # toggles
 
     @property
     def deformed_shape(self) -> bool:
@@ -231,9 +229,7 @@ class ResultRenderer:
     def num_points(self, value: int) -> None:
         self._num_points = max(2, int(value))
 
-    # ------------------------------------------------------------------
     # Result look-up
-    # ------------------------------------------------------------------
 
     def _get_active_results(self) -> Optional["SingleResults"]:
         """Return the :class:`SingleResults` currently selected.
@@ -260,9 +256,7 @@ class ResultRenderer:
 
         return None
 
-    # ------------------------------------------------------------------
     # Main update
-    # ------------------------------------------------------------------
 
     def update(self) -> None:  # noqa: C901
         """Clear the plotter and re-render everything."""
@@ -272,11 +266,11 @@ class ResultRenderer:
         members = self.model.members if hasattr(self.model, "members") else []
         nodes = self.model.nodes if hasattr(self.model, "nodes") else []
 
-        # ---- undeformed ghost model ----
+        # undeformed ghost model
         if self.show_undeformed:
             self._render_undeformed_model(members)
 
-        # ---- build displacement lookup ----
+        # build displacement lookup
         node_displacements: dict[int, tuple[np.ndarray, np.ndarray]] = {}
         if results is not None and self.deformed_shape:
             disp_nodes = getattr(results, "displacement_nodes", {}) or {}
@@ -288,31 +282,29 @@ class ResultRenderer:
                         disp.as_rotation(),
                     )
 
-        # ---- deformed members ----
+        # deformed members
         if self.deformed_shape and node_displacements:
             self._render_deformed_members(members, node_displacements, results)
 
-        # ---- deformed/original nodes ----
+        # deformed/original nodes
         if self.show_nodes:
             self._render_nodes(nodes, node_displacements, results)
 
-        # ---- internal-force diagrams ----
+        # internal-force diagrams
         if self.member_diagrams and results is not None:
             self._render_diagrams(members, results)
 
-        # ---- reactions ----
+        # reactions
         if self.show_reactions and results is not None:
             self._render_reactions(nodes, results)
 
-        # ---- view ----
+        # view
         if pv.OFF_SCREEN:
             self.plotter.view_xy()
             self.plotter.show_axes()
             self.plotter.set_viewup((0, 1, 0))
 
-    # ------------------------------------------------------------------
     # Private render helpers
-    # ------------------------------------------------------------------
 
     def _render_undeformed_model(self, members: list) -> None:
         """Draw members in a faded colour as reference."""
@@ -509,9 +501,7 @@ class ResultRenderer:
                 )
                 labeled = True
 
-    # ------------------------------------------------------------------
     # Public API
-    # ------------------------------------------------------------------
 
     def show(
         self,

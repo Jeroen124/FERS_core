@@ -12,9 +12,7 @@ from fers_core import (
     AnalysisOrder,
 )
 
-# =============================================================================
 # Example and Validation: Cantilever With Root Rotational Spring (via MemberHinge)
-# =============================================================================
 # Model: node1 --[RIGID]--> node2 s--[NORMAL + spring at start]--> node3
 # Support: full fixity at node1 (translations and rotations)
 # Load: 1 kN downward at the free end (node3)
@@ -23,10 +21,8 @@ from fers_core import (
 # spring at its fixed/root end. The rigid member transmits the support DOFs to
 # node2; the MemberHinge provides a rotational spring around local z at the
 # start of the flexible member.
-# =============================================================================
 
 # Step 1: Set up the model
-# ------------------------
 calculation_1 = FERS()
 calculation_1.settings.analysis_options.order = AnalysisOrder.LINEAR
 
@@ -67,7 +63,6 @@ calculation_1.add_member_set(member_set)
 # calculation_1.memberhinges.append(start_hinge)
 
 # Step 2: Apply the load
-# ----------------------
 load_case = calculation_1.create_load_case(name="End Load")
 
 # 1 kN downward at the free end
@@ -84,7 +79,6 @@ os.makedirs(os.path.dirname(file_path), exist_ok=True)
 calculation_1.save_to_json(file_path, indent=4)
 
 # Step 3: Run FERS calculation
-# ----------------------------
 print("Running the analysis...")
 calculation_1.run_analysis()
 results = calculation_1.resultsbundle.loadcases["End Load"]
@@ -95,7 +89,6 @@ rotation_tip_fers = results.displacement_nodes["3"].rz
 reaction_moment_support_fers = results.reaction_nodes["1"].nodal_forces.mz
 
 # Step 4: Validate against analytical solution
-# --------------------------------------------
 # For a cantilever of length L with a root rotational spring k_phi:
 #   Root rotation:        φ0 = (F * L) / k_phi
 #   Tip rotation:         φ_tip = (F * L**2) / (2 * E * I) + φ0
@@ -143,10 +136,7 @@ else:
     print("Support reaction moment does NOT match the analytical solution ❌")
 
 
-# =============================================================================
 # Notes for Users
-# =============================================================================
-# 1) This example shows how to model a root rotational spring using MemberHinge while
-#    keeping a rigid link from the fixed support to the spring location.
-# 2) The analytical checks use closed-form expressions for a cantilever with a root spring.
-# 3) You can tune k_phi_z to target a desired root rotation under the applied tip load.
+# A root rotational spring modelled with a MemberHinge, with a rigid link from the fixed
+# support to the spring. The checks use the closed-form cantilever with a root spring;
+# tune k_phi_z to target a root rotation under the tip load.

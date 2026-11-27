@@ -2,9 +2,7 @@ import os
 from fers_core import FERS, AnalysisOrder, Material, Node, PlateSurface, PlateMeshSettings
 
 
-# =============================================================================
 # Example 141: Plate Surface with Automatic Mesh Generation
-# =============================================================================
 #
 # A flat rectangular concrete slab (2 m × 1 m, 120 mm thick) is defined as a
 # PlateSurface polygon.  FERS automatically triangulates the polygon into plate
@@ -15,9 +13,8 @@ from fers_core import FERS, AnalysisOrder, Material, Node, PlateSurface, PlateMe
 #   • Controlling mesh density via ``mesh_size``
 #   • Inspecting the generated plate elements after meshing
 #   • Serialising the model to JSON
-# =============================================================================
 
-# ── Model setup ───────────────────────────────────────────────────────────────
+# Model setup
 
 model = FERS()
 model.settings.analysis_options.order = AnalysisOrder.LINEAR
@@ -48,7 +45,7 @@ slab = PlateSurface(
 
 model.add_plate_surface(slab)
 
-# ── Mesh generation ───────────────────────────────────────────────────────────
+# Mesh generation
 
 model.generate_plate_meshes()
 
@@ -58,7 +55,7 @@ print(f"  Triangular elements    : {len(model.plates)}")
 print(f"  Surface name           : {model.plate_surfaces[0].name}")
 print(f"  Thickness              : {model.plate_surfaces[0].thickness * 1000:.0f} mm")
 
-# ── Save to JSON ──────────────────────────────────────────────────────────────
+# Save to JSON
 
 file_path = os.path.join("json_input_solver", "141_Plate_Surface_Mesh.json")
 os.makedirs(os.path.dirname(file_path), exist_ok=True)

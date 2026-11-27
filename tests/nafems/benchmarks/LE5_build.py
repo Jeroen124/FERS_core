@@ -1,8 +1,8 @@
-"""NAFEMS LE5 — Z-section cantilever under end torque, via FERS's 7-DOF warping beam.
+"""NAFEMS LE5 - Z-section cantilever under end torque, via FERS's 7-DOF warping beam.
 
 The reference is a thin-walled open Z-section solved as a folded shell; the -108 MPa axial
 stress at the flange tip is a RESTRAINED-WARPING (Vlasov) stress. The published research spec
-marked this "infeasible" assuming a 6-DOF beam — but FERS has a 7th warping DOF and a warping
+marked this "infeasible" assuming a 6-DOF beam - but FERS has a 7th warping DOF and a warping
 constant input, so we model the whole section as ONE beam member and recover the warping normal
 stress from the bimoment:  sigma_w = B * omega_n / C_w.
 

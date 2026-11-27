@@ -105,7 +105,7 @@ def solved(tmp_path_factory):
     return paths
 
 
-# --- the frozen 0.1.97 loader -----------------------------------------------
+# the frozen 0.1.97 loader
 
 
 def _forces(f):
@@ -199,7 +199,7 @@ def _text(path):
     return path.read_text(encoding="utf-8")
 
 
-# --- parity -----------------------------------------------------------------
+# parity
 
 
 @pytest.mark.parametrize("variant", list(_VARIANTS))
@@ -262,7 +262,7 @@ def test_the_model_section_loads_as_before(solved):
     )
 
 
-# --- the tables -------------------------------------------------------------
+# the tables
 
 
 @pytest.fixture(scope="module")
@@ -313,7 +313,7 @@ def test_the_rigid_link_has_no_entry_and_the_truss_has_no_section_forces(solved)
     assert len(single.member_results["2"].section_forces) == 3  # beam, interior stations
 
 
-# --- read-only --------------------------------------------------------------
+# read-only
 
 
 def test_loaded_results_are_read_only(solved):
@@ -373,7 +373,7 @@ def test_renderers_run_on_loaded_results(solved):
     assert member.render_deformed_shape(member_model, zeros, zeros, zeros, zeros)
 
 
-# --- errors and edge cases --------------------------------------------------
+# errors and edge cases
 
 
 def test_validation_errors_read_as_before(solved, tmp_path):
@@ -454,7 +454,7 @@ def test_a_file_in_the_platform_codec_still_loads(solved, tmp_path):
     assert FERS.from_json(str(path)).resultsbundle.loadcombinations["ULS1"].name == "ULS café"
 
 
-# --- the bugs fixed with this ------------------------------------------------
+# the bugs fixed with this
 
 
 def test_from_raw_dict_reads_real_results(solved):

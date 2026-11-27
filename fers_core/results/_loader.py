@@ -121,7 +121,7 @@ def _stream_pairs(js: JsonStream) -> Iterator[Tuple[str, Any]]:
         yield key, js.read_value()
 
 
-# --- from a stream ----------------------------------------------------------
+# from a stream
 
 
 def _single_from_stream(js: JsonStream, keys: KeyIndexCache, loc: Tuple[Any, ...]) -> SingleResults:
@@ -236,7 +236,7 @@ def _null_or_invalid(js: JsonStream) -> None:
     return None
 
 
-# --- from a mapping ---------------------------------------------------------
+# from a mapping
 
 
 def bundle_from_mapping(raw: Mapping[str, Any]) -> ResultsBundle:

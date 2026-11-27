@@ -28,7 +28,7 @@ def lap(**kw):
     return BoltedLap(**base)
 
 
-# ── bearing ────────────────────────────────────────────────────────────────
+# bearing
 
 
 def test_bearing_at_full_end_distance():
@@ -67,7 +67,7 @@ def test_bearing_adds_up_over_the_bolts():
     assert bearing_resistance(lap(n_bolts=3)) == pytest.approx(3.0 * bearing_resistance(lap()))
 
 
-# ── bolt shear ─────────────────────────────────────────────────────────────
+# bolt shear
 
 
 def test_bolt_shear_through_the_threads():
@@ -103,7 +103,7 @@ def test_an_untabulated_bolt_in_the_threads_is_refused_not_guessed():
     assert bolt_shear_resistance(lap(d=0.013, threads_in_shear_plane=False)) > 0.0
 
 
-# ── net section ────────────────────────────────────────────────────────────
+# net section
 
 
 def test_net_section_with_the_spread_penalty():
@@ -137,7 +137,7 @@ def test_holes_that_eat_the_section_are_refused():
         net_section_resistance(lap(n_bolts=20, n_at_section=20), a_gross=525.9e-6)
 
 
-# ── the envelope ───────────────────────────────────────────────────────────
+# the envelope
 
 
 def test_compression_takes_no_net_section_deduction():
@@ -168,7 +168,7 @@ def test_an_unknown_sense_is_refused():
         connection_resistance(lap(), sense="shear")
 
 
-# ── detailing ──────────────────────────────────────────────────────────────
+# detailing
 
 
 def test_short_distances_are_reported_not_raised():
@@ -197,7 +197,7 @@ def test_nonsense_geometry_is_refused_at_construction():
         lap(grade="12.9")
 
 
-# ── eccentricity ───────────────────────────────────────────────────────────
+# eccentricity
 
 
 def test_a_concentric_load_is_unaffected():

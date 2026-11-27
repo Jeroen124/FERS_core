@@ -5,14 +5,14 @@ as the solver evolves. They drive the real solver through `calculate_from_json` 
 entry point the website's WASM uses), so a regression here is a regression on the page.
 
 Scope (what FERS's element library can represent):
-  FV2 — pin-ended double cross, in-plane free vibration      (beam-frame modal)
-  FV5 — deep simply-supported beam (Timoshenko)              (beam modal: shear+rotary+torsion+axial)
-  LE1 — elliptic membrane (plane stress)                     (membrane static, convergence)
-  LE6 — skew Morley rhombic plate under pressure             (plate bending, convergence)
-  FVP — simply-supported square plate, free vibration        (plate modal mass, engine >= 0.2.43)
+  FV2 - pin-ended double cross, in-plane free vibration      (beam-frame modal)
+  FV5 - deep simply-supported beam (Timoshenko)              (beam modal: shear+rotary+torsion+axial)
+  LE1 - elliptic membrane (plane stress)                     (membrane static, convergence)
+  LE6 - skew Morley rhombic plate under pressure             (plate bending, convergence)
+  FVP - simply-supported square plate, free vibration        (plate modal mass, engine >= 0.2.43)
 Out of scope by construction (no solver support): 3D solid (LE10/11), curved/axisymmetric
 shells (LE2/3/4/7/8/9), thermal, transient. (Flat thin-plate free vibration and rigid-link
-offset point masses are now supported — see FVP and the offset-mass Rust regression tests.)
+offset point masses are now supported - see FVP and the offset-mass Rust regression tests.)
 """
 
 import os
@@ -103,7 +103,7 @@ def test_FV5_deep_timoshenko_beam():
 
 
 def test_FVP_plate_free_vibration():
-    """FVP: simply-supported square plate — exercises plate modal mass (engine >= 0.2.43;
+    """FVP: simply-supported square plate - exercises plate modal mass (engine >= 0.2.43;
     before this, plate DOFs were massless and had no modes). The fundamental f11 matches
     the Navier closed form, converging from above, within 2% at a 20x20 mesh."""
     freqs, _ = H.modal_frequencies(FVP_build.build(20), num_modes=6)

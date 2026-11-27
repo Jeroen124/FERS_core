@@ -1,19 +1,19 @@
 """
-806 — Cloud Save / Load  (FERS Cloud)
+806 - Cloud Save / Load  (FERS Cloud)
 ======================================
 Demonstrates how to persist and retrieve a FERS model using the
 FERS Cloud service.
 
 Prerequisites:
-  • A FERS Cloud account — register at https://app.fers.cloud
+  • A FERS Cloud account - register at https://app.fers.cloud
   • Your personal API key (found in your account settings)
 
 Key features shown:
-  • model.cloud_connect(api_key)       — authenticate with the API
-  • model.cloud_save(name)             — upload the model
-  • model.cloud_list()                 — list saved models
-  • model.cloud_load(model_id)         — download a model
-  • model.cloud_delete(model_id)       — remove a model
+  • model.cloud_connect(api_key) - authenticate with the API
+  • model.cloud_save(name) - upload the model
+  • model.cloud_list() - list saved models
+  • model.cloud_load(model_id) - download a model
+  • model.cloud_delete(model_id) - remove a model
 
 NOTE: This example will *not* run without valid credentials.
       Replace the placeholder API key below with your own.
@@ -31,9 +31,7 @@ from fers_core import (
 )
 
 
-# =============================================================================
 # Step 1: Build a small model
-# =============================================================================
 model = FERS()
 
 steel = Material(name="S355", e_mod=210e9, g_mod=81e9, density=7850, yield_stress=355e6)
@@ -56,9 +54,7 @@ lc = model.create_load_case(name="Gravity")
 NodalLoad(node=node2, load_case=lc, magnitude=-10_000, direction=(0, 1, 0))
 
 
-# =============================================================================
 # Step 2: Connect to FERS Cloud
-# =============================================================================
 API_KEY = "your-api-key-here"  # ← replace with your real API key
 
 try:
@@ -70,10 +66,8 @@ except Exception as e:
     exit()
 
 
-# =============================================================================
 # Step 3: Save the model to the cloud
-# =============================================================================
-# Only the model inputs are uploaded — analysis results are NEVER stored in the
+# Only the model inputs are uploaded - analysis results are NEVER stored in the
 # cloud. The FersCloud web viewer recomputes results in-browser when a model is
 # opened or shared, so running run_analysis() here is optional (kept only to
 # demonstrate the local solve). cloud_save() always uploads inputs only.
@@ -82,18 +76,14 @@ saved_info = model.cloud_save(name="806_example_model")
 print(f"Saved to cloud: {saved_info}")
 
 
-# =============================================================================
 # Step 4: List all models in your cloud account
-# =============================================================================
 models = model.cloud_list()
 print(f"\nModels in your account ({len(models)}):")
 for m in models:
     print(f"  • {m}")
 
 
-# =============================================================================
 # Step 5: Reload the model from the cloud
-# =============================================================================
 # Use the model ID from Step 3 or from the list above
 if models:
     first_model_id = models[0].get("id") or models[0].get("_id")
@@ -104,9 +94,7 @@ if models:
     )
 
 
-# =============================================================================
 # Step 6 (optional): Delete the model from the cloud
-# =============================================================================
 # Uncomment the following lines to clean up after the example:
 #
 # model.cloud_delete(first_model_id)

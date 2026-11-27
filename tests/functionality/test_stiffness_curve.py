@@ -8,7 +8,7 @@ from fers_core.supports.nodalsupport import NodalSupport
 from fers_core.members.memberhinge import MemberHinge
 
 
-# ── StiffnessCurveConfig Validation ───────────────────────────────────────────
+# StiffnessCurveConfig Validation
 
 
 class TestStiffnessCurveConfigValidation:
@@ -45,7 +45,7 @@ class TestStiffnessCurveConfigValidation:
             assert cfg.depends_on == fc
 
 
-# ── StiffnessCurveConfig Serialization ────────────────────────────────────────
+# StiffnessCurveConfig Serialization
 
 
 class TestStiffnessCurveConfigSerialization:
@@ -86,7 +86,7 @@ class TestStiffnessCurveConfigSerialization:
         assert a != b
 
 
-# ── SupportCondition — spring_curve Factory ───────────────────────────────────
+# SupportCondition - spring_curve Factory
 
 
 class TestSpringCurveCreation:
@@ -138,14 +138,14 @@ class TestSpringCurveCreation:
             SupportCondition(SupportConditionType.SPRING)
 
     def test_spring_with_curve_and_stiffness(self):
-        """Both stiffness and curve on SPRING is allowed — curve overrides."""
+        """Both stiffness and curve on SPRING is allowed - curve overrides."""
         curve = StiffnessCurveConfig(ForceComponent.Fz, [[0, 1e5], [100, 1e6]])
         sc = SupportCondition(SupportConditionType.SPRING, stiffness=5e4, stiffness_curve=curve)
         assert sc.stiffness == 5e4
         assert sc.stiffness_curve is not None
 
 
-# ── SupportCondition Serialization ────────────────────────────────────────────
+# SupportCondition Serialization
 
 
 class TestSpringCurveSerialization:
@@ -195,7 +195,7 @@ class TestSpringCurveSerialization:
             assert sc.stiffness_curve is not None
 
 
-# ── Display ───────────────────────────────────────────────────────────────────
+# Display
 
 
 class TestSpringCurveDisplay:
@@ -214,7 +214,7 @@ class TestSpringCurveDisplay:
         assert "Fz" in r
 
 
-# ── NodalSupport Integration ──────────────────────────────────────────────────
+# NodalSupport Integration
 
 
 class TestNodalSupportSpringCurve:
@@ -271,7 +271,7 @@ class TestNodalSupportSpringCurve:
         assert ns2.rotation_conditions["Z"].condition_type == SupportConditionType.FREE
 
 
-# ── MemberHinge Integration ───────────────────────────────────────────────────
+# MemberHinge Integration
 
 
 class TestMemberHingeStiffnessCurve:
@@ -335,7 +335,7 @@ class TestMemberHingeStiffnessCurve:
         assert restored.stiffness_curve_vx is None
 
 
-# ── Backward Compatibility ────────────────────────────────────────────────────
+# Backward Compatibility
 
 
 class TestBackwardCompatibility:
@@ -368,7 +368,7 @@ class TestBackwardCompatibility:
         assert sc.stiffness_curve.points == [[0, 1e5], [50000, 1e7]]
 
 
-# ── Asymmetric (signed) curves ────────────────────────────────────────────────
+# Asymmetric (signed) curves
 
 
 class TestSignedCurves:

@@ -2,7 +2,7 @@
 principal-axis angle is the one the solver checks against.
 
 Both of these were silently wrong, and both are unconservative in the direction
-that matters — they feed EN 1993-1-1 §6.3.1 and §6.3.1.4.
+that matters - they feed EN 1993-1-1 §6.3.1 and §6.3.1.4.
 """
 
 import math
@@ -75,7 +75,7 @@ def test_the_principal_angle_is_the_one_the_solver_compares_against():
     # sectionproperties' own principal values for this profile.
     assert i_max * 1e8 == pytest.approx(280.2, abs=0.5)
     assert i_min * 1e8 == pytest.approx(73.0, abs=0.5)
-    # The weak principal value is well under the centroidal one — that gap is
+    # The weak principal value is well under the centroidal one - that gap is
     # the whole point, and it is the unconservative direction if missed.
     assert i_min < 0.45 * sec.i_z
 

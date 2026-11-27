@@ -1,10 +1,10 @@
-"""NAFEMS FV6 — Circular ring, in-plane and out-of-plane flexural vibration (free-free).
+"""NAFEMS FV6 - Circular ring, in-plane and out-of-plane flexural vibration (free-free).
 
 Complete circular ring, centroidal radius R=1.0 m, solid circular section r_c=0.05 m,
 E=200 GPa, ν=0.3, ρ=8000. Modelled as N straight beam segments. Free-free in 3D → 6 rigid-body
 modes; lifted with soft translational grounding springs at three well-separated nodes.
 
-Targets — classical thin-ring closed form (independently verified), pairs per wavenumber n:
+Targets - classical thin-ring closed form (independently verified), pairs per wavenumber n:
   out-of-plane flexural-torsional n=2/3/4: 51.849 / 148.77 / 286.98 Hz
   in-plane flexural            n=2/3/4: 53.382 / 150.99 / 289.51 Hz
 (NAFEMS R0015 FE targets are ~1% higher: 52.29/149.7/288.3 and 53.97/152.4/288.3.)

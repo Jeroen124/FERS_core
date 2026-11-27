@@ -1,5 +1,5 @@
 """
-201 — Simple Shed  (3-D Portal Frame Structure with Bracing)
+201 - Simple Shed  (3-D Portal Frame Structure with Bracing)
 ============================================================
 A steel portal-frame shed modelled in 3-D, with cross-bracing in the
 side walls and roof panels, and longitudinal base tie beams.
@@ -74,18 +74,14 @@ from fers_core import (
     AnalysisOrder,
 )
 
-# =============================================================================
-# 0.  Shared properties
-# =============================================================================
+# Shared properties
 model = FERS()
 model.settings.analysis_options.order = AnalysisOrder.LINEAR
 
 S235 = Material(name="S235", e_mod=210e9, g_mod=80.769e9, density=7850, yield_stress=235e6)
 
-# ---------------------------------------------------------------------------
 # HEA 140  (columns)
 # EN 10365: A=31.4 cm2, Iy=1033 cm4, Iz=389.3 cm4, J=8.13 cm4
-# ---------------------------------------------------------------------------
 _sp_col = ShapePath(
     name="HEA140",
     shape_commands=ShapePath.create_he_profile(h=0.133, b=0.140, t_f=0.0085, t_w=0.0055, r=0.012),
@@ -102,10 +98,8 @@ sec_column = Section(
     shape_path=_sp_col,
 )
 
-# ---------------------------------------------------------------------------
 # IPE 160  (rafters)
 # EN 10365: A=20.1 cm2, Iy=869 cm4, Iz=68.3 cm4, J=3.60 cm4
-# ---------------------------------------------------------------------------
 _sp_raf = ShapePath(
     name="IPE160",
     shape_commands=ShapePath.create_ipe_profile(h=0.160, b=0.082, t_f=0.0074, t_w=0.0050, r=0.009),
@@ -122,10 +116,8 @@ sec_rafter = Section(
     shape_path=_sp_raf,
 )
 
-# ---------------------------------------------------------------------------
 # IPE 120  (purlins)
 # EN 10365: A=13.2 cm2, Iy=318 cm4, Iz=27.7 cm4, J=1.74 cm4
-# ---------------------------------------------------------------------------
 _sp_purl = ShapePath(
     name="IPE120",
     shape_commands=ShapePath.create_ipe_profile(h=0.120, b=0.064, t_f=0.0063, t_w=0.0044, r=0.007),
@@ -142,10 +134,8 @@ sec_purlin = Section(
     shape_path=_sp_purl,
 )
 
-# ---------------------------------------------------------------------------
 # IPE 100  (base tie beams)
 # EN 10365: A=10.3 cm2, Iy=171 cm4, Iz=15.9 cm4, J=1.27 cm4
-# ---------------------------------------------------------------------------
 _sp_tie = ShapePath(
     name="IPE100",
     shape_commands=ShapePath.create_ipe_profile(h=0.100, b=0.055, t_f=0.0057, t_w=0.0041, r=0.007),
@@ -162,10 +152,8 @@ sec_tie = Section(
     shape_path=_sp_tie,
 )
 
-# ---------------------------------------------------------------------------
 # CHS 48.3x3.2  (cross-bracing, wall and roof)
 # EN 10219: A=4.53 cm2, I=11.6 cm4 (symmetric), J=23.2 cm4
-# ---------------------------------------------------------------------------
 _sp_brace = ShapePath(
     name="CHS 48.3x3.2",
     shape_commands=ShapePath.create_chs_profile(d=0.0483, t=0.0032),
@@ -188,9 +176,7 @@ pinned_base = NodalSupport(
     rotation_conditions={"X": "Free", "Y": "Free", "Z": "Free"},
 )
 
-# =============================================================================
-# 1.  Nodes  (Y = vertical up)
-# =============================================================================
+# Nodes  (Y = vertical up)
 # Portal frame at Z = 0
 n1 = Node(0, 0, 0, nodal_support=pinned_base)  # left  column base
 n2 = Node(6, 0, 0, nodal_support=pinned_base)  # right column base
@@ -205,11 +191,9 @@ n8 = Node(0, 3.0, 8)  # left  eave
 n9 = Node(3, 4.2, 8)  # ridge
 n10 = Node(6, 3.0, 8)  # right eave
 
-# =============================================================================
-# 2.  Members
-# =============================================================================
+# Members
 
-# --- Portal frames -----------------------------------------------------------
+# Portal frames
 col_L1 = Member(n1, n3, section=sec_column)
 col_R1 = Member(n2, n5, section=sec_column)
 rafter_L1 = Member(n3, n4, section=sec_rafter)
@@ -220,16 +204,16 @@ col_R2 = Member(n7, n10, section=sec_column)
 rafter_L2 = Member(n8, n9, section=sec_rafter)
 rafter_R2 = Member(n9, n10, section=sec_rafter)
 
-# --- Purlins (eaves + ridge) -------------------------------------------------
+# Purlins (eaves + ridge)
 purlin_eave_L = Member(n3, n8, section=sec_purlin)
 purlin_eave_R = Member(n5, n10, section=sec_purlin)
 purlin_ridge = Member(n4, n9, section=sec_purlin)
 
-# --- Base tie beams (IPE 100, connecting column bases along Z) ---------------
+# Base tie beams (IPE 100, connecting column bases along Z)
 tie_L = Member(n1, n6, section=sec_tie)  # left  base tie
 tie_R = Member(n2, n7, section=sec_tie)  # right base tie
 
-# --- Side wall cross-bracing (CHS 48.3x3.2, X-brace each side wall) ---------
+# Side wall cross-bracing (CHS 48.3x3.2, X-brace each side wall)
 # Left wall  (X = 0): base-to-opposite-eave diagonals
 brace_wall_L1 = Member(n1, n8, section=sec_brace)  # base Z=0 -> eave Z=8
 brace_wall_L2 = Member(n3, n6, section=sec_brace)  # eave Z=0 -> base Z=8
@@ -238,7 +222,7 @@ brace_wall_L2 = Member(n3, n6, section=sec_brace)  # eave Z=0 -> base Z=8
 brace_wall_R1 = Member(n2, n10, section=sec_brace)  # base Z=0 -> eave Z=8
 brace_wall_R2 = Member(n5, n7, section=sec_brace)  # eave Z=0 -> base Z=8
 
-# --- Roof cross-bracing (CHS 48.3x3.2, X-brace each roof panel) -------------
+# Roof cross-bracing (CHS 48.3x3.2, X-brace each roof panel)
 # Left roof panel  (eave L <-> ridge): eave/ridge at Z=0 vs Z=8
 brace_roof_L1 = Member(n3, n9, section=sec_brace)  # eave Z=0 -> ridge Z=8
 brace_roof_L2 = Member(n4, n8, section=sec_brace)  # ridge Z=0 -> eave Z=8
@@ -247,9 +231,7 @@ brace_roof_L2 = Member(n4, n8, section=sec_brace)  # ridge Z=0 -> eave Z=8
 brace_roof_R1 = Member(n4, n10, section=sec_brace)  # ridge Z=0 -> eave Z=8
 brace_roof_R2 = Member(n5, n9, section=sec_brace)  # eave Z=0 -> ridge Z=8
 
-# =============================================================================
-# 3.  Member sets
-# =============================================================================
+# Member sets
 ms_frame1 = MemberSet(
     members=[col_L1, col_R1, rafter_L1, rafter_R1],
     classification="Frame Z=0",
@@ -284,9 +266,7 @@ model.add_member_set(
     ms_roof_bracing,
 )
 
-# =============================================================================
-# 4.  Load cases
-# =============================================================================
+# Load cases
 lc_G = model.create_load_case(name="G - Permanent")
 lc_S = model.create_load_case(name="S - Snow")
 lc_W = model.create_load_case(name="W - Wind")
@@ -307,9 +287,7 @@ for rafter in [rafter_L1, rafter_R1, rafter_L2, rafter_R2]:
 for col in [col_L1, col_L2]:
     DistributedLoad(member=col, load_case=lc_W, magnitude=600, direction=(1, 0, 0))
 
-# =============================================================================
-# 5.  Load combinations  (EN 1990 STR)
-# =============================================================================
+# Load combinations  (EN 1990 STR)
 model.create_load_combination(
     name="ULS: 1.35G + 1.5S",
     load_cases_factors={lc_G: 1.35, lc_S: 1.5},
@@ -325,9 +303,7 @@ model.create_load_combination(
     limit_state="SLS",
 )
 
-# =============================================================================
-# 6.  Run analysis
-# =============================================================================
+# Run analysis
 print("Running analysis: 201 Simple Shed (with bracing)")
 model.run_analysis()
 
@@ -353,18 +329,14 @@ for k, rn in uls_res.reaction_nodes.items():
     label = support_labels.get(k, k)
     print(f"  {label}: Fy = {f.fy / 1000:.2f} kN   Fx = {f.fx / 1000:.2f} kN")
 
-# =============================================================================
-# 7.  Save JSON
-# =============================================================================
+# Save JSON
 # FERS_cloud ships this model as a template: point FERS_CLOUD_PUBLIC at its
 # public/ folder to regenerate it. Otherwise the file lands where this runs.
 json_path = os.path.join(os.environ.get("FERS_CLOUD_PUBLIC", "."), "201_Simple_Shed.json")
 model.save_to_json(json_path, indent=4)
 print(f"\nJSON saved -> {json_path}")
 
-# =============================================================================
-# 8.  Save to FERS Cloud
-# =============================================================================
+# Save to FERS Cloud
 # Only with a key: FERS_API_KEY from https://ferscloud.com/profile.
 API_KEY = os.environ.get("FERS_API_KEY")
 if API_KEY:

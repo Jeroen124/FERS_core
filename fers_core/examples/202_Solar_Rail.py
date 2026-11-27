@@ -1,5 +1,5 @@
 """
-202 — Solar Rail  (Ballasted Flat-Roof 2x2 Solar Panel Mounting Frame)
+202 - Solar Rail  (Ballasted Flat-Roof 2x2 Solar Panel Mounting Frame)
 =======================================================================
 Models the complete aluminium rail frame for a 2x2 ballasted solar panel
 array on a flat or low-slope roof.  No roof penetrations are used.
@@ -77,9 +77,7 @@ from fers_core import (
     AnalysisOrder,
 )
 
-# =============================================================================
-# 0.  Geometry constants
-# =============================================================================
+# Geometry constants
 TILT_DEG = 15.0
 _cos_tilt = math.cos(math.radians(TILT_DEG))
 _tan_tilt = math.tan(math.radians(TILT_DEG))
@@ -88,9 +86,7 @@ Y_FRONT = 0.150  # front leg height (m)
 Y_MID = Y_FRONT + 1.75 * _tan_tilt  # 0.619 m
 Y_BACK = Y_FRONT + 3.50 * _tan_tilt  # 1.088 m
 
-# =============================================================================
-# 1.  Material
-# =============================================================================
+# Material
 model = FERS()
 model.settings.analysis_options.order = AnalysisOrder.LINEAR
 
@@ -102,11 +98,9 @@ aluminum = Material(
     yield_stress=215e6,
 )
 
-# =============================================================================
-# 2.  Sections with ShapePaths for the 3-D viewer
-# =============================================================================
+# Sections with ShapePaths for the 3-D viewer
 
-# --- RHS 60x40x2 mm  (longitudinal rails) ------------------------------------
+# RHS 60x40x2 mm  (longitudinal rails)
 _h, _b, _t, _r = 0.060, 0.040, 0.002, 0.004
 _sp_rhs = ShapePath(
     name="RHS 60x40x2",
@@ -124,7 +118,7 @@ sec_long = Section(
     shape_path=_sp_rhs,
 )
 
-# --- SHS 40x40x2 mm  (cross-rails and support legs) -------------------------
+# SHS 40x40x2 mm  (cross-rails and support legs)
 _s, _ts, _rs = 0.040, 0.002, 0.004
 _sp_shs = ShapePath(
     name="SHS 40x40x2",
@@ -142,15 +136,13 @@ sec_cross = Section(
     shape_path=_sp_shs,
 )
 
-# =============================================================================
-# 3.  Nodes
-# =============================================================================
+# Nodes
 foot = NodalSupport(
     displacement_conditions={"X": "Fixed", "Y": "Fixed", "Z": "Fixed"},
     rotation_conditions={"X": "Free", "Y": "Free", "Z": "Free"},
 )
 
-# --- Base foot nodes (Y = 0, ballast level, all pinned) ----------------------
+# Base foot nodes (Y = 0, ballast level, all pinned)
 b1 = Node(0.0, 0, 0.00, nodal_support=foot)  # front-left  base
 b2 = Node(1.1, 0, 0.00, nodal_support=foot)  # front-centre base
 b3 = Node(2.2, 0, 0.00, nodal_support=foot)  # front-right  base
@@ -161,7 +153,7 @@ b7 = Node(0.0, 0, 3.50, nodal_support=foot)  # back-left    base
 b8 = Node(1.1, 0, 3.50, nodal_support=foot)  # back-centre  base
 b9 = Node(2.2, 0, 3.50, nodal_support=foot)  # back-right   base
 
-# --- Rail frame nodes (elevated, tilted at 15 deg) ---------------------------
+# Rail frame nodes (elevated, tilted at 15 deg)
 r1 = Node(0.0, Y_FRONT, 0.00)  # front-left  rail
 r2 = Node(1.1, Y_FRONT, 0.00)  # front-centre rail
 r3 = Node(2.2, Y_FRONT, 0.00)  # front-right  rail
@@ -172,11 +164,9 @@ r7 = Node(0.0, Y_BACK, 3.50)  # back-left    rail
 r8 = Node(1.1, Y_BACK, 3.50)  # back-centre  rail
 r9 = Node(2.2, Y_BACK, 3.50)  # back-right   rail
 
-# =============================================================================
-# 4.  Members
-# =============================================================================
+# Members
 
-# --- Vertical support legs (base -> rail, 9 members) ------------------------
+# Vertical support legs (base -> rail, 9 members)
 leg_1 = Member(b1, r1, section=sec_cross)
 leg_2 = Member(b2, r2, section=sec_cross)
 leg_3 = Member(b3, r3, section=sec_cross)
@@ -187,7 +177,7 @@ leg_7 = Member(b7, r7, section=sec_cross)
 leg_8 = Member(b8, r8, section=sec_cross)
 leg_9 = Member(b9, r9, section=sec_cross)
 
-# --- Longitudinal rails (tilted at 15 deg, run along Z, 6 members) ----------
+# Longitudinal rails (tilted at 15 deg, run along Z, 6 members)
 long_L1 = Member(r1, r4, section=sec_long)  # left  rail, front bay
 long_L2 = Member(r4, r7, section=sec_long)  # left  rail, back  bay
 long_C1 = Member(r2, r5, section=sec_long)  # centre rail, front bay
@@ -195,7 +185,7 @@ long_C2 = Member(r5, r8, section=sec_long)  # centre rail, back  bay
 long_R1 = Member(r3, r6, section=sec_long)  # right rail, front bay
 long_R2 = Member(r6, r9, section=sec_long)  # right rail, back  bay
 
-# --- Cross-rails (horizontal, run along X, 6 members) -----------------------
+# Cross-rails (horizontal, run along X, 6 members)
 cross_F1 = Member(r1, r2, section=sec_cross)  # front cross-rail, left  bay
 cross_F2 = Member(r2, r3, section=sec_cross)  # front cross-rail, right bay
 cross_M1 = Member(r4, r5, section=sec_cross)  # mid   cross-rail, left  bay
@@ -218,9 +208,7 @@ ms_cross = MemberSet(
 
 model.add_member_set(ms_legs, ms_long, ms_cross)
 
-# =============================================================================
-# 5.  Load cases
-# =============================================================================
+# Load cases
 lc_G = model.create_load_case(name="G - Permanent")
 lc_S = model.create_load_case(name="S - Snow")
 lc_Wu = model.create_load_case(name="Wu - Wind Uplift")
@@ -266,9 +254,7 @@ for m in outer_rails:
 for m in centre_rails:
     DistributedLoad(member=m, load_case=lc_Wu, magnitude=_Wu_centre, direction=(0, 1, 0))
 
-# =============================================================================
-# 6.  Load combinations
-# =============================================================================
+# Load combinations
 model.create_load_combination(
     name="ULS: 1.35G + 1.5S",
     load_cases_factors={lc_G: 1.35, lc_S: 1.5},
@@ -291,9 +277,7 @@ model.create_load_combination(
     limit_state="SLS",
 )
 
-# =============================================================================
-# 7.  Run analysis
-# =============================================================================
+# Run analysis
 print("Running analysis: 202 Solar Rail (2x2 array, 15 deg tilt)")
 model.run_analysis()
 
@@ -323,18 +307,14 @@ for k, rn in uls_lift.reaction_nodes.items():
     label = foot_labels.get(k, k)
     print(f"  {label:<16s}: Fy = {rn.nodal_forces.fy / 1000:+.3f} kN")
 
-# =============================================================================
-# 8.  Save JSON
-# =============================================================================
+# Save JSON
 # FERS_cloud ships this model as a template: point FERS_CLOUD_PUBLIC at its
 # public/ folder to regenerate it. Otherwise the file lands where this runs.
 json_path = os.path.join(os.environ.get("FERS_CLOUD_PUBLIC", "."), "202_Solar_Rail.json")
 model.save_to_json(json_path, indent=4)
 print(f"\nJSON saved -> {json_path}")
 
-# =============================================================================
-# 9.  Save to FERS Cloud
-# =============================================================================
+# Save to FERS Cloud
 # Only with a key: FERS_API_KEY from https://ferscloud.com/profile.
 API_KEY = os.environ.get("FERS_API_KEY")
 if API_KEY:

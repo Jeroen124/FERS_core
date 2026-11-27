@@ -1,5 +1,5 @@
 """
-151 — Seismic Response Spectrum (EN 1998-1)
+151 - Seismic Response Spectrum (EN 1998-1)
 ===========================================
 
 A single-bay steel portal frame under horizontal earthquake load along its
@@ -37,9 +37,7 @@ from fers_core import (
 )
 from fers_core.supports.supportcondition import SupportCondition
 
-# =============================================================================
 # Parameters
-# =============================================================================
 SPAN = 6.0  # [m]
 HEIGHT = 4.0  # [m]
 ROOF_WEIGHT = 3500.0  # beam + cladding self-weight [N/m], gravity included
@@ -54,9 +52,7 @@ steel = Material(name="S355", e_mod=210e9, g_mod=81e9, density=7850.0, yield_str
 heb200 = Section.from_name("HEB200", steel)
 ipe300 = Section.from_name("IPE300", steel)
 
-# =============================================================================
 # Model: two fixed-base columns and a roof beam in the X-Y plane
-# =============================================================================
 model = FERS()
 
 # The roof is held out of plane, as a wall brace would, so every mode sways in
@@ -93,9 +89,7 @@ model.add_seismic_analysis(
 
 model.run_analysis()
 
-# =============================================================================
 # Results
-# =============================================================================
 results = model.resultsbundle.seismic
 mrsa = results["modal_response_spectrum"]["per_direction"][0]
 lateral = results["lateral_force"]["per_direction"][0]
