@@ -107,6 +107,10 @@ takes = [abs(reactions[str(foot.id)].nodal_forces.fx) for foot in (foot_1, foot_
 print(f"post 1 takes {takes[0]:.1f} N, post 2 {takes[1]:.1f} N")  # 0.2 N and 67.2 N
 ```
 
+Post 1 still takes 0.2 N because the solve is second order by default: the post
+leans under the rail's load, and its axial force then has a horizontal part. With
+`AnalysisOrder.LINEAR` it takes nothing.
+
 A model that uses scissor hinges is written with `schema_version` 3, which an
 older engine refuses rather than solve every connection as rigid. Without them,
 a model is written as before.
