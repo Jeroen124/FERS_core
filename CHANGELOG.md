@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.2.35
+
+### Engine 0.2.109: a second-order solve settles its k(M) connectors, or says it did not
+
+`fers_calculations` is pinned to 0.2.109, up from 0.2.108. A Nonlinear solve of
+a model with a stiffness curve on a member hinge (a connector stiffness that
+follows an end force, such as the moment) could stop before that stiffness had
+settled on its curve and still report `converged: true` with no warning. On a
+beam whose connectors no node can move it made a single pass: measured on a
+clamped 6 m beam under 10 kN/m, the end moment came out 8.6 % short on a gently
+softening curve and 74 % short on a steep one. The last load step now converges
+only once every such stiffness is within 1e-6 of its curve. A step that runs
+out of iterations first keeps its last balanced state, with `converged: false`
+and a `hinge_secant_not_settled` warning naming the connector. Models without
+these connector curves, moment–rotation diagrams included, solve as in 0.2.108.
+The schema is unchanged; `fers_core.types` is stamped 0.2.109.
+
 ## 0.2.34
 
 ### Engine 0.2.108: a Linear analysis takes stiffness curves, each set at its own load
